@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { InvestigationPanel } from './investigation-panel'
 import { ArrowLeft, Play, Pause, Search, Info } from 'lucide-react'
 import { getEvidenceDisplay } from '@/lib/evidence-taxonomy'
 
@@ -209,7 +210,8 @@ export function RegionalOperatingPicture({
 
   const [contextId, setContextId] = useState('normal')
   const [category, setCategory] = useState('all')
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
+  const isCambridge = backHref === '/regions/cambridgeshire-peterborough'
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(isCambridge && places.some(p => p.slug === 'river-cam') ? 'river-cam' : null)
   const [cursorTs, setCursorTs] = useState<number>(maxTs)
   const [lookbackDays, setLookbackDays] = useState<number | null>(null)
   const [searchText, setSearchText] = useState('')
@@ -249,9 +251,9 @@ export function RegionalOperatingPicture({
 
   // Chronology rail = window + category chip, newest first.
   const railEvents = useMemo(() => {
-    const list = windowEvents.filter((e) => category === 'all' || e.eventType === category)
+    const list = windowEvents.filter((e) => (category === 'all' || e.eventType === category) && (!selectedSlug || e.assetSlug === selectedSlug))
     return [...list].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-  }, [windowEvents, category])
+  }, [windowEvents, category, selectedSlug])
 
   // Places to pulse: those with at least one event in the rail set (map ↔ rail in sync).
   const activeSlugs = useMemo(() => new Set(railEvents.map((e) => e.assetSlug)), [railEvents])
@@ -400,9 +402,9 @@ export function RegionalOperatingPicture({
       </header>
 
       {/* ----------------------------------------------------------------- Body */}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
         {/* Map */}
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-h-[320px] min-w-0 shrink-0 md:min-h-0 md:flex-1">
           <OperatingMapInner
             points={places}
             connections={connections}
@@ -469,7 +471,11 @@ export function RegionalOperatingPicture({
         </div>
 
         {/* Chronology rail */}
-        <aside className="flex w-[360px] shrink-0 flex-col border-l border-white/10 bg-[#0a0f1a]">
+        <aside className="flex w-full shrink-0 flex-col md:w-[42%] md:min-w-[290px] md:max-w-[440px] md:overflow-y-auto border-l border-white/10 bg-[#0a0f1a]">
+          {isCambridge && <InvestigationPanel records={chronology} selectedSlug={selectedSlug}
+            placeName={places.find(p => p.slug === selectedSlug)?.name ?? 'Cambridge & Peterborough'}
+            onChoose={cat => { setCategory(cat); setLookbackDays(null); setCursorTs(maxTs); setPlaying(false); setContextId('normal') }}
+            onReset={() => { setSelectedSlug(null); setCategory('all'); setLookbackDays(null); setCursorTs(maxTs); setPlaying(false); setContextId('normal') }} />}
           <div className="border-b border-white/10 px-4 py-3">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
               Evidence chronology
@@ -510,7 +516,8 @@ export function RegionalOperatingPicture({
           <div className="min-h-0 flex-1 overflow-y-auto">
             {railEvents.length === 0 ? (
               <div className="px-4 py-10 text-center text-[12px] text-slate-500">
-                No evidence falls inside this window. Widen the time range or clear the filter.
+                No loaded records match this place, topic and period. This does not establish that no event occurred.
+                <button className="mt-3 block w-full text-amber-200 underline" onClick={() => { setCategory('all'); setLookbackDays(null); setCursorTs(maxTs); setSelectedSlug(null) }}>View all available records</button>
               </div>
             ) : (
               <ul className="divide-y divide-white/[0.06]">
