@@ -21,7 +21,7 @@ const nextConfig = {
   // the platform's browser checks on the pod browse via 127.0.0.1. Enumerated hosts, never a
   // wildcard: every conversation previews under the same parent domain and serves content its own
   // author controls, so `**.<domain>` would let any UNRELATED app's preview reach this dev server.
-  allowedDevOrigins: ['127.0.0.1', '3f3b98860.na120.preview.abacusai.app', '135878d217.na120.preview.abacusai.app', '126f09400a.na120.preview.abacusai.app'],
+  allowedDevOrigins: ['127.0.0.1', '3f3b98860.na120.preview.abacusai.app', '135878d217.na120.preview.abacusai.app', '126f09400a.na120.preview.abacusai.app', 'd525f92e6.na120.preview.abacusai.app'],
 };
 
 const fs = require('fs');
