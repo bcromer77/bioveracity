@@ -1,12 +1,102 @@
 generator client {
     provider = "prisma-client-js"
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output = "/home/ubuntu/bioveracity/nextjs_space/node_modules/.prisma/client"
 }
 
 datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
+}
+
+// Additive evidence pipeline. Source content is private; only reviewed claims
+// are exposed to registered users through evidence search.
+model EvidenceDocument {
+  id              String   @id @default(cuid())
+  documentKey     String
+  versionHash     String   @unique
+  observedAt      DateTime
+  createdAt       DateTime @default(now())
+  url             String
+  title           String
+  publisher       String
+  authorityId     String
+  jurisdiction    String
+  eventDate       String?
+  eventPrecision  String
+  publicationDate String?
+  contentKind     String
+  sections        Json
+  status          String   @default("PENDING_REVIEW")
+  activeReviewId  String?
+  // Biodiversity safeguards. Authoritative server-side classification; never set
+  // from an incoming feed flag. Defaults keep new records out of ordinary search,
+  // export and embedding until a reviewer classifies them.
+  sensitivity        String  @default("UNKNOWN") // UNKNOWN | PUBLIC | RESTRICTED
+  reusePermission    String  @default("UNKNOWN") // UNKNOWN | PERMITTED | PROHIBITED | CATALOGUE_ONLY
+  incomingSensitivity String?                    // preserved incoming warning, audit only
+  catalogueOnly      Boolean @default(false)      // minimal catalogue reference; underlying dataset not retained
+  sourceRegisterId   String?
+  sourceRegister     EvidenceSourceRegister? @relation(fields: [sourceRegisterId], references: [id])
+  reviews         EvidenceReview[]
+
+  @@index([documentKey, observedAt])
+  @@index([authorityId])
+  @@index([sensitivity, reusePermission])
+  @@index([sourceRegisterId])
+}
+
+// Approved source / dataset register (biodiversity control #3). One row per
+// approved dataset: publisher, identifier, licence terms, required attribution,
+// permitted uses, commercial conditions, spatial resolution and any specific
+// permissions. Documents reference this to carry licence and attribution into
+// results, APIs and reports.
+model EvidenceSourceRegister {
+  id                     String   @id @default(cuid())
+  publisher              String
+  datasetIdentifier      String
+  licence                String
+  licenceVersion         String?
+  link                   String?
+  requiredAttribution    String
+  permittedUses          String
+  commercialUseConditions String?
+  spatialResolution      String?
+  specificPermissions    String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  documents             EvidenceDocument[]
+
+  @@unique([publisher, datasetIdentifier])
+}
+
+model EvidenceReview {
+  id           String   @id @default(cuid())
+  documentId   String
+  document     EvidenceDocument @relation(fields: [documentId], references: [id])
+  reviewer     String
+  claim        String
+  excerpt      String
+  locator      String
+  basis        String
+  evidenceType String
+  createdAt    DateTime @default(now())
+  embeddings   EvidenceEmbedding[]
+  @@index([documentId])
+}
+
+model EvidenceEmbedding {
+  reviewId  String
+  review    EvidenceReview @relation(fields: [reviewId], references: [id])
+  space     String
+  embedding Unsupported("vector(1536)")
+  createdAt DateTime @default(now())
+  @@id([reviewId, space])
+}
+
+model EvidenceSearchQuota {
+  userId   String @id
+  window   DateTime
+  requests Int
 }
 
 model User {

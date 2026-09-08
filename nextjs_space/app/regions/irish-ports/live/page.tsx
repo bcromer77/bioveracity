@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { isInstitutional } from '@/lib/access'
@@ -193,9 +192,4 @@ export default async function IrishPortsLivePage() {
       institutionalHref={accessNote ? '/institutional' : undefined}
     />
   )
-}
-
-// Keep a plain link in the tree for crawlers / no-JS fallback context.
-export function _NoscriptBack() {
-  return <Link href="/regions/irish-ports">Back to the Irish Ports evidence picture</Link>
 }
