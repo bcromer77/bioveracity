@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import { hasPortProvenance, portDatePrecision, portReplayWindow } from '@/lib/port-provenance'
 import { auth } from '@/auth'
 import { isInstitutional } from '@/lib/access'
 import { RegionalOperatingPicture } from '@/components/regions/cambridgeshire/operating-picture'
@@ -54,7 +55,6 @@ export default async function IrishPortsLivePage() {
       where: { regionSlug: REGION_SLUG },
       orderBy: { priorityScore: 'desc' },
       include: {
-        _count: { select: { divergences: true } },
         capitalProjects: { orderBy: { startDate: 'desc' } },
         authorisations: { orderBy: { grantedDate: 'desc' } },
       },
@@ -76,15 +76,12 @@ export default async function IrishPortsLivePage() {
     return 'other'
   }
 
-  // Canonical places (only those with verified coordinates are plottable).
+  // Stored place coordinates; location presence does not verify the place.
   const ports: OPPoint[] = assets
     .filter((a) => a.latitude != null && a.longitude != null)
     .map((a) => {
-      let evidenceState = 'neutral'
-      if (a._count.divergences > 0) evidenceState = 'divergence'
-      else if (a.statusDetail && /\bclassification\b|\bverified\b/i.test(a.statusDetail)) {
-        evidenceState = 'verified'
-      }
+      const evidenceState = 'neutral' // No place-wide verdict from unreviewed legacy counts.
+
       return {
         slug: a.slug,
         name: a.name,
@@ -103,13 +100,14 @@ export default async function IrishPortsLivePage() {
   // port), never proximity inference.
   const childNodes: OPPoint[] = []
   const connections: OPConnection[] = []
+  const milestoneCards: OPEvent[] = []
 
   for (const a of assets) {
     if (a.latitude == null || a.longitude == null) continue
     const lat = a.latitude as number
     const lng = a.longitude as number
-    const projects = a.capitalProjects
-    const permits = a.authorisations
+    const projects = a.capitalProjects.filter(p => hasPortProvenance(p) && p.startDate)
+    const permits = a.authorisations.filter(p => hasPortProvenance(p) && p.grantedDate)
     const total = projects.length + permits.length
     if (total === 0) continue
 
@@ -127,6 +125,14 @@ export default async function IrishPortsLivePage() {
         category: 'operations',
         evidenceState: 'neutral',
       })
+      milestoneCards.push({
+        id: `project:${p.id}`, title: `${p.name} · ${p.status}`,
+        description: p.description, date: p.startDate!.toISOString(),
+        datePrecision: portDatePrecision(p as typeof p & { datePrecision?: string | null }),
+        eventType: 'planning', evidenceClass: p.evidenceClass, changeType: 'event',
+        sourceUrl: p.sourceUrl, sourceDomain: new URL(p.sourceUrl!).hostname,
+        assetSlug: slug, assetName: a.name, lat: pos.lat, lng: pos.lng,
+      })
       connections.push({ fromSlug: a.slug, toSlug: slug, label: 'Capital project on the public record' })
       i++
     }
@@ -143,52 +149,52 @@ export default async function IrishPortsLivePage() {
         category: 'other',
         evidenceState: 'neutral',
       })
+      milestoneCards.push({
+        id: `permit:${pm.id}`, title: `${humanPermit(pm.type)} · ${pm.status}`,
+        description: pm.description, date: pm.grantedDate!.toISOString(),
+        datePrecision: portDatePrecision(pm as typeof pm & { datePrecision?: string | null }),
+        eventType: 'regulatory', evidenceClass: pm.evidenceClass, changeType: 'event',
+        sourceUrl: pm.sourceUrl, sourceDomain: new URL(pm.sourceUrl!).hostname,
+        assetSlug: slug, assetName: a.name, lat: pos.lat, lng: pos.lng,
+      })
       connections.push({ fromSlug: a.slug, toSlug: slug, label: humanPermit(pm.type) })
       i++
     }
   }
 
-  const places: OPPoint[] = [...ports, ...childNodes]
-
-  // Gating: free access is limited to a recent, curated window of the record.
-  // Institutional access replays the complete history and arbitrary periods.
-  let events = eventsRaw
-  let accessNote: string | undefined
-  if (!institutional && eventsRaw.length > 0) {
-    const maxTs = Math.max(...eventsRaw.map((e) => e.date.getTime()))
-    const cutoff = new Date(maxTs)
-    cutoff.setMonth(cutoff.getMonth() - FREE_WINDOW_MONTHS)
-    const limited = eventsRaw.filter((e) => e.date.getTime() >= cutoff.getTime())
-    if (limited.length < eventsRaw.length) {
-      events = limited
-      accessNote = `Free access replays the most recent ${FREE_WINDOW_MONTHS} months of the record. The complete history — and replay of any earlier period or project window — is an institutional capability.`
-    }
-  }
-
-  const chronology: OPEvent[] = events.map((e) => ({
-    id: e.id,
-    title: e.title,
-    description: e.description,
-    date: e.date.toISOString(),
-    eventType: e.eventType,
-    evidenceClass: e.evidenceClass,
-    changeType: e.changeType,
-    sourceUrl: e.sourceUrl,
-    sourceDomain: e.sourceDomain,
-    assetSlug: e.asset.slug,
-    assetName: e.asset.name,
-    lat: e.asset.latitude ?? null,
-    lng: e.asset.longitude ?? null,
-  }))
+  // The same server-side window governs both cards and their related markers.
+  // Missing provenance is withheld, never repaired with invented metadata.
+  const supportedEvents = eventsRaw.filter(hasPortProvenance)
+  const allChronology: OPEvent[] = [
+    ...supportedEvents.map((e) => ({
+      id: e.id, title: e.title, description: e.description,
+      date: e.date.toISOString(), datePrecision: portDatePrecision(e),
+      eventType: e.eventType, evidenceClass: e.evidenceClass, changeType: e.changeType,
+      sourceUrl: e.sourceUrl, sourceDomain: e.sourceDomain,
+      assetSlug: e.asset.slug, assetName: e.asset.name,
+      lat: e.asset.latitude ?? null, lng: e.asset.longitude ?? null,
+    })),
+    ...milestoneCards,
+  ].sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+  const chronology = portReplayWindow(allChronology, institutional, FREE_WINDOW_MONTHS)
+  const visibleSlugs = new Set(chronology.map(e => e.assetSlug))
+  const places: OPPoint[] = [...ports, ...childNodes.filter(p => visibleSlugs.has(p.slug))]
+  const visibleConnections = connections.filter(c => visibleSlugs.has(c.toSlug))
+  const accessNote = chronology.length < allChronology.length
+    ? `Free access replays the most recent ${FREE_WINDOW_MONTHS} months of the eligible record. Institutional access includes earlier eligible records.`
+    : undefined
+  const withheld = eventsRaw.length - supportedEvents.length
+    + assets.reduce((sum, a) => sum + a.capitalProjects.length + a.authorisations.length, 0)
+    - milestoneCards.length
 
   return (
     <RegionalOperatingPicture
       regionName="Irish Ports"
       places={places}
       chronology={chronology}
-      connections={connections}
+      connections={visibleConnections}
       backHref="/regions/irish-ports"
-      relationshipNote="Lines link each port to the projects and permits recorded against it in the public record. Related-record positions around a port are schematic, not geographic."
+      relationshipNote={`Related-record positions around a port are schematic, not geographic. ${withheld} records are withheld pending source metadata or a usable milestone date. Source links support inspection; they do not independently establish a claim.`}
       accessNote={accessNote}
       institutionalHref={accessNote ? '/institutional' : undefined}
     />

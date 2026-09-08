@@ -101,6 +101,7 @@ model EvidenceSearchQuota {
 }
 
 model User {
+  residentSubmissions ResidentSubmission[]
   id            String      @id @default(cuid())
   name          String?
   email         String      @unique
@@ -153,6 +154,7 @@ model VerificationToken {
 }
 
 model Asset {
+  residentSubmissions ResidentSubmission[]
   id                  String               @id @default(cuid())
   slug                String               @unique
   name                String
@@ -219,6 +221,10 @@ model Event {
 
   @@index([assetId])
   @@index([date])
+  sourcePublisher String?
+  sourceRetrievedAt DateTime?
+  sourceLocation String?
+
 }
 
 model Divergence {
@@ -258,6 +264,11 @@ model Authorisation {
   createdAt     DateTime  @default(now())
 
   @@index([assetId])
+  sourcePublisher String?
+  sourceRetrievedAt DateTime?
+  sourceLocation String?
+  datePrecision String @default("unknown")
+
 }
 
 model CapitalProject {
@@ -277,6 +288,11 @@ model CapitalProject {
   createdAt     DateTime  @default(now())
 
   @@index([assetId])
+  sourcePublisher String?
+  sourceRetrievedAt DateTime?
+  sourceLocation String?
+  datePrecision String @default("unknown")
+
 }
 
 model RegulatoryActivity {
@@ -780,4 +796,40 @@ model Watch {
   @@index([assetId])
   @@index([areaId])
   @@index([targetType])
+}
+
+// Private intake, deliberately separate from published CommunityReport/Event.
+enum HoneycombCategory {
+  WATER
+  RIVER
+  ODOUR
+  OPERATIONS
+  AIR
+  SOIL
+  WEATHER
+  NOISE
+  BIODIVERSITY
+  OTHER
+}
+enum ResidentSubmissionStatus {
+  PENDING_VERIFICATION
+  REVIEWED
+  REJECTED
+}
+model ResidentSubmission {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assetId String
+  asset Asset @relation(fields: [assetId], references: [id])
+  requestId String
+  category HoneycombCategory
+  description String
+  observedAt DateTime
+  receivedAt DateTime @default(now())
+  status ResidentSubmissionStatus @default(PENDING_VERIFICATION)
+  visibility String @default("PRIVATE")
+  @@unique([userId, requestId])
+  @@index([userId, receivedAt])
+  @@index([status])
 }
