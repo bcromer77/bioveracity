@@ -3,6 +3,7 @@ import type { EvidenceHit } from '@/lib/evidence-store'
 export function EvidenceResults({ hits }: { hits: EvidenceHit[] }) {
   return <div className="space-y-4">{hits.map(hit => <article key={hit.id} className="rounded-xl border p-5">
     <p className="text-xs font-semibold text-emerald-800">Verified by BioVeracity · {hit.evidenceType.replace(/_/g, ' ')}</p>
+    {hit.matchType && <p className="mt-1 text-xs text-muted-foreground">{hit.matchType === 'both' ? 'Meaning and keyword match' : hit.matchType === 'meaning' ? 'Related meaning' : 'Keyword match'}</p>}
     <h2 className="mt-2 text-xl font-semibold">{hit.claim}</h2>
     <p className="mt-2 text-sm text-muted-foreground">{hit.publisher} · {hit.jurisdiction}</p>
     <blockquote className="my-4 border-l-2 pl-4 text-sm">{hit.excerpt}</blockquote>

@@ -41,6 +41,7 @@ export type EvidenceHit = {
   id: string; title: string; url: string; publisher: string; authorityId: string; jurisdiction: string;
   eventDate: string | null; eventPrecision: string; publicationDate: string | null;
   observedAt: Date; claim: string; excerpt: string; locator: string; evidenceType: string; checkedAt: Date;
+  matchType?: 'keyword' | 'meaning' | 'both';
 }
 export async function withdrawEvidence(id: string, reviewer: string, reason: string) {
   if (reason.trim().length < 30 || reason.length > 2000) throw new Error('Substantive withdrawal reason required')
@@ -53,9 +54,16 @@ export async function withdrawEvidence(id: string, reviewer: string, reason: str
   })
 }
 export async function searchEvidence(q: string, authority = '', from = '', to = ''): Promise<EvidenceHit[]> {
+  validateSearchFilters(q, authority, from, to)
+  return keywordEvidence(q, authority, from, to)
+}
+export function validateSearchFilters(q: string, authority = '', from = '', to = '') {
+  if (![q, authority, from, to].every(v => typeof v === 'string')) throw new Error('Invalid search')
   if (q.length > 300 || authority.length > 200) throw new Error('Search too long')
   for (const value of [from, to]) if (value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || new Date(value).toISOString().slice(0, 10) !== value)) throw new Error('Invalid date filter')
   if (from && to && from > to) throw new Error('Reversed date range')
+}
+async function keywordEvidence(q: string, authority: string, from: string, to: string): Promise<EvidenceHit[]> {
   // Current-version choice precedes verification and keyword filters: a changed,
   // unreviewed source must hide its older verified version from current results.
   return prisma.$queryRaw<EvidenceHit[]>(Prisma.sql`

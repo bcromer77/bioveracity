@@ -2,7 +2,7 @@
 
 ## Actual delivery state
 
-This change adds application intake, retained document versions, source-passage review, withdrawal audit, and institutional full-text evidence search. It fixes incoming automatic claim verification based only on a URL/identifier and event-date fallback in the legacy ingest path. It does not deploy itself, create a persistent scheduler, generate embeddings, or prove national source coverage.
+The pipeline adds application intake, retained document versions, source-passage review and withdrawal audit. The follow-on registered search change adds full-text and vector evidence search: see [registered-vector-search-handoff.md](registered-vector-search-handoff.md) for its configuration, indexing job, access rules and deployment gates. The pipeline also fixes incoming automatic claim verification based only on a URL/identifier and event-date fallback in the legacy ingest path. Neither change deploys itself, activates a persistent scheduler or proves national source coverage.
 
 GitHub issue #3 tracks integrity fixes; #4 tracks operational coverage. Preserve the current hardened v20 application. Draft PRs #1 and #2 contain the council register and Python collector/honeycomb work. This bridge is based on main and can accept the existing research JSON archive without those branches; `pipeline.run_once` requires the reviewed collector from PR #2. Reconcile those changes before enabling a scheduled collector.
 
@@ -11,7 +11,7 @@ GitHub issue #3 tracks integrity fixes; #4 tracks operational coverage. Preserve
 1. Collector or research archive supplies HTTPS source identity, council ID, publication date, event date and precision, retrieval timestamp, and located source sections.
 2. `POST /api/ingest/evidence` authenticates a dedicated key and stores a version as `PENDING_REVIEW`. It never trusts submitted verification/access flags. It does not fetch an arbitrary submitted URL.
 3. An identified admin opens the actual source at `/admin/evidence`, supplies a checked claim, exact excerpt, locator, evidence type and review explanation, and confirms permitted publication. The server checks that the excerpt matches retained text and records the reviewer/time. Matching text alone is not automatic semantic verification.
-4. The approved claim appears at `/evidence` immediately through a database query. No separate manual website copy is required. The existing place search links to this page when enabled. Institutional access is enforced before reading source passages; existing public place/headline access is unchanged.
+4. The approved claim appears in keyword evidence search immediately through a database query. No separate manual website copy is required. Registered account access is enforced before reading source passages. The follow-on search change shows evidence alongside place results and indexes newly reviewed claims for meaning-based retrieval through its bounded scheduled worker.
 5. A substantive new source version hides the older verified version from current search until reviewed. Admins can reopen a document by ID to correct or withdraw a claim; previous review rows remain retained.
 
 “Verified by BioVeracity” applies to the specific checked claim, not the entire source, environmental causation, independent measurement certification, or the truth of every operator/community statement. New collection remains private. Unknown event dates remain unknown; year/month precision remains visible. Date-range filters intentionally exclude unknown/coarse event dates.
@@ -54,7 +54,7 @@ The draft register lists 413 principal councils (317 England, 32 Scotland, 22 Wa
 
 Source checks on 8 September 2026: the England government guidance still states 317, but is labelled last updated April 2023; this alone is not certification of every council's current legal status. See https://www.gov.uk/guidance/local-government-structure-and-elections, https://www.gov.scot/policies/local-government/, https://www.nidirect.gov.uk/articles/local-councils, https://www.localgov.ie/find-my-local-authority and the source manifest in PR #1. Preserve proposed/shadow/successor authorities separately.
 
-Search here is PostgreSQL full-text passage/claim search with council and event-date filters, returning up to 30 current reviewed results. It is not yet the vector/honeycomb application integration from PR #2, an evaluated national-scale index, or unlimited pagination. No live embedding service was called. Next delivery: evaluated hybrid retrieval with model/version isolation, typed source-backed place/river/port relations, measured database indexes, and source coverage surfaced in search. Do not label similarity a verification score.
+The follow-on [registered search handoff](registered-vector-search-handoff.md) adds model-isolated PostgreSQL vector + full-text retrieval with council/date filters and up to 30 current reviewed results. It does not import the raw private SQLite index from PR #2. No live embedding service was called in local validation. Real-source retrieval evaluation, typed source-backed place/river/port relations, national-scale performance and exhaustive pagination remain to be completed. Do not label similarity a verification score.
 
 ## Validation performed in this change
 

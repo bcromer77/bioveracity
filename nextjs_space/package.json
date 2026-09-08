@@ -7,13 +7,15 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:evidence": "node --import tsx --test tests/evidence-contract.test.ts tests/evidence-search.test.ts"
+    "test:evidence": "node --import tsx --test tests/evidence-contract.test.ts tests/evidence-search.test.ts tests/evidence-hybrid.test.ts",
+    "index:evidence": "node --import tsx scripts/index-evidence.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
     "@next/swc-wasm-nodejs": "16.3.3",
     "@types/bcryptjs": "2.4.6",
     "@types/jsonwebtoken": "9.0.7",
