@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Discovery only; not runtime authorisation",
+  "sources": [
+    {
+      "accessMethod": "public page",
+      "caveat": "Page reports Variation No. 1 adopted 13 July 2026; read the variation before asserting its effects.",
+      "checkedOn": "2026-09-08",
+      "id": "wcc-plan",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "Wexford County Council",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "County Development Plan 2022–2028",
+      "url": "https://www.wexfordcoco.ie/planning/development-and-local-area-plans/current-plans/wexford-county-development-plan-2022-2028/wexford-county-development-plan-2022-2028"
+    },
+    {
+      "accessMethod": "public portal",
+      "caveat": "Portal discovery does not establish a bulk API or access to enforcement notices.",
+      "checkedOn": "2026-09-08",
+      "id": "wcc-planning",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "Wexford County Council",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Planning application search",
+      "url": "https://www.wexfordcoco.ie/planning/search-planning-applications"
+    },
+    {
+      "accessMethod": "public page",
+      "caveat": "Protected site crosses county boundaries. Boundary is not species occurrence or proof of impact.",
+      "checkedOn": "2026-09-08",
+      "id": "npws-slaney",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "NPWS",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Slaney River Valley SAC 000781",
+      "url": "https://www.npws.ie/protected-sites/sac/000781"
+    },
+    {
+      "accessMethod": "public page",
+      "caveat": "Boundary designation does not establish site condition or wrongdoing.",
+      "checkedOn": "2026-09-08",
+      "id": "npws-harbour",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "NPWS",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Wexford Harbour and Slobs SPA 004076",
+      "url": "https://www.npws.ie/protected-sites/spa/004076"
+    },
+    {
+      "accessMethod": "PDF",
+      "caveat": "May 2024 report based on data up to 2021. Catchment extent is not County Wexford.",
+      "checkedOn": "2026-09-08",
+      "id": "epa-slaney",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "EPA / Catchments.ie",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Slaney & Wexford Harbour catchment summary, Cycle 3",
+      "url": "https://catchments.ie/wp-content/files/catchmentassessments/12%20Slaney%20%26%20Wexford%20Harbour%20Catchment%20Summary%20WFD%20Cycle%203.pdf"
+    },
+    {
+      "accessMethod": "public page",
+      "caveat": "Operator project statement; planned dates do not establish actual construction or completion.",
+      "checkedOn": "2026-09-08",
+      "id": "ue-tagoat",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "Uisce Éireann",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Tagoat wastewater treatment network",
+      "url": "https://www.water.ie/projects/local-projects/tagoat-wastewater-treatment-network"
+    },
+    {
+      "accessMethod": "public page",
+      "caveat": "Page combines older masterplan schedules with newer investment vision. Separate components and dates.",
+      "checkedOn": "2026-09-08",
+      "id": "rosslare-plan",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "Rosslare Europort",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Masterplan",
+      "url": "https://www.rosslareeuroport.ie/en-ie/master-plan/"
+    },
+    {
+      "accessMethod": "public map portal",
+      "caveat": "ArcGIS link identified; API, layer rights and historical coverage not established.",
+      "checkedOn": "2026-09-08",
+      "id": "mara-map",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "MARA",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "MARA map",
+      "url": "https://www.maritimeregulator.ie/our-work/mara-geoportal/mara-map/"
+    },
+    {
+      "accessMethod": "public map portal",
+      "caveat": "Layer metadata, scenario, date and rights still require inspection.",
+      "checkedOn": "2026-09-08",
+      "id": "opw-flood",
+      "inspectionState": "DISCOVERED",
+      "prescribedAttribution": null,
+      "provider": "OPW",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Flood maps",
+      "url": "https://www.floodinfo.ie/map/floodmaps/?pf=t"
+    },
+    {
+      "accessMethod": "consultation page",
+      "caveat": "Verification challenge prevented reading. No substantive claims extracted.",
+      "checkedOn": "2026-09-08",
+      "id": "wcc-sfra",
+      "inspectionState": "RETRIEVAL_BLOCKED",
+      "prescribedAttribution": null,
+      "provider": "Wexford County Council",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Strategic Flood Risk Assessment",
+      "url": "https://consult.wexfordcoco.ie/ga/consultation/wexford-county-development-plan-2022-2028/chapter/volume-11-strategic-flood-risk-assessment"
+    }
+  ]
+}

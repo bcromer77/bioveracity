@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Staged summaries for source review; no production import",
+  "candidates": [
+    {
+      "id": "WX-C001",
+      "sourceId": "wcc-plan",
+      "statement": "The council plan page reports adoption of Variation No. 1 on 13 July 2026.",
+      "eventDate": "2026-07-13",
+      "datePrecision": "day",
+      "publicationDate": null,
+      "sourceLocator": "Plan page, Variation No. 1 notice",
+      "evidenceType": "OFFICIAL_STATEMENT",
+      "limitation": "The variation's substantive effects have not yet been reviewed.",
+      "reviewState": "AWAITING_REVIEW",
+      "checkedOn": "2026-09-08",
+      "runtimeImportAllowed": false
+    },
+    {
+      "id": "WX-C002",
+      "sourceId": "epa-slaney",
+      "statement": "The May 2024 catchment summary says it uses data up to 2021.",
+      "eventDate": null,
+      "datePrecision": "unknown",
+      "publicationDate": "2024-05",
+      "sourceLocator": "Introduction",
+      "evidenceType": "OFFICIAL_REPORT",
+      "limitation": "Do not present its assessments as live 2026 measurements.",
+      "reviewState": "AWAITING_REVIEW",
+      "checkedOn": "2026-09-08",
+      "runtimeImportAllowed": false
+    },
+    {
+      "id": "WX-C003",
+      "sourceId": "ue-tagoat",
+      "statement": "Uisce Éireann describes a €6.7 million Tagoat wastewater network upgrade.",
+      "eventDate": null,
+      "datePrecision": "unknown",
+      "publicationDate": null,
+      "sourceLocator": "Project overview",
+      "evidenceType": "OPERATOR_STATEMENT",
+      "limitation": "Reported project investment is not verified expenditure or a county investment budget.",
+      "reviewState": "AWAITING_REVIEW",
+      "checkedOn": "2026-09-08",
+      "runtimeImportAllowed": false
+    },
+    {
+      "id": "WX-C004",
+      "sourceId": "ue-tagoat",
+      "statement": "The planned network connection runs to Kilrane and onward through existing infrastructure to Rosslare wastewater treatment.",
+      "eventDate": null,
+      "datePrecision": "unknown",
+      "publicationDate": null,
+      "sourceLocator": "Project works and benefits",
+      "evidenceType": "OPERATOR_STATEMENT",
+      "limitation": "This describes planned dependency, not independently verified operational capacity.",
+      "reviewState": "AWAITING_REVIEW",
+      "checkedOn": "2026-09-08",
+      "runtimeImportAllowed": false
+    },
+    {
+      "id": "WX-C005",
+      "sourceId": "ue-tagoat",
+      "statement": "The project page gives spring 2027 as the expected completion period.",
+      "eventDate": null,
+      "datePrecision": "season",
+      "eventDateText": "spring 2027",
+      "publicationDate": null,
+      "sourceLocator": "Project programme",
+      "evidenceType": "OPERATOR_STATEMENT",
+      "limitation": "Forecast only; do not manufacture a day or mark completed.",
+      "reviewState": "AWAITING_REVIEW",
+      "checkedOn": "2026-09-08",
+      "runtimeImportAllowed": false
+    },
+    {
+      "id": "WX-C006",
+      "sourceId": "rosslare-plan",
+      "statement": "The port describes a €350 million planned investment package spanning several initiatives.",
+      "eventDate": null,
+      "datePrecision": "unknown",
+      "publicationDate": null,
+      "sourceLocator": "Investment vision section",
+      "evidenceType": "OPERATOR_STATEMENT",
+      "limitation": "Separate masterplan, digitisation, border facilities, road and offshore-renewables components; funding, approvals and delivery require individual review.",
+      "reviewState": "AWAITING_REVIEW",
+      "checkedOn": "2026-09-08",
+      "runtimeImportAllowed": false
+    }
+  ]
+}
