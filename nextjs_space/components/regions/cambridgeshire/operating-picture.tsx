@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { InvestigationPanel } from './investigation-panel'
+import { PlaceHistoryPanel } from './place-history-panel'
 import { ArrowLeft, Play, Pause, Search, Info } from 'lucide-react'
 import { getEvidenceDisplay } from '@/lib/evidence-taxonomy'
 
@@ -217,6 +218,7 @@ export function RegionalOperatingPicture({
   const [searchText, setSearchText] = useState('')
   const [searchNote, setSearchNote] = useState('')
   const [playing, setPlaying] = useState(false)
+  const [historyAnchorId, setHistoryAnchorId] = useState<string | null>(null)
 
   const context = CONTEXTS.find((c) => c.id === contextId) ?? CONTEXTS[0]
   const emphasisCategory = context.emphasis
@@ -269,6 +271,7 @@ export function RegionalOperatingPicture({
 
   const selectEvent = useCallback((e: OPEvent) => {
     setSelectedSlug(e.assetSlug)
+    setHistoryAnchorId(e.id)
     const t = Date.parse(e.date)
     if (!Number.isNaN(t)) setCursorTs(t)
     setPlaying(false)
@@ -472,6 +475,9 @@ export function RegionalOperatingPicture({
 
         {/* Chronology rail */}
         <aside className="flex w-full shrink-0 flex-col md:w-[42%] md:min-w-[290px] md:max-w-[440px] md:overflow-y-auto border-l border-white/10 bg-[#0a0f1a]">
+          <PlaceHistoryPanel records={chronology} slug={selectedSlug}
+            placeName={places.find(p => p.slug === selectedSlug)?.name ?? regionName}
+            anchorId={historyAnchorId} onAnchor={selectEvent} />
           {isCambridge && <InvestigationPanel records={chronology} selectedSlug={selectedSlug}
             placeName={places.find(p => p.slug === selectedSlug)?.name ?? 'Cambridge & Peterborough'}
             onChoose={cat => { setCategory(cat); setLookbackDays(null); setCursorTs(maxTs); setPlaying(false); setContextId('normal') }}
