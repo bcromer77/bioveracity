@@ -1,0 +1,18 @@
+{
+  "scope": "Pilot sources only; this does not activate a scheduler or cover all 413 councils",
+  "sources": [
+    {"id":"cambridge-council","authority_id":"uk:mysociety:CAB","publisher":"Cambridge City Council","jurisdiction":"England","enabled":true,
+      "allowed_hosts":["democracy.cambridge.gov.uk","www.cambridge.gov.uk"],
+      "seed_urls":["https://democracy.cambridge.gov.uk/ieListMeetings.aspx?CId=116","https://www.cambridge.gov.uk/media/vt3angkd/local-authority-climate-service-report.pdf"],
+      "follow_patterns":["ieListMeetings\\.aspx","ieListDocuments\\.aspx","/documents/","/media/.*\\.pdf"]},
+    {"id":"peterborough-council","authority_id":"uk:mysociety:PTE","publisher":"Peterborough City Council","jurisdiction":"England","enabled":true,
+      "allowed_hosts":["democracy.peterborough.gov.uk"],"seed_urls":["https://democracy.peterborough.gov.uk/ieListMeetings.aspx?CommitteeId=139"],
+      "follow_patterns":["ieListMeetings\\.aspx","ieListDocuments\\.aspx","/documents/"]},
+    {"id":"carlow-council","authority_id":"ie:bioveracity:carlow-county-council","publisher":"Carlow County Council","jurisdiction":"Republic of Ireland","enabled":true,
+      "allowed_hosts":["carlow.ie"],"seed_urls":["https://carlow.ie/ga/council-meetings"],
+      "follow_patterns":["council-meetings","/sites/.*\\.pdf"]},
+    {"id":"kilkenny-lcdc","authority_id":"ie:bioveracity:kilkenny-county-council","publisher":"Kilkenny County Council","jurisdiction":"Republic of Ireland","enabled":true,
+      "allowed_hosts":["kilkennycoco.ie"],"seed_urls":["https://kilkennycoco.ie/eng/your_council/lcdc/lcdc-kilkenny-meetings/"],
+      "follow_patterns":["/your_council/lcdc/.*\\.pdf","/your_council/lcdc/lcdc-kilkenny-meetings/"]}
+  ]
+}
