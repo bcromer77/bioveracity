@@ -24,9 +24,9 @@ async function main() {
       date: new Date('2025-07-27'),
       summary: 'The operator record and the community record describe the same period differently.',
       before: 'Anglian Water operates March Water Recycling Centre under environmental permit AN/AW1NF1063/015. Before summer 2025, the public operator record described routine treatment with no site-specific regulatory finding of a persistent odour problem.',
-      theChange: 'On 27 July 2025 Anglian Water paused lime-related waste treatment at the site, resuming on 22 September 2025. Over the same summer, March residents reported persistent severe odour and approximately 30-40 daily HGV/tanker movements.',
+      theChange: 'Anglian Water announced a pause scheduled for 27 July to 22 September 2025; actual cessation and restart are not established by the announcement. Over the same summer, March residents reported persistent severe odour and approximately 30-40 daily HGV/tanker movements.',
       theDifference: 'The operator record frames the period as a temporary, managed pause. The community record describes the period as one of sustained, unresolved odour. No verified odour-concentration or source-apportionment series has been supplied that would reconcile the two accounts, and no site-specific Environment Agency enforcement finding has been published for March.',
-      whatHappenedNext: 'Lime treatment resumed on 22 September 2025. At portfolio level, Ofwat concluded an investigation into Anglian Water in September 2025 with a £62.8M redress package, and the Environment Agency completed 1,500+ Anglian-area wastewater inspections across April 2025-March 2026 — neither is a site-specific finding for March.',
+      whatHappenedNext: 'The scheduled end of the pause was 22 September 2025; actual restart remains unconfirmed. At portfolio level, Ofwat concluded an investigation into Anglian Water in September 2025 with a £62.8M redress package, and the Environment Agency completed 1,500+ Anglian-area wastewater inspections across April 2025-March 2026 — neither is a site-specific finding for March.',
       status: 'unresolved',
       sourceDomain: 'marchtowncouncil.gov.uk',
     },
@@ -85,7 +85,7 @@ async function main() {
   // Tag relevant existing events with changeType so the timeline reflects material
   // changes and divergence points. updateMany is idempotent.
   const changeTag: { assetSlug: string; title: string; changeType: string }[] = [
-    { assetSlug: 'march-wrc', title: 'Anglian Water pauses lime-related waste treatment', changeType: 'material_change' },
+    { assetSlug: 'march-wrc', title: 'Scheduled start of announced lime-treatment pause', changeType: 'material_change' },
     { assetSlug: 'march-wrc', title: 'Residents report persistent severe odour and 30-40 daily HGV movements', changeType: 'divergence' },
     { assetSlug: 'milton-wrc', title: 'Relocation development consent granted', changeType: 'material_change' },
     { assetSlug: 'milton-wrc', title: 'Relocation cancelled after HIF funding withdrawn', changeType: 'divergence' },

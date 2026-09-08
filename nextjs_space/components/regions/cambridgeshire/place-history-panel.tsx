@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { StationRainfallPanel } from './station-rainfall-panel'
 import { exactHistoryDay, groupPlaceHistory, historyDateLabel, historySourceUrl } from '@/lib/place-history'
 import { getEvidenceDisplay } from '@/lib/evidence-taxonomy'
 import type { OPEvent } from './operating-picture'
@@ -41,7 +43,9 @@ export function PlaceHistoryPanel({ records, slug, placeName, anchorId, onAnchor
           </li> })}
         </ul>
         {!grouped[phase].length && <p className="mt-3">No loaded records in this group. This does not establish that nothing happened.</p>}
-        <p className="mt-2 text-[11px] text-slate-400">{grouped.outside} dated records outside this window. Rainfall totals, river readings and comparisons with earlier incidents have not been assembled by this panel.</p>
+        <p className="mt-2 text-[11px] text-slate-400">{grouped.outside} dated records outside this window. River readings and comparisons with earlier incidents are not connected. Station rainfall can be explored separately for supported places.</p>
+        {slug === 'march-wrc' && <Link className="mt-3 block text-amber-200 underline" href="/regions/cambridgeshire-peterborough/cases/march-liming-2025">Read the sourced March case brief</Link>}
+        {['march-wrc', 'river-cam', 'milton-wrc'].includes(slug) && <StationRainfallPanel key={`${slug}:${anchor.date}`} date={anchor.date.slice(0, 10)} defaultStation={slug === 'march-wrc' ? 'chatteris' : slug === 'milton-wrc' ? 'uttons-drove' : 'fleam-dyke'} />}
       </>}
     </>}
   </section>
