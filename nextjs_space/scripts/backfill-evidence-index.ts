@@ -15,7 +15,7 @@ import 'dotenv/config'
  */
 import { indexEvidence } from '../lib/evidence-index'
 import { embeddingConfig } from '../lib/evidence-embeddings'
-import { prisma } from '../lib/prisma'
+import { disconnectEvidenceDb } from '../lib/evidence-db'
 
 const MAX_RUNTIME_MS = parseInt(process.env.BACKFILL_MAX_RUNTIME_MS || '300000', 10)
 const MAX_CLAIMS    = parseInt(process.env.BACKFILL_MAX_CLAIMS   || '5000', 10)
@@ -74,4 +74,4 @@ async function main() {
 main().catch(err => {
   console.error('Backfill failed:', err instanceof Error ? err.message : 'unknown')
   process.exitCode = 1
-}).finally(() => prisma.$disconnect())
+}).finally(() => disconnectEvidenceDb())

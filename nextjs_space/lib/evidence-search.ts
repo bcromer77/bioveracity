@@ -1,6 +1,6 @@
 import type { Session } from 'next-auth'
 import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
+import { evidenceDb } from '@/lib/evidence-db'
 import { requireRegistered } from '@/lib/access'
 import { evidenceEnabled } from '@/lib/evidence-http'
 import { embedTexts, embeddingConfig, validVector } from '@/lib/evidence-embeddings'
@@ -31,7 +31,7 @@ export async function searchReviewedEvidence(session: Session | null, params: Ev
   let vector: number[]
   try {
     // Persistent per-account quota works across app processes; no queries are stored.
-    const quota = await prisma.$queryRaw<{ requests: number }[]>`
+    const quota = await evidenceDb().$queryRaw<{ requests: number }[]>`
       INSERT INTO "EvidenceSearchQuota" ("userId", "window", requests)
       VALUES (${session.user.id}, date_trunc('minute', CURRENT_TIMESTAMP), 1)
       ON CONFLICT ("userId") DO UPDATE SET
@@ -65,7 +65,7 @@ function chronological(hits: EvidenceHit[], sort: string) {
 export async function retrieveHybrid(q: string, authority: string, from: string, to: string, space: string, queryVector: number[]) {
   validateSearchFilters(q, authority, from, to)
   const vector = JSON.stringify(validVector(queryVector))
-  const rows = await prisma.$queryRaw<{ hits: any[]; indexed: number; eligible: number }[]>(Prisma.sql`
+  const rows = await evidenceDb().$queryRaw<{ hits: any[]; indexed: number; eligible: number }[]>(Prisma.sql`
     WITH current_documents AS (
       SELECT DISTINCT ON ("documentKey") * FROM "EvidenceDocument"
       ORDER BY "documentKey", "observedAt" DESC, id DESC

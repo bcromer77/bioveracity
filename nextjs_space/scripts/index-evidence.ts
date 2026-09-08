@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { indexEvidence } from '../lib/evidence-index'
 import { embeddingConfig } from '../lib/evidence-embeddings'
-import { prisma } from '../lib/prisma'
+import { evidenceDb, disconnectEvidenceDb } from '../lib/evidence-db'
 
 // ── Configuration semantics ──────────────────────────────────────────
 // 1. BIOVERACITY_VECTOR_ENABLED !== 'true'  → intentionally disabled → clean skip (exit 0)
@@ -14,7 +14,7 @@ const MAX_CLAIMS    = parseInt(process.env.INDEX_MAX_CLAIMS   || '200', 10)     
 const BATCH_SIZE    = 16                                                          // per-batch cap (embed API limit)
 
 async function backlogCount(space: string): Promise<number> {
-  const rows = await prisma.$queryRaw<{ count: number }[]>`
+  const rows = await evidenceDb().$queryRaw<{ count: number }[]>`
     WITH current_documents AS (
       SELECT DISTINCT ON ("documentKey") * FROM "EvidenceDocument"
       ORDER BY "documentKey", "observedAt" DESC, id DESC
@@ -120,4 +120,4 @@ async function main() {
 main().catch((err) => {
   console.error('Evidence indexing failed:', err instanceof Error ? err.message : 'unknown')
   process.exitCode = 1
-}).finally(() => prisma.$disconnect())
+}).finally(() => disconnectEvidenceDb())

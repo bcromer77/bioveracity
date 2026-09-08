@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
+import { evidenceDb } from '@/lib/evidence-db'
 import { embedTexts, embeddingConfig } from '@/lib/evidence-embeddings'
 
 // Repeated bounded runs automatically pick up newly reviewed claims and corrections.
@@ -8,7 +8,7 @@ export async function indexEvidence(limit = 16) {
   const config = embeddingConfig()
   if (!config) throw new Error('Vector indexing is not configured')
   if (!Number.isInteger(limit) || limit < 1 || limit > 16) throw new Error('Batch limit must be 1–16')
-  return prisma.$transaction(async tx => {
+  return evidenceDb().$transaction(async tx => {
     const locks = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(hashtext('bioveracity-evidence-index')) AS locked`
     if (!locks[0]?.locked) return { indexed: 0, busy: true }
     const rows = await tx.$queryRaw<{ id: string; claim: string; excerpt: string }[]>(Prisma.sql`
