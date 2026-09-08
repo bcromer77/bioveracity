@@ -29,20 +29,24 @@ export async function resolveAsset(hints: ResolveHints): Promise<string | null> 
   const identifierValues: string[] = []
   if (hints.officialIdentifier?.trim()) identifierValues.push(hints.officialIdentifier.trim())
   for (const v of hints.identifiers ?? []) if (v?.trim()) identifierValues.push(v.trim())
-  for (const value of identifierValues) {
-    const byId = await prisma.assetIdentifier.findFirst({ where: { value }, select: { assetId: true } })
-    if (byId) return byId.assetId
+  if (identifierValues.length) {
+    const matches = await prisma.assetIdentifier.findMany({ where: { value: { in: identifierValues }, verified: true }, select: { assetId: true } })
+    const assets = [...new Set(matches.map(row => row.assetId))]
+    // Conflicting authorities/namespaces or unknown supplied identifiers need review.
+    return assets.length === 1 ? assets[0] : null
   }
 
   // 2. Exact canonical name (case-insensitive equality; no fuzzy contains, so a
   //    similarly-named but different place is never wrongly bound).
   const name = hints.name?.trim()
   if (name) {
-    const byName = await prisma.asset.findFirst({
+    const byName = await prisma.asset.findMany({
       where: { name: { equals: name, mode: 'insensitive' } },
       select: { id: true },
+      take: 2,
     })
-    if (byName) return byName.id
+    if (byName.length > 1) return null
+    if (byName.length === 1) return byName[0].id
   }
 
   // 3. Verified alias — match the deterministically-normalised alias form
@@ -51,11 +55,13 @@ export async function resolveAsset(hints: ResolveHints): Promise<string | null> 
   if (name) aliasCandidates.push(name)
   for (const a of hints.aliases ?? []) if (a?.trim()) aliasCandidates.push(a.trim())
   for (const a of aliasCandidates) {
-    const byAlias = await prisma.assetAlias.findFirst({
-      where: { aliasNormalized: normalizeAlias(a) },
+    const byAlias = await prisma.assetAlias.findMany({
+      where: { aliasNormalized: normalizeAlias(a), verificationState: 'VERIFIED' },
       select: { assetId: true },
     })
-    if (byAlias) return byAlias.assetId
+    const assets = [...new Set(byAlias.map(row => row.assetId))]
+    if (assets.length > 1) return null
+    if (assets.length === 1) return assets[0]
   }
 
   // 4. Exact slug.
