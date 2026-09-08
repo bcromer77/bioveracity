@@ -1,10 +1,11 @@
 import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
-import { validateEvidence, validateReview } from '@/lib/evidence-contract'
+import { evidenceDb } from '@/lib/evidence-db'
+import { validateEvidence, validateReview, classifyOnIngest } from '@/lib/evidence-contract'
+import { scanForSensitiveContent } from '@/lib/evidence-sensitivity'
 
 export async function receiveEvidence(input: unknown) {
   const record = validateEvidence(input)
-  return prisma.$transaction(async tx => {
+  return evidenceDb().$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${record.documentKey}))`
     const old = await tx.evidenceDocument.findUnique({ where: { versionHash: record.versionHash } })
     if (old) {
@@ -13,19 +14,46 @@ export async function receiveEvidence(input: unknown) {
       return { id: old.id, duplicate: true, status: old.status }
     }
     const c = record.content
+
+    // Control #7: screen the actual content (passages, locators, links, title),
+    // not just any incoming label. Precise-locality signals force RESTRICTED.
+    const scan = scanForSensitiveContent({ sections: c.sections, links: [c.url], text: [c.title] })
+
+    // Control #4 (no silent downgrade): if any existing version of this document
+    // is already restricted, a later import can never relax it.
+    const priorRestricted = await tx.evidenceDocument.findFirst({
+      where: { documentKey: record.documentKey, sensitivity: 'RESTRICTED' }, select: { id: true },
+    })
+
+    // Control #5: without resolved acquisition permission, retain only a minimal
+    // catalogue reference rather than ingesting the underlying dataset content.
+    const catalogueOnly = record.acquisitionPermitted !== true
+    const classification = classifyOnIngest({
+      contentSensitive: scan.sensitive,
+      inheritedRestricted: Boolean(priorRestricted),
+      catalogueOnly,
+    })
+    const storedSections = catalogueOnly
+      ? [{ locator: 'catalogue-reference', text: `Catalogue reference only. Underlying dataset not retained pending acquisition permission. Source: ${c.url}` }]
+      : c.sections
+
     const created = await tx.evidenceDocument.create({ data: {
       documentKey: record.documentKey, versionHash: record.versionHash, observedAt: record.observedAt,
       url: c.url, title: c.title, publisher: c.publisher, authorityId: c.authority_id,
       jurisdiction: c.jurisdiction, eventDate: c.event_date, eventPrecision: c.event_date_precision,
-      publicationDate: c.publication_date, contentKind: c.content_kind, sections: c.sections,
+      publicationDate: c.publication_date, contentKind: c.content_kind, sections: storedSections,
       status: 'PENDING_REVIEW',
+      sensitivity: classification.sensitivity,
+      reusePermission: classification.reusePermission,
+      incomingSensitivity: record.incomingSensitivity,
+      catalogueOnly,
     } })
-    return { id: created.id, duplicate: false, status: created.status }
+    return { id: created.id, duplicate: false, status: created.status, sensitivity: created.sensitivity, catalogueOnly }
   })
 }
 
 export async function reviewEvidence(id: string, input: unknown, reviewer: string) {
-  return prisma.$transaction(async tx => {
+  return evidenceDb().$transaction(async tx => {
     const found = await tx.evidenceDocument.findUniqueOrThrow({ where: { id } })
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${found.documentKey}))`
     const latest = await tx.evidenceDocument.findFirst({ where: { documentKey: found.documentKey }, orderBy: [{ observedAt: 'desc' }, { id: 'desc' }] })
@@ -45,7 +73,7 @@ export type EvidenceHit = {
 }
 export async function withdrawEvidence(id: string, reviewer: string, reason: string) {
   if (reason.trim().length < 30 || reason.length > 2000) throw new Error('Substantive withdrawal reason required')
-  return prisma.$transaction(async tx => {
+  return evidenceDb().$transaction(async tx => {
     const found = await tx.evidenceDocument.findUniqueOrThrow({ where: { id } })
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${found.documentKey}))`
     await tx.evidenceReview.create({ data: { documentId: id, reviewer, claim: 'Claim withdrawn', excerpt: '', locator: '', basis: reason, evidenceType: 'withdrawal' } })
@@ -66,7 +94,7 @@ export function validateSearchFilters(q: string, authority = '', from = '', to =
 async function keywordEvidence(q: string, authority: string, from: string, to: string): Promise<EvidenceHit[]> {
   // Current-version choice precedes verification and keyword filters: a changed,
   // unreviewed source must hide its older verified version from current results.
-  return prisma.$queryRaw<EvidenceHit[]>(Prisma.sql`
+  return evidenceDb().$queryRaw<EvidenceHit[]>(Prisma.sql`
     WITH current_documents AS (
       SELECT DISTINCT ON ("documentKey") * FROM "EvidenceDocument"
       ORDER BY "documentKey", "observedAt" DESC, id DESC
