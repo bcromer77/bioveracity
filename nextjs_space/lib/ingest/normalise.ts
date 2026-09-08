@@ -13,6 +13,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { pickStr, pickNum, pickInt, pickDate } from '@/lib/ingest/schema-2-1'
+import { parseEvidenceDate } from '@/lib/evidence-contract'
 
 // The canonical tables the engine can target.
 export type NormalisationTarget =
@@ -94,16 +95,12 @@ function hostOf(url: string | null): string | null {
   }
 }
 
-// Best-effort record date without fabricating precision: publication timestamp
-// first, then retrieval, then an explicit date field on the raw observation.
+// Preserve only explicit event dates; publication/retrieval are separate facts.
 function recordDate(c: Candidate, o: Record<string, any>): Date | null {
-  return (
-    pickDate(o, 'event_date', 'eventDate', 'date') ??
-    c.publishedAt ??
-    pickDate(o, 'publication_timestamp', 'published_at') ??
-    c.retrievedAt ??
-    null
-  )
+  const d = parseEvidenceDate(o.event_date ?? o.eventDate ?? o.date, o.event_date_precision ?? o.datePrecision)
+  if (!d.value) return null
+  const padded = d.precision === 'year' ? `${d.value}-01-01` : d.precision === 'month' ? `${d.value}-01` : d.value
+  return new Date(`${padded}T00:00:00Z`)
 }
 
 // Derive the canonical shape for a verified candidate. Pure — writes nothing.
@@ -132,7 +129,15 @@ export function computeNormalisation(c: Candidate): NormalisationPlan {
     }
   }
 
-  const date = recordDate(c, o)
+  let date: Date | null
+  let precision: string
+  try {
+    date = recordDate(c, o)
+    precision = parseEvidenceDate(o.event_date ?? o.eventDate ?? o.date, o.event_date_precision ?? o.datePrecision).precision
+  } catch { return { ok: false, reason: 'Event date is invalid or its precision is inconsistent. Review required.' } }
+  if (date && precision !== 'day' && target !== 'Event') {
+    return { ok: false, reason: `${target} cannot currently represent ${precision}-only event dates honestly. Retain for review.` }
+  }
   const dateIso = date ? date.toISOString() : null
 
   switch (target) {
@@ -151,7 +156,7 @@ export function computeNormalisation(c: Candidate): NormalisationPlan {
           value,
           sourceUrl: c.sourceUrl,
           verified: true,
-          validFrom: dateIso,
+          validFrom: pickDate(o, 'valid_from', 'validFrom'),
         },
       }
     }
@@ -306,6 +311,7 @@ export function computeNormalisation(c: Candidate): NormalisationPlan {
           description: c.description,
           date: dateIso,
           eventType: pickStr(o, 'event_type', 'eventType') ?? 'environmental',
+          datePrecision: precision,
           evidenceClass: pickStr(o, 'evidence_class', 'evidenceClass') ?? 'R',
           sourceUrl: c.sourceUrl,
           sourceDomain: hostOf(c.sourceUrl),

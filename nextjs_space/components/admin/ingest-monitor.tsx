@@ -83,6 +83,11 @@ export function IngestMonitor({ tiles, rows }: { tiles: Tile[]; rows: Row[] }) {
   async function runAction(candidateId: string, action: 'verify' | 'reject' | 'normalise' | 'publish') {
     setActionError(null)
     let reason: string | undefined
+    if (action === 'verify') {
+      const input = window.prompt('After checking the original source, explain how the retained source_excerpt and source_locator support this claim (at least 30 characters):')
+      if (!input || input.trim().length < 30) { setActionError('A substantive source-review explanation is required.'); return }
+      reason = input.trim()
+    }
     if (action === 'reject') {
       const input = window.prompt('Reason for rejecting this candidate (optional):') ?? undefined
       reason = input

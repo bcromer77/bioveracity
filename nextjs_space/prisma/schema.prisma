@@ -1,12 +1,52 @@
 generator client {
     provider = "prisma-client-js"
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output = "/home/ubuntu/bioveracity/nextjs_space/node_modules/.prisma/client"
+    output = "../node_modules/.prisma/client"
 }
 
 datasource db {
     provider = "postgresql"
     url      = env("DATABASE_URL")
+}
+
+// Additive evidence pipeline. Source content is private; only reviewed claims
+// are exposed through the institutional search route.
+model EvidenceDocument {
+  id              String   @id @default(cuid())
+  documentKey     String
+  versionHash     String   @unique
+  observedAt      DateTime
+  createdAt       DateTime @default(now())
+  url             String
+  title           String
+  publisher       String
+  authorityId     String
+  jurisdiction    String
+  eventDate       String?
+  eventPrecision  String
+  publicationDate String?
+  contentKind     String
+  sections        Json
+  status          String   @default("PENDING_REVIEW")
+  activeReviewId  String?
+  reviews         EvidenceReview[]
+
+  @@index([documentKey, observedAt])
+  @@index([authorityId])
+}
+
+model EvidenceReview {
+  id           String   @id @default(cuid())
+  documentId   String
+  document     EvidenceDocument @relation(fields: [documentId], references: [id])
+  reviewer     String
+  claim        String
+  excerpt      String
+  locator      String
+  basis        String
+  evidenceType String
+  createdAt    DateTime @default(now())
+  @@index([documentId])
 }
 
 model User {
