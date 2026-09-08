@@ -96,16 +96,19 @@ function buildIcon(p: OPPoint, selected: boolean, dimmed: boolean, active: boole
   })
 }
 
-function FitBounds({ points }: { points: OPPoint[] }) {
+function FitBounds({ points, selectedSlug }: { points: OPPoint[]; selectedSlug: string | null }) {
   const map = useMap()
   useEffect(() => {
-    if (points.length > 1) {
+    const selected = points.find(p => p.slug === selectedSlug)
+    if (selected) {
+      map.setView([selected.lat, selected.lng], selected.indicative ? 12 : 14)
+    } else if (points.length > 1) {
       const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]))
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 11 })
     } else if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 11)
     }
-  }, [points, map])
+  }, [points, selectedSlug, map])
   return null
 }
 
@@ -164,7 +167,7 @@ export default function OperatingMapInner({
       </LayersControl>
       <TileLayer attribution='Labels &copy; Esri' url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" maxZoom={18} />
 
-      <FitBounds points={points} />
+      <FitBounds points={points} selectedSlug={selectedSlug} />
 
       {/* Source-backed relationships only. */}
       {edges.map((e, i) => {
