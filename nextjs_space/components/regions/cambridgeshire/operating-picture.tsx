@@ -66,11 +66,11 @@ const CONTEXTS: {
   emphasis: string | null
   blurb: string
 }[] = [
-  { id: 'normal', label: 'Normal', lookbackDays: null, emphasis: null, blurb: 'The full evidence record for the region.' },
-  { id: 'watch', label: 'Watch', lookbackDays: 90, emphasis: null, blurb: 'Activity across the most recent 90 days of the record.' },
-  { id: 'stress', label: 'Stress', lookbackDays: 30, emphasis: 'operations', blurb: 'A tighter 30-day window, weighted to operational evidence.' },
-  { id: 'incident', label: 'Incident', lookbackDays: 3, emphasis: null, blurb: 'The 72 hours around the latest evidence — rewind an event.' },
-  { id: 'recovery', label: 'Recovery', lookbackDays: 180, emphasis: null, blurb: 'The longer arc after an event, to follow what changed.' },
+  { id: 'normal', label: 'All records', lookbackDays: null, emphasis: null, blurb: 'The full evidence record for the region.' },
+  { id: 'watch', label: '90 days', lookbackDays: 90, emphasis: null, blurb: 'Activity across the most recent 90 days of the record.' },
+  { id: 'stress', label: 'Operations', lookbackDays: 30, emphasis: 'operations', blurb: 'A tighter 30-day window, filtered to operational evidence.' },
+  { id: 'incident', label: '3 days', lookbackDays: 3, emphasis: null, blurb: 'The 72 hours around the latest evidence — rewind an event.' },
+  { id: 'recovery', label: '180 days', lookbackDays: 180, emphasis: null, blurb: 'The longer arc after an event, to follow what changed.' },
 ]
 
 const CATEGORIES: { id: string; label: string }[] = [
@@ -358,7 +358,7 @@ export function RegionalOperatingPicture({
           <div className="leading-tight">
             <div className="text-[13px] font-semibold tracking-[0.18em] text-slate-100">BIOVERACITY</div>
             <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">
-              Regional Environmental State
+              Places and evidence
             </div>
           </div>
         </div>
@@ -426,15 +426,19 @@ export function RegionalOperatingPicture({
                 <input
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  placeholder='Ask in plain language — e.g. "community reports in the last 90 days"'
+                  placeholder='Filter timeline — e.g. "community reports in the last 90 days"'
                   className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
                 />
                 <button
                   type="submit"
                   className="shrink-0 rounded-md bg-[#E9AD20] px-2.5 py-1 text-[11px] font-semibold text-[#0b1220] transition hover:brightness-110"
                 >
-                  Search
+                  Apply
                 </button>
+              </div>
+              <div className="mt-1 flex justify-between gap-3 px-1 text-[11px] text-slate-300">
+                <span>Topic and time filters · windows end at the latest stored record</span>
+                <Link className="shrink-0 underline" href={`/evidence?q=${encodeURIComponent(selectedSlug ? places.find(p => p.slug === selectedSlug)?.name ?? searchText : searchText || 'River Cam')}`}>Search reviewed sources</Link>
               </div>
               {searchNote && (
                 <div className="mt-1 px-1 text-[11px] text-slate-400">{searchNote}</div>
@@ -451,7 +455,7 @@ export function RegionalOperatingPicture({
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#4ade80' }} />
-                Verified
+                Reviewed record
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#cbd5e1' }} />

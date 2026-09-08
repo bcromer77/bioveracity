@@ -1,3 +1,4 @@
+import { evidenceEligibility } from '@/lib/evidence-eligibility'
 import { Prisma } from '@prisma/client'
 import { evidenceDb } from '@/lib/evidence-db'
 import { validateEvidence, validateReview, classifyOnIngest } from '@/lib/evidence-contract'
@@ -9,8 +10,12 @@ export async function receiveEvidence(input: unknown) {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${record.documentKey}))`
     const old = await tx.evidenceDocument.findUnique({ where: { versionHash: record.versionHash } })
     if (old) {
-      // A retry cannot erase an audit trail or move observation time backwards.
-      if (record.observedAt > old.observedAt) await tx.evidenceDocument.update({ where: { id: old.id }, data: { observedAt: record.observedAt } })
+      // Do not promote an older content version by changing its ordering timestamp.
+      // New access warnings apply even when the underlying passage is unchanged.
+      if (record.incomingSensitivity) await tx.evidenceDocument.update({
+        where: { id: old.id },
+        data: { incomingSensitivity: record.incomingSensitivity, sensitivity: 'RESTRICTED', reusePermission: 'PROHIBITED' },
+      })
       return { id: old.id, duplicate: true, status: old.status }
     }
     const c = record.content
@@ -29,7 +34,7 @@ export async function receiveEvidence(input: unknown) {
     // catalogue reference rather than ingesting the underlying dataset content.
     const catalogueOnly = record.acquisitionPermitted !== true
     const classification = classifyOnIngest({
-      contentSensitive: scan.sensitive,
+      contentSensitive: scan.sensitive || Boolean(record.incomingSensitivity),
       inheritedRestricted: Boolean(priorRestricted),
       catalogueOnly,
     })
@@ -69,6 +74,7 @@ export type EvidenceHit = {
   id: string; title: string; url: string; publisher: string; authorityId: string; jurisdiction: string;
   eventDate: string | null; eventPrecision: string; publicationDate: string | null;
   observedAt: Date; claim: string; excerpt: string; locator: string; evidenceType: string; checkedAt: Date;
+  licence: string; attribution: string;
   matchType?: 'keyword' | 'meaning' | 'both';
 }
 export async function withdrawEvidence(id: string, reviewer: string, reason: string) {
@@ -101,9 +107,11 @@ async function keywordEvidence(q: string, authority: string, from: string, to: s
     )
     SELECT d.id, d.title, d.url, d.publisher, d."authorityId", d.jurisdiction,
       d."eventDate", d."eventPrecision", d."publicationDate", d."observedAt",
-      r.claim, r.excerpt, r.locator, r."evidenceType", r."createdAt" AS "checkedAt"
+      r.claim, r.excerpt, r.locator, r."evidenceType", r."createdAt" AS "checkedAt",
+      s.licence, s."requiredAttribution" AS attribution
     FROM current_documents d JOIN "EvidenceReview" r ON r.id = d."activeReviewId" AND r."documentId" = d.id
-    WHERE d.status = 'VERIFIED'
+    JOIN "EvidenceSourceRegister" s ON s.id = d."sourceRegisterId"
+    WHERE ${evidenceEligibility('display')}
       AND (${authority} = '' OR d."authorityId" = ${authority})
       AND (${from} = '' OR (d."eventPrecision" = 'day' AND d."eventDate" >= ${from}))
       AND (${to} = '' OR (d."eventPrecision" = 'day' AND d."eventDate" <= ${to}))

@@ -5,7 +5,8 @@ import { evidenceEnabled } from '@/lib/evidence-http'
 import { searchReviewedEvidence, type EvidenceQuery, type SearchOutcome } from '@/lib/evidence-search'
 import { SearchStatus } from '@/components/search/search-status'
 import { EvidenceResults } from '@/components/search/evidence-results'
-import { prisma } from '@/lib/prisma'
+import { evidenceDb } from '@/lib/evidence-db'
+import { evidenceEligibility } from '@/lib/evidence-eligibility'
 export const dynamic = 'force-dynamic'
 
 export default async function EvidencePage({ searchParams }: { searchParams: Promise<EvidenceQuery> }) {
@@ -17,11 +18,11 @@ export default async function EvidencePage({ searchParams }: { searchParams: Pro
   let councils: { authorityId: string; publisher: string }[] = []
   try {
     result = await searchReviewedEvidence(session, p)
-    councils = await prisma.$queryRaw`WITH current_documents AS (
+    councils = await evidenceDb().$queryRaw`WITH current_documents AS (
       SELECT DISTINCT ON ("documentKey") * FROM "EvidenceDocument" ORDER BY "documentKey", "observedAt" DESC, id DESC
     ) SELECT DISTINCT d."authorityId", d.publisher FROM current_documents d
       JOIN "EvidenceReview" r ON r.id = d."activeReviewId" AND r."documentId" = d.id
-      WHERE d.status = 'VERIFIED' ORDER BY d.publisher LIMIT 1000`
+      WHERE ${evidenceEligibility('display')} ORDER BY d.publisher LIMIT 1000`
   } catch { failed = true }
   return <main className="mx-auto max-w-5xl space-y-6 px-5 py-10">
     <Link href="/search" className="text-sm underline">Places</Link>
@@ -29,7 +30,7 @@ export default async function EvidencePage({ searchParams }: { searchParams: Pro
       <p className="mt-2 text-muted-foreground">Explore environmental questions across places and time. Read the checked claims and source passages behind each result.</p></header>
     <form className="grid gap-3 rounded-xl border p-4 md:grid-cols-2">
       <label className="md:col-span-2">Search<input name="q" defaultValue={p.q} maxLength={300} placeholder="Flooding, river quality, planning decisions…" className="mt-1 w-full rounded border p-3" /></label>
-      <label className="md:col-span-2">Council<select name="authority" defaultValue={p.authority ?? ''} className="mt-1 w-full rounded border p-2"><option value="">All councils in the reviewed collection</option>{councils.map(c => <option key={c.authorityId} value={c.authorityId}>{c.publisher}</option>)}</select></label>
+      <label className="md:col-span-2">Source organisation<select name="authority" defaultValue={p.authority ?? ''} className="mt-1 w-full rounded border p-2"><option value="">All source organisations in the reviewed collection</option>{councils.map(c => <option key={c.authorityId} value={c.authorityId}>{c.publisher}</option>)}</select></label>
       <label>Event from<input type="date" name="from" defaultValue={p.from} className="mt-1 block w-full rounded border p-2" /></label>
       <label>Event to<input type="date" name="to" defaultValue={p.to} className="mt-1 block w-full rounded border p-2" /></label>
       <label>Match<select name="mode" defaultValue={p.mode ?? 'hybrid'} className="mt-1 block w-full rounded border p-2"><option value="hybrid">Meaning and keywords</option><option value="keyword">Keywords only</option></select></label>
