@@ -1,0 +1,50 @@
+[
+  {
+    "council_id": "uk:mysociety:CAB",
+    "source_kind": "meeting_index",
+    "url": "https://democracy.cambridge.gov.uk/ieListMeetings.aspx?CId=116",
+    "retrieval_status": "page_reviewed",
+    "scope": "Full council only; other committees not yet inventoried",
+    "platform_hint": "ModernGov",
+    "checked_on": "2026-09-08",
+    "adapter_status": "not_implemented",
+    "reuse_status": "not_reviewed",
+    "last_successful_ingestion": null
+  },
+  {
+    "council_id": "uk:mysociety:PTE",
+    "source_kind": "meeting_index",
+    "url": "https://democracy.peterborough.gov.uk/ieListMeetings.aspx?CommitteeId=139",
+    "retrieval_status": "fetch_failed_403",
+    "scope": "Search result located; supporting page fetch failed",
+    "platform_hint": "ModernGov",
+    "checked_on": "2026-09-08",
+    "adapter_status": "not_implemented",
+    "reuse_status": "not_reviewed",
+    "last_successful_ingestion": null
+  },
+  {
+    "council_id": "ie:bioveracity:carlow-county-council",
+    "source_kind": "meeting_index",
+    "url": "https://carlow.ie/ga/council-meetings",
+    "retrieval_status": "page_reviewed",
+    "scope": "County and municipal district meetings; linked PDFs not yet extracted",
+    "platform_hint": null,
+    "checked_on": "2026-09-08",
+    "adapter_status": "not_implemented",
+    "reuse_status": "not_reviewed",
+    "last_successful_ingestion": null
+  },
+  {
+    "council_id": "ie:bioveracity:kilkenny-county-council",
+    "source_kind": "meeting_index",
+    "url": "https://kilkennycoco.ie/eng/your_council/lcdc/lcdc-kilkenny-meetings/",
+    "retrieval_status": "page_reviewed",
+    "scope": "LCDC only; not full council coverage",
+    "platform_hint": null,
+    "checked_on": "2026-09-08",
+    "adapter_status": "not_implemented",
+    "reuse_status": "not_reviewed",
+    "last_successful_ingestion": null
+  }
+]

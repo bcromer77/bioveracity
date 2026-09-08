@@ -1,0 +1,18 @@
+{
+  "snapshot_date": "2026-09-08",
+  "uk": {
+    "url": "https://github.com/mysociety/uk_local_authority_names_and_codes/blob/main/data/uk_local_authorities.csv",
+    "blob_sha": "2d9f90795c7d51f37bab7a24095309a06203e0f3",
+    "retrieved_on": "2026-09-08",
+    "license": "MIT; see MYSOCIETY-LICENSE.txt",
+    "note": "Community-maintained identity crosswalk, not a legal register. Source dates retained as reported; entity-by-entity current legal status not independently certified."
+  },
+  "ireland": {
+    "url": "https://www.cso.ie/en/releasesandpublications/ep/p-rpbi/registerofpublicsectorbodies2024-final/localgovernment/",
+    "locator": "Table 4.1 Local Authorities",
+    "retrieved_on": "2026-09-08",
+    "note": "Names transcribed from CSO Table 4.1; no national identity code inferred."
+  },
+  "scope": "Principal councils; UK combined/strategic authorities separate. Parish, town/community councils, Irish municipal districts, national parks and other joint bodies are expansion work, not claimed covered.",
+  "coverage": "Directory baseline only. No council documents ingested or recurring collectors activated."
+}
