@@ -10,7 +10,7 @@ datasource db {
 }
 
 // Additive evidence pipeline. Source content is private; only reviewed claims
-// are exposed through the institutional search route.
+// are exposed to registered users through evidence search.
 model EvidenceDocument {
   id              String   @id @default(cuid())
   documentKey     String
@@ -46,7 +46,23 @@ model EvidenceReview {
   basis        String
   evidenceType String
   createdAt    DateTime @default(now())
+  embeddings   EvidenceEmbedding[]
   @@index([documentId])
+}
+
+model EvidenceEmbedding {
+  reviewId  String
+  review    EvidenceReview @relation(fields: [reviewId], references: [id])
+  space     String
+  embedding Unsupported("vector(1536)")
+  createdAt DateTime @default(now())
+  @@id([reviewId, space])
+}
+
+model EvidenceSearchQuota {
+  userId   String @id
+  window   DateTime
+  requests Int
 }
 
 model User {
