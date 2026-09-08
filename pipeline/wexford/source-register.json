@@ -172,15 +172,15 @@
     },
     {
       "accessMethod": "public map portal",
-      "caveat": "Layer metadata, scenario, date and rights still require inspection.",
+      "caveat": "Licence inspected 2026-09-08: OPW flood-map / CFRAM layers are re-usable for NON-COMMERCIAL purposes only, EXCEPT the ICWWS 2018 and Galway CWWS 2020 layers which are CC BY 4.0. This is a commercial-reuse blocker for the general flood layers. Layer metadata, AEP scenario, climate scenario and defence assumptions still require per-layer inspection.",
       "checkedOn": "2026-09-08",
       "id": "opw-flood",
-      "inspectionState": "DISCOVERED",
-      "prescribedAttribution": null,
+      "inspectionState": "READ",
+      "prescribedAttribution": "Ordnance Survey Ireland / OPW as stated on floodinfo.ie",
       "provider": "OPW",
       "rights": {
         "acquisition": "UNKNOWN",
-        "commercialReuse": "UNKNOWN",
+        "commercialReuse": "NON_COMMERCIAL_ONLY (except ICWWS 2018 and Galway CWWS 2020 = CC_BY_4.0)",
         "display": "UNKNOWN",
         "embedding": "UNKNOWN",
         "export": "UNKNOWN",
@@ -192,11 +192,11 @@
       "url": "https://www.floodinfo.ie/map/floodmaps/?pf=t"
     },
     {
-      "accessMethod": "consultation page",
-      "caveat": "Verification challenge prevented reading. No substantive claims extracted.",
+      "accessMethod": "direct PDF download",
+      "caveat": "Retrieved 2026-09-08 as the direct PDF from wexfordcoco.ie (the consult.wexfordcoco.ie portal remains challenge-blocked). Document is citable; no reuse/redistribution licence is stated on it, so commercial redistribution of the document itself is UNKNOWN. Content cites the OPW Feasibility Report and the OPW flood database (floodmaps.ie snapshot April 2013). SFRA's own adoption/publication date not confirmed from the watermarked title page.",
       "checkedOn": "2026-09-08",
       "id": "wcc-sfra",
-      "inspectionState": "RETRIEVAL_BLOCKED",
+      "inspectionState": "READ",
       "prescribedAttribution": null,
       "provider": "Wexford County Council",
       "rights": {
@@ -209,8 +209,71 @@
       },
       "runtimeImportAllowed": false,
       "sensitivityReview": "PENDING",
-      "title": "Strategic Flood Risk Assessment",
-      "url": "https://consult.wexfordcoco.ie/ga/consultation/wexford-county-development-plan-2022-2028/chapter/volume-11-strategic-flood-risk-assessment"
+      "title": "Strategic Flood Risk Assessment (Draft Enniscorthy Plan)",
+      "url": "https://www.wexfordcoco.ie/sites/default/files/content/Planning/DraftEnniscorthyPlan14-20/StrategicFloodRiskAssessment.pdf"
+    },
+    {
+      "accessMethod": "open data download (CSV via data.gov.ie)",
+      "caveat": "Licence inspected 2026-09-08: CC BY 4.0 (re-use permitted, including commercial, with attribution). Daily and monthly series; period 1983-01-01 to Present. Covers the November 2000 event; does NOT cover the 1924, 1947 or 1965 events. Specific Nov 2000 daily totals not yet extracted from the CSV.",
+      "checkedOn": "2026-09-08",
+      "id": "met-rainfall",
+      "inspectionState": "READ",
+      "prescribedAttribution": "Met Éireann required statements: (1) source Met Éireann; (2) Copyright Met Éireann; (3) licensed under CC BY 4.0; (4) Met Éireann does not accept any liability for the data; (5) data may have been modified from the original.",
+      "provider": "Met Éireann",
+      "rights": {
+        "acquisition": "CC_BY_4.0",
+        "commercialReuse": "GRANTED_CC_BY_4.0",
+        "display": "GRANTED_CC_BY_4.0",
+        "embedding": "GRANTED_CC_BY_4.0",
+        "export": "GRANTED_CC_BY_4.0",
+        "retention": "GRANTED_CC_BY_4.0"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Enniscorthy-Brownswood rainfall (daily/monthly), Co. Wexford",
+      "url": "https://data.gov.ie/dataset/enniscorthy-brownswood-rainfall-data"
+    },
+    {
+      "accessMethod": "public station page + Hydro-Data archive",
+      "caveat": "Licence inspected 2026-09-08: re-use subject to the Irish PSI licence (Directive 2003/98/EC; circular per/2016/12); station-details dataset on data.gov.ie is CC BY 4.0. Station ref 12002 is within the 00001-41000 range OPW marks as suitable for republication. Real-time waterlevel.ie values are provisional/raw/unchecked with a 5-week rolling window only; processed/archival series and Annual Maxima are via Hydro-Data (waterlevel.ie/hydro-data, opw.ie/hydro). Whether the 12002 record extends back to November 2000 is NOT yet confirmed. Latest illustrative reading captured 8 Sep 2026 21:45 UTC: staff gauge 0.365 m / 0.421 m OD (provisional).",
+      "checkedOn": "2026-09-08",
+      "id": "opw-hydro-12002",
+      "inspectionState": "READ",
+      "prescribedAttribution": "Contains Irish Public Sector Data (OPW) licensed under the PSI Licence; station-details dataset licensed under CC BY 4.0.",
+      "provider": "OPW",
+      "rights": {
+        "acquisition": "PSI_LICENCE",
+        "commercialReuse": "GRANTED_PSI_LICENCE",
+        "display": "GRANTED_PSI_LICENCE",
+        "embedding": "GRANTED_PSI_LICENCE",
+        "export": "GRANTED_PSI_LICENCE",
+        "retention": "GRANTED_PSI_LICENCE"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "OPW hydrometric station 12002 Enniscorthy, River Slaney (level + flow)",
+      "url": "https://waterlevel.ie/0000012002/"
+    },
+    {
+      "accessMethod": "public page",
+      "caveat": "Official OPW + Wexford County Council scheme site, read 2026-09-08. Cites extreme floods in 1924, 1947, 1965, 2000 and 2015 and records the scheme history (public exhibition 2019; submitted 2020; refused 2022 under Section 7E(1)(b) of the Arterial Drainage Acts as amended by the EU (EIA)(Arterial Drainage) Regulations 2019; phased delivery). No reuse/redistribution licence stated; treat as citable, not redistributable.",
+      "checkedOn": "2026-09-08",
+      "id": "enniscorthy-frs",
+      "inspectionState": "READ",
+      "prescribedAttribution": null,
+      "provider": "OPW / Wexford County Council",
+      "rights": {
+        "acquisition": "UNKNOWN",
+        "commercialReuse": "UNKNOWN",
+        "display": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "export": "UNKNOWN",
+        "retention": "UNKNOWN"
+      },
+      "runtimeImportAllowed": false,
+      "sensitivityReview": "PENDING",
+      "title": "Enniscorthy Flood Relief Scheme",
+      "url": "https://www.enniscorthyfrs.ie/"
     }
   ]
 }

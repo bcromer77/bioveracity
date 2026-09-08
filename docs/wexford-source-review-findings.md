@@ -1,8 +1,10 @@
 # Wexford Source Review Findings
 
-**Review date:** 8 September 2026  
+**Review date:** 8 September 2026 (corrected)  
 **Reviewer:** Integration validation against live sources  
 **Scope:** GitHub issue #11 — source verification and case recommendation only
+
+> **Corrections applied 8 September 2026.** Two unsupported claims were removed after re-checking live sources: (1) the Slaney River Valley SAC (000781) was previously implied to cross the Rosslare–Kilrane–Tagoat coastal cluster (Case 2) — it does not; that area's nearest statutory designation is the Wexford Harbour and Slobs SPA/SAC to the north, which is proximity, not intersection. (2) Water-quality cells that read generically "harbour waterbody" are now named explicitly (Wexford Harbour vs Rosslare Harbour) so the two distinct waterbodies are not conflated. A separate Enniscorthy historical flood case has been prepared in `docs/wexford-enniscorthy-flood-case.md`.
 
 ## Executive Summary
 
@@ -162,9 +164,9 @@ All 6 staged factual candidates verified against source passages:
 
 | Source | Content | Date/Period | Evidence Type |
 |--------|---------|-------------|---------------|
-| EPA catchment (epa-slaney) | Enniscorthy waterbody assessments (multiple Slaney segments) | 2016–2021 cycle | OFFICIAL_ASSESSMENT |
+| EPA catchment (epa-slaney) | Slaney waterbody assessments near Enniscorthy (multiple segments listed in the EPA table; the specific main-channel-at-Enniscorthy waterbody code and status were not isolated this review — do not assert a single status) | 2016–2021 cycle | OFFICIAL_ASSESSMENT |
 | OPW flood maps (opw-flood) | National and community-scale flood extents (scenario-specific) | Various scenarios | OFFICIAL_SPATIAL_DATA |
-| NPWS SAC (npws-slaney) | Slaney River Valley SAC 000781 (crosses catchment) | Current | OFFICIAL_DESIGNATION |
+| NPWS SAC (npws-slaney) | Slaney River Valley SAC 000781 follows the Slaney through Enniscorthy (boundary ≠ species occurrence ≠ proof of impact) | Current | OFFICIAL_DESIGNATION |
 | WCC planning portal (wcc-planning) | Planning application search capability | Current | PUBLIC_SEARCH_INTERFACE |
 | WCC Plan (wcc-plan) | County Development Plan 2022–2028 (incl. Variation No. 1) | 2026-07-13 | OFFICIAL_PLAN |
 
@@ -188,8 +190,8 @@ All 6 staged factual candidates verified against source passages:
 
 | Demonstration Capability | Case 1: Harbour | Case 2: Rosslare | Case 3: Enniscorthy |
 |-------------------------|----------------|------------------|---------------------|
-| Show protected-site boundaries | ✓ (SAC, SPA) | ✓ (SAC crosses area) | ✓ (SAC) |
-| Show water-quality status (2021 data) | ✓ (harbour waterbody) | ✓ (harbour waterbody) | ✓ (Slaney segments) |
+| Show protected-site boundaries | ✓ (SAC 000781, SPA 004076) | ✗ (Slaney Valley SAC does not extend to this coastal cluster; nearest designation is Wexford Harbour SPA/SAC to the north — proximity, not intersection) | ✓ (SAC 000781 follows the Slaney through the town) |
+| Show water-quality status (2021 data) | ✓ (Wexford Harbour: Moderate, at risk) | ✓ (Rosslare Harbour: Good, HMWB under review) | ~ (Slaney segments; specific Enniscorthy main-channel waterbody not isolated from the EPA table) |
 | Show operator infrastructure plans | — | ✓ (UÉ Tagoat, Rosslare masterplan) | — |
 | Show development plan policies | ✓ (WCC plan) | ✓ (WCC plan) | ✓ (WCC plan) |
 | Show flood-map layers | — | — | ✓ (OPW; scenario pending) |
