@@ -349,7 +349,7 @@ export function RegionalOperatingPicture({
     ct === 'divergence' ? '#f87171' : ct === 'material_change' ? '#E9AD20' : '#7dd3fc'
 
   return (
-    <div className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[#0b1220] text-slate-100">
+    <div className="flex min-h-[100dvh] w-full flex-col md:h-[100dvh] md:overflow-hidden bg-[#0b1220] text-slate-100">
       {/* ----------------------------------------------------------------- Header */}
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-white/10 bg-[#0b1220]/95 px-4 py-2.5 backdrop-blur">
         <div className="flex items-center gap-3">
@@ -405,7 +405,7 @@ export function RegionalOperatingPicture({
       </header>
 
       {/* ----------------------------------------------------------------- Body */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+      <div className="flex flex-col md:min-h-0 md:flex-1 md:flex-row md:overflow-hidden">
         {/* Map */}
         <div className="relative min-h-[320px] min-w-0 shrink-0 md:min-h-0 md:flex-1">
           <OperatingMapInner
@@ -519,7 +519,7 @@ export function RegionalOperatingPicture({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
             {railEvents.length === 0 ? (
               <div className="px-4 py-10 text-center text-[12px] text-slate-500">
                 No loaded records match this place, topic and period. This does not establish that no event occurred.
