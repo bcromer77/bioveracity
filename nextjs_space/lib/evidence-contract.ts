@@ -46,7 +46,12 @@ export function validateEvidence(input: unknown) {
     return { locator: string(s.locator, 'source locator', 500), text: string(s.text, 'source text', 100000) }
   })
   if (sections.reduce((n, s) => n + s.text.length, 0) > 500000) throw new Error('Record exceeds text limit')
-  // Caller-supplied verification/access flags are deliberately discarded.
+  // Caller-supplied verification/access flags never become authoritative. An
+  // incoming sensitivity warning is preserved for audit only; acquisition
+  // permission is recorded so unresolved permission falls back to a catalogue
+  // reference instead of storing the underlying dataset.
+  const incomingSensitivity = incomingLabel(r)
+  const acquisitionPermitted = r.acquisition_permitted === true
   const content = {
     url: httpsUrl(r.url), title: string(r.title, 'title', 1000), publisher: string(r.publisher, 'publisher', 300),
     authority_id: string(r.authority_id, 'authority ID', 200), jurisdiction: string(r.jurisdiction, 'jurisdiction', 100),
@@ -55,7 +60,42 @@ export function validateEvidence(input: unknown) {
     publication_date: publication.value, sections,
   }
   return { content, observedAt: new Date(retrievedAt), versionHash: digest(content),
-    documentKey: digest([content.url, content.content_kind, content.representation_id]) }
+    documentKey: digest([content.url, content.content_kind, content.representation_id]),
+    incomingSensitivity, acquisitionPermitted }
+}
+
+function incomingLabel(r: Record<string, unknown>): string | null {
+  const raw = r.incoming_sensitivity ?? r.access_label ?? r.sensitivity
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  return trimmed && trimmed.length <= 100 ? trimmed : null
+}
+
+export type Sensitivity = 'UNKNOWN' | 'PUBLIC' | 'RESTRICTED'
+export type ReusePermission = 'UNKNOWN' | 'PERMITTED' | 'PROHIBITED' | 'CATALOGUE_ONLY'
+
+// Server-side classification at ingest. Ingest can never yield PUBLIC or
+// PERMITTED: a VERIFIED claim is not automatically licensed for redistribution
+// or external embedding (control #1), and records are never defaulted to public
+// (control #2). Content-level sensitivity or an inherited restriction forces
+// RESTRICTED/PROHIBITED and cannot be relaxed by a later import (controls #4, #7).
+// Unresolved acquisition permission yields CATALOGUE_ONLY (control #5).
+export function classifyOnIngest(opts: { contentSensitive: boolean; inheritedRestricted: boolean; catalogueOnly: boolean }): { sensitivity: Sensitivity; reusePermission: ReusePermission } {
+  if (opts.contentSensitive || opts.inheritedRestricted) return { sensitivity: 'RESTRICTED', reusePermission: 'PROHIBITED' }
+  if (opts.catalogueOnly) return { sensitivity: 'UNKNOWN', reusePermission: 'CATALOGUE_ONLY' }
+  return { sensitivity: 'UNKNOWN', reusePermission: 'UNKNOWN' }
+}
+
+// Admin classification decision. PUBLIC + PERMITTED (the only searchable/embeddable
+// combination) is allowed only when content screening is clean and reuse is
+// explicitly permitted. Any sensitive content forces RESTRICTED regardless of the
+// requested label.
+export function classifyByReviewer(opts: { requestedSensitivity: Sensitivity; requestedReuse: ReusePermission; contentSensitive: boolean }): { sensitivity: Sensitivity; reusePermission: ReusePermission } {
+  if (opts.contentSensitive) return { sensitivity: 'RESTRICTED', reusePermission: 'PROHIBITED' }
+  const sensitivity: Sensitivity = ['UNKNOWN', 'PUBLIC', 'RESTRICTED'].includes(opts.requestedSensitivity) ? opts.requestedSensitivity : 'UNKNOWN'
+  const reuse: ReusePermission = ['UNKNOWN', 'PERMITTED', 'PROHIBITED', 'CATALOGUE_ONLY'].includes(opts.requestedReuse) ? opts.requestedReuse : 'UNKNOWN'
+  if (sensitivity === 'RESTRICTED') return { sensitivity, reusePermission: reuse === 'PERMITTED' ? 'PROHIBITED' : reuse }
+  return { sensitivity, reusePermission: reuse }
 }
 
 export function validateReview(input: unknown, sections: { locator: string; text: string }[]) {
