@@ -40,13 +40,26 @@ export async function POST(request: Request) {
 
   const candidate = await prisma.observationCandidate.findUnique({
     where: { id: candidateId },
-    select: { ...CANDIDATE_SELECT, status: true, rawIngestId: true, normalisedTargetType: true, normalisedPayload: true, normalisedRecordId: true },
+    select: { ...CANDIDATE_SELECT, verificationMethod: true, verificationNote: true, status: true, rawIngestId: true, normalisedTargetType: true, normalisedPayload: true, normalisedRecordId: true },
   })
   if (!candidate) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
 
   try {
+    if (action === 'normalise' || action === 'publish') {
+      const raw = candidate.rawObservation as Record<string, unknown>
+      if (candidate.verificationMethod !== 'HUMAN_REVIEW' || !candidate.verificationNote || candidate.verificationNote.trim().length < 30 ||
+          typeof raw.source_excerpt !== 'string' || !raw.source_excerpt.trim() || typeof raw.source_locator !== 'string' || !raw.source_locator.trim()) {
+        return NextResponse.json({ error: 'This candidate needs source-passage review. Legacy automatic verification is not sufficient.' }, { status: 422 })
+      }
+    }
     if (action === 'verify') {
-      if (!['CANDIDATE', 'NEEDS_REVIEW'].includes(candidate.status)) {
+      const raw = candidate.rawObservation as Record<string, unknown>
+      if (!candidate.sourceUrl || !reason?.trim() || reason.trim().length < 30 ||
+          typeof raw.source_excerpt !== 'string' || !raw.source_excerpt.trim() ||
+          typeof raw.source_locator !== 'string' || !raw.source_locator.trim()) {
+        return NextResponse.json({ error: 'Verification requires a source URL, retained source_excerpt, source_locator and a substantive reviewer explanation.' }, { status: 422 })
+      }
+      if (!['CANDIDATE', 'NEEDS_REVIEW', 'VERIFIED', 'NORMALISED'].includes(candidate.status)) {
         return NextResponse.json({ error: `Cannot verify a candidate in state ${candidate.status}.` }, { status: 409 })
       }
       await prisma.observationCandidate.update({

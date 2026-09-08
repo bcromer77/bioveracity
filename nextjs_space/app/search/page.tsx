@@ -6,6 +6,7 @@ import { EvidenceLegend } from '@/components/evidence-badge'
 import { searchPlaces } from '@/lib/search'
 import { SearchX, MapPin, ArrowRight, Anchor } from 'lucide-react'
 import Link from 'next/link'
+import { evidenceEnabled } from '@/lib/evidence-http'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,7 @@ export default async function SearchPage({
         <div className="mx-auto max-w-[1100px] px-4 py-6 md:py-8">
           <div className="mb-6">
             <UniversalSearch size="large" initialValue={query} />
+            {evidenceEnabled() && <Link className="mt-3 inline-block text-sm underline" href={`/evidence?q=${encodeURIComponent(query)}`}>Search checked source evidence</Link>}
           </div>
 
           {showsIrishPorts && (
