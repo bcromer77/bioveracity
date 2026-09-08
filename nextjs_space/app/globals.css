@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 38%;
+
+    --accent: 42 82% 52%;
+    --accent-foreground: 0 0% 9%;
+
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 13% 88%;
+    --input: 220 13% 84%;
+    --ring: 42 82% 52%;
+
+    --link: 214 90% 42%;
+    --link-visited: 265 50% 45%;
+
+    --radius: 0.375rem;
+    --radius-sm: 0.25rem;
+    --radius-lg: 0.5rem;
+    --radius-full: 9999px;
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+    --spacing-3xl: 64px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --shadow-md: 0 2px 8px -2px rgb(0 0 0 / 0.08);
+    --shadow-lg: 0 8px 24px -4px rgb(0 0 0 / 0.10);
+
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+
+    --chart-1: 222 47% 11%;
+    --chart-2: 42 78% 55%;
+    --chart-3: 200 70% 45%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 150 50% 40%;
+
+    --evidence-verified: 150 50% 40%;
+    --evidence-corroborated: 42 78% 55%;
+    --evidence-unverified: 220 9% 46%;
+    --evidence-inference: 200 70% 45%;
+    --evidence-gap: 25 60% 52%;
+  }
+
+  .dark {
+    --background: 224 35% 7%;
+    --foreground: 210 20% 92%;
+
+    --card: 224 30% 10%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 224 30% 10%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 42 78% 55%;
+    --primary-foreground: 224 35% 7%;
+
+    --secondary: 224 20% 16%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 224 20% 14%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 42 78% 55%;
+    --accent-foreground: 224 35% 7%;
+
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 224 18% 18%;
+    --input: 224 18% 18%;
+    --ring: 42 78% 55%;
+
+    --chart-1: 42 78% 55%;
+    --chart-2: 200 70% 50%;
+    --chart-3: 150 50% 45%;
+    --chart-4: 0 62% 55%;
+    --chart-5: 270 50% 60%;
+
+    --evidence-verified: 150 50% 45%;
+    --evidence-corroborated: 42 78% 55%;
+    --evidence-unverified: 220 10% 55%;
+    --evidence-inference: 200 70% 50%;
+    --evidence-gap: 25 65% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Evidence taxonomy symbols */
+.evidence-verified { color: hsl(var(--evidence-verified)); }
+.evidence-corroborated { color: hsl(var(--evidence-corroborated)); }
+.evidence-unverified { color: hsl(var(--evidence-unverified)); }
+.evidence-inference { color: hsl(var(--evidence-inference)); }
+.evidence-gap { color: hsl(var(--evidence-gap)); }
+
+/* Tabular numeric data */
+.font-data {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Conventional link styling for sources and clickable references */
+.link {
+  color: hsl(var(--link));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.link:hover { text-decoration-thickness: 2px; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+/* ---------------------------------------------------------------------------
+   Regional Operating Picture (Mode B) — pulsing evidence ring on the map.
+   Applied only to places with evidence inside the active replay window.
+--------------------------------------------------------------------------- */
+.bv-op-marker { background: transparent; border: 0; }
+.bv-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 0 var(--bv-pulse, #E9AD20);
+  opacity: 0.6;
+  animation: bv-pulse-ring 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+@keyframes bv-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 var(--bv-pulse, #E9AD20); opacity: 0.55; }
+  70%  { box-shadow: 0 0 0 12px transparent; opacity: 0; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 0; }
+}
