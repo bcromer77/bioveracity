@@ -1,28 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 
-// ---------------------------------------------------------------------------
-// Irish Ports enrichment — makes the maritime module's claims mechanically true.
-//
-// Purpose (idempotent, ADDITIVE ONLY, NO deletes, safe on the shared DB):
-//   1. Guarantees all five Irish ports exist in the deploy path (Waterford was
-//      previously only created by seed-cambridgeshire.ts, not the deploy seed).
-//   2. Attaches REAL source URLs to existing seeded events / projects /
-//      authorisations so every important claim is one click from its source.
-//   3. Adds the canonical Cork Container Terminal intervention chain
-//      (project -> baseline -> deployment -> operation -> unresolved question ->
-//      resolution paths) from source-backed public records.
-//   4. Adds source-backed development-pipeline records ALONGSIDE existing
-//      baselines (never overwriting existing sourced figures).
-//   5. Publishes ChangeRecords describing genuinely material changes in the
-//      language a programme director needs ('entered operation', 'application
-//      lodged', 'new evidence requirement identified') — not 'N new records'.
-//
-// Every URL below was verified against the live public record. Where a precise
-// URL or date is not established, the field is left as-is (source domain only)
-// rather than invented. NO fabrication, NO manufactured timestamps.
-// ---------------------------------------------------------------------------
+// Legacy candidate data retained for reconciliation, not approved ingestion.
+// The previously asserted source/date guarantees were not supported by review.
+const RETRIEVED = new Date('2026-09-07') // legacy candidate; NOT verified retrieval metadata
 
-const RETRIEVED = new Date('2026-09-07') // retrieval date for provenance notes
+import { assertPortSeedReady } from '../lib/port-seed-gate'
+export { assertPortSeedReady } from '../lib/port-seed-gate'
 
 type Prisma = PrismaClient
 
@@ -92,13 +75,13 @@ async function ensureQuestion(prisma: Prisma, assetId: string, q: any, paths: an
 
 async function ensureChange(prisma: Prisma, assetId: string, c: any) {
   const existing = await prisma.changeRecord.findFirst({ where: { assetId, title: c.title } })
-  if (!existing) return prisma.changeRecord.create({ data: { assetId, published: true, ...c } })
-  // Ensure it is published on re-run (so it surfaces in 'What changed').
-  if (!existing.published) await prisma.changeRecord.update({ where: { id: existing.id }, data: { published: true } })
+  if (!existing) return prisma.changeRecord.create({ data: { ...c, assetId, published: false, detectedAt: new Date() } })
+  // A rerun must never undo a publication/withdrawal decision.
   return existing
 }
 
 export async function enrichIrishPorts(prisma: Prisma) {
+  assertPortSeedReady()
   // -------------------------------------------------------------------------
   // (0) Ensure Port of Waterford exists in the DEPLOY path (previously only
   //     created by seed-cambridgeshire.ts). Upsert by slug — additive.

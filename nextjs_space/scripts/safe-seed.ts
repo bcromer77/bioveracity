@@ -21,7 +21,9 @@ try {
     process.exit(1);
   }
 
-} catch (err: any) {
+} catch {
+  console.error("Seed preflight could not read or validate the seed file; aborting.");
+  process.exit(1);
 }
 
 execSync("tsx --require dotenv/config scripts/seed.ts", { stdio: "inherit" });

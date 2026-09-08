@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import { enrichIrishPorts } from './irish-ports-enrichment'
+import { enrichIrishPorts, assertPortSeedReady } from './irish-ports-enrichment'
 
 // ---------------------------------------------------------------------------
 // DEMO / BOOTSTRAP SEED
@@ -23,6 +23,7 @@ import { enrichIrishPorts } from './irish-ports-enrichment'
 const prisma = new PrismaClient()
 
 async function main() {
+  assertPortSeedReady() // fail before any writes; legacy incoming facts lack required provenance
   // Seed admin/bootstrap account from environment (no hard-coded credential).
   const adminEmail = process.env.SEED_ADMIN_EMAIL
   const adminPassword = process.env.SEED_ADMIN_PASSWORD

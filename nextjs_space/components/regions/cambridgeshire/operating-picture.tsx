@@ -188,6 +188,7 @@ export function RegionalOperatingPicture({
   relationshipNote,
   accessNote,
   institutionalHref,
+  initialContextId = 'normal',
 }: {
   regionName: string
   places: OPPoint[]
@@ -198,6 +199,7 @@ export function RegionalOperatingPicture({
   relationshipNote?: string
   accessNote?: string
   institutionalHref?: string
+  initialContextId?: 'normal' | 'incident'
 }) {
   // Deterministic timeline bounds from the real record (SSR-safe: from props).
   const { minTs, maxTs } = useMemo(() => {
@@ -209,12 +211,12 @@ export function RegionalOperatingPicture({
     return { minTs: Math.min(...ts), maxTs: Math.max(...ts) }
   }, [chronology])
 
-  const [contextId, setContextId] = useState('normal')
+  const [contextId, setContextId] = useState<string>(initialContextId)
   const [category, setCategory] = useState('all')
   const isCambridge = backHref === '/regions/cambridgeshire-peterborough'
   const [selectedSlug, setSelectedSlug] = useState<string | null>(isCambridge && places.some(p => p.slug === 'river-cam') ? 'river-cam' : null)
   const [cursorTs, setCursorTs] = useState<number>(maxTs)
-  const [lookbackDays, setLookbackDays] = useState<number | null>(null)
+  const [lookbackDays, setLookbackDays] = useState<number | null>(initialContextId === 'incident' ? 3 : null)
   const [searchText, setSearchText] = useState('')
   const [searchNote, setSearchNote] = useState('')
   const [playing, setPlaying] = useState(false)

@@ -1,0 +1,18 @@
+name: Evidence integrity
+on: [pull_request]
+permissions:
+  contents: read
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nextjs_space
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check-map-scope.mjs
+      - run: npm install --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+      - run: node --import tsx --test tests/port-provenance.test.ts tests/resident-report.test.ts tests/resident-schema.test.ts
