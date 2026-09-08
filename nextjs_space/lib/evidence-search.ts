@@ -1,3 +1,4 @@
+import { evidenceEligibility } from '@/lib/evidence-eligibility'
 import type { Session } from 'next-auth'
 import { Prisma } from '@prisma/client'
 import { evidenceDb } from '@/lib/evidence-db'
@@ -72,9 +73,12 @@ export async function retrieveHybrid(q: string, authority: string, from: string,
     ), eligible AS MATERIALIZED (
       SELECT d.id, d.title, d.url, d.publisher, d."authorityId", d.jurisdiction,
         d."eventDate", d."eventPrecision", d."publicationDate", d."observedAt" AT TIME ZONE 'UTC' AS "observedAt",
+        s.licence, s."requiredAttribution" AS attribution,
+        d.sensitivity, d."reusePermission", d."catalogueOnly", d."incomingSensitivity", d."sourceRegisterId", d.status,
         r.id AS "reviewId", r.claim, r.excerpt, r.locator, r."evidenceType", r."createdAt" AT TIME ZONE 'UTC' AS "checkedAt"
       FROM current_documents d JOIN "EvidenceReview" r ON r.id = d."activeReviewId" AND r."documentId" = d.id
-      WHERE d.status = 'VERIFIED'
+      JOIN "EvidenceSourceRegister" s ON s.id = d."sourceRegisterId"
+      WHERE ${evidenceEligibility('display')}
         AND (${authority} = '' OR d."authorityId" = ${authority})
         AND (${from} = '' OR (d."eventPrecision" = 'day' AND d."eventDate" >= ${from}))
         AND (${to} = '' OR (d."eventPrecision" = 'day' AND d."eventDate" <= ${to}))
@@ -85,6 +89,7 @@ export async function retrieveHybrid(q: string, authority: string, from: string,
     ), semantic AS (
       SELECT d.id, row_number() OVER (ORDER BY e.embedding <=> ${vector}::vector, d.id) AS rank
       FROM eligible d JOIN "EvidenceEmbedding" e ON e."reviewId" = d."reviewId" AND e.space = ${space}
+      WHERE ${evidenceEligibility('embedding')}
       ORDER BY rank LIMIT 100
     ), fused AS (
       SELECT COALESCE(l.id, s.id) AS id,
@@ -95,9 +100,9 @@ export async function retrieveHybrid(q: string, authority: string, from: string,
       SELECT d.*, f."matchType", f.score FROM fused f JOIN eligible d ON d.id = f.id
       ORDER BY f.score DESC, d.id LIMIT 30
     )
-    SELECT COALESCE((SELECT jsonb_agg(to_jsonb(r) - 'reviewId' - 'score' ORDER BY r.score DESC, r.id) FROM results r), '[]'::jsonb) AS hits,
+    SELECT COALESCE((SELECT jsonb_agg(to_jsonb(r) - 'reviewId' - 'score' - 'sensitivity' - 'reusePermission' - 'catalogueOnly' - 'incomingSensitivity' - 'sourceRegisterId' - 'status' ORDER BY r.score DESC, r.id) FROM results r), '[]'::jsonb) AS hits,
       (SELECT count(*)::integer FROM eligible) AS eligible,
-      (SELECT count(*)::integer FROM eligible d JOIN "EvidenceEmbedding" e ON e."reviewId" = d."reviewId" AND e.space = ${space}) AS indexed
+      (SELECT count(*)::integer FROM eligible d JOIN "EvidenceEmbedding" e ON e."reviewId" = d."reviewId" AND e.space = ${space} WHERE ${evidenceEligibility('embedding')}) AS indexed
   `)
   const result = rows[0]
   return { ...result, hits: result.hits.map(h => ({ ...h, observedAt: new Date(h.observedAt), checkedAt: new Date(h.checkedAt) })) as EvidenceHit[] }

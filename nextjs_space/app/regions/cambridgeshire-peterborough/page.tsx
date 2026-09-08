@@ -1,3 +1,4 @@
+import { CamSourceContext } from '@/components/regions/cambridgeshire/cam-source-context'
 import { prisma } from '@/lib/prisma'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
@@ -187,6 +188,7 @@ export default async function CambridgeshirePeterboroughPage() {
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
       <main className="flex-1">
+        <CamSourceContext />
         <CambridgeshireShowcase
           counts={counts}
           wastewater={wastewater}

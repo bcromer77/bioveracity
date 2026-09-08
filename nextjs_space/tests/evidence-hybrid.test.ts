@@ -33,6 +33,8 @@ test('embedding provider validates model, dimensions, ordering, finite values an
 test('registered search, indexing, hybrid SQL and correction lifecycle against PostgreSQL + pgvector', async () => {
   const db = new PGlite({ extensions: { vector } })
   await db.exec(await readFile('prisma/migrations/0001_evidence_pipeline/migration.sql', 'utf8'))
+  await db.exec(await readFile('prisma/migrations/0003_biodiversity_safeguards/migration.sql', 'utf8'))
+  await db.exec(`INSERT INTO "EvidenceSourceRegister" (id,publisher,"datasetIdentifier",licence,"requiredAttribution","permittedUses") VALUES ('fixture-source','Fixture','synthetic','CC0','Synthetic fixture only','display,embedding')`)
   await db.exec(await readFile('prisma/migrations/0002_evidence_vectors/migration.sql', 'utf8'))
   const original = { query: prisma.$queryRaw, transaction: prisma.$transaction, fetch: global.fetch }
   const env = { enabled: process.env.BIOVERACITY_EVIDENCE_ENABLED, vectors: process.env.BIOVERACITY_VECTOR_ENABLED, key: process.env.OPENAI_API_KEY, model: process.env.BIOVERACITY_EMBEDDING_MODEL }
@@ -64,6 +66,7 @@ test('registered search, indexing, hybrid SQL and correction lifecycle against P
   const insert = async (id: string, claim: string, status = 'VERIFIED', key = id, observed = '2026-01-01', authority = 'fixture-a', date: string | null = '2025-12-01', precision = 'day') => {
     await db.query(`INSERT INTO "EvidenceDocument" (id,"documentKey","versionHash","observedAt",url,title,publisher,"authorityId",jurisdiction,"eventDate","eventPrecision","contentKind",sections,status,"activeReviewId") VALUES ($1,$2,$1,$3,'https://example.org/fixture','Synthetic minutes','Synthetic council',$4,'Fixture',$5,$6,'source_excerpt','[]',$7,$8)`, [id,key,observed,authority,date,precision,status,'r-'+id])
     await db.query(`INSERT INTO "EvidenceReview" (id,"documentId",reviewer,claim,excerpt,locator,basis,"evidenceType") VALUES ($1,$2,'PRIVATE-REVIEWER',$3,$3,'Page 1','PRIVATE-REVIEW-NOTES','council_record')`, ['r-'+id,id,claim])
+    await db.query(`UPDATE "EvidenceDocument" SET sensitivity='PUBLIC', "reusePermission"='PERMITTED', "sourceRegisterId"='fixture-source' WHERE id=$1`, [id])
   }
   const embed = (id: string, values = vec(0), modelSpace = space) => db.query(`INSERT INTO "EvidenceEmbedding" ("reviewId",space,embedding) VALUES ($1,$2,$3::vector)`, ['r-'+id,modelSpace,JSON.stringify(values)])
   try {
@@ -71,6 +74,24 @@ test('registered search, indexing, hybrid SQL and correction lifecycle against P
     await assert.rejects(searchReviewedEvidence({ user: {} } as any, { q: 'water' }))
     assert.equal(sqlCalls, 0, 'anonymous requests cannot reach the database')
     assert.equal(calls, 0, 'anonymous requests cannot spend embedding credits')
+    for (const [id, field, value] of [
+      ['restricted', 'sensitivity', 'RESTRICTED'],
+      ['unclassified', 'sensitivity', 'UNKNOWN'],
+      ['prohibited', 'reusePermission', 'PROHIBITED'],
+      ['warning', 'incomingSensitivity', 'restricted'],
+    ]) {
+      await insert(id, 'PRIVATE flooding evidence')
+      await db.query(`UPDATE "EvidenceDocument" SET "${field}"=$1 WHERE id=$2`, [value,id])
+      await embed(id)
+    }
+    await insert('catalogue', 'PRIVATE flooding catalogue')
+    await db.exec(`UPDATE "EvidenceDocument" SET "catalogueOnly"=true WHERE id='catalogue'`)
+    await insert('unregistered', 'PRIVATE flooding unregistered')
+    await db.exec(`UPDATE "EvidenceDocument" SET "sourceRegisterId"=NULL WHERE id='unregistered'`)
+    assert.equal((await indexEvidence()).indexed, 0)
+    assert.equal(calls, 0, 'excluded documents never reach embedding provider')
+    assert.equal((await searchReviewedEvidence(session, { q: 'flooding', mode: 'keyword' })).hits.length, 0)
+    assert.equal((await retrieveHybrid('flooding', '', '', '', space, vec(0))).hits.length, 0)
     await insert('semantic', 'River levels overtopped the banks')
     await insert('lexical', 'Flooding response was discussed')
     await insert('pending', 'PRIVATE pending source', 'PENDING_REVIEW')
@@ -80,6 +101,8 @@ test('registered search, indexing, hybrid SQL and correction lifecycle against P
     assert.equal(result.notice, 'index_pending')
     assert.equal(result.indexed, 1)
     assert.equal(result.eligible, 2)
+    assert.equal(result.hits[0].attribution, 'Synthetic fixture only')
+    assert.equal(result.hits[0].licence, 'CC0')
     assert.equal(result.hits.find(h => h.id === 'semantic')?.matchType, 'meaning', 'retrieves a passage without a keyword match')
     assert.equal(result.hits.find(h => h.id === 'semantic')?.observedAt.toISOString(), '2026-01-01T00:00:00.000Z', 'retrieval timestamps preserve UTC across server timezones')
     assert.equal(result.hits.find(h => h.id === 'lexical')?.matchType, 'keyword')
@@ -137,6 +160,13 @@ test('registered search, indexing, hybrid SQL and correction lifecycle against P
     process.env.BIOVERACITY_VECTOR_ENABLED = 'true'
     await assert.rejects(indexEvidence(), 'provider failure is a failed job, not successful zero indexing')
     assert.equal((await db.query<{ n: number }>(`SELECT count(*)::integer AS n FROM "EvidenceEmbedding" WHERE "reviewId" IN ('r-early','r-later')`)).rows[0].n, 0, 'failed job does not leave partial vectors')
+    // A source-level permission change must affect existing vectors immediately.
+    await db.exec(`UPDATE "EvidenceSourceRegister" SET "permittedUses"='display'`)
+    assert.equal((await indexEvidence()).indexed, 0, 'display permission does not authorise embeddings')
+    assert.equal((await retrieveHybrid('nonesuch', '', '', '', space, vec(0))).hits.length, 0)
+    assert.ok((await searchReviewedEvidence(session, { q: 'release', mode: 'keyword' })).hits.length > 0)
+    await db.exec(`UPDATE "EvidenceSourceRegister" SET "permittedUses"=''`)
+    assert.equal((await searchReviewedEvidence(session, { q: 'release', mode: 'keyword' })).hits.length, 0)
     process.env.BIOVERACITY_EVIDENCE_ENABLED = 'false'
     await assert.rejects(searchReviewedEvidence(session, { q: 'release' }))
   } finally {

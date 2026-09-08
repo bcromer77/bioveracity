@@ -8,12 +8,15 @@ import { searchEvidence } from '../lib/evidence-store'
 test('real SQL enforces review, current versions, council filters and honest dates', async () => {
   const db = new PGlite()
   await db.exec(await readFile('prisma/migrations/0001_evidence_pipeline/migration.sql', 'utf8'))
+  await db.exec(await readFile('prisma/migrations/0003_biodiversity_safeguards/migration.sql', 'utf8'))
+  await db.exec(`INSERT INTO "EvidenceSourceRegister" (id,publisher,"datasetIdentifier",licence,"requiredAttribution","permittedUses") VALUES ('fixture-source','Fixture','synthetic','CC0','Synthetic fixture only','display,embedding')`)
   const original = prisma.$queryRaw
   // Run the application's exact parameterised search SQL against PostgreSQL WASM.
   prisma.$queryRaw = (async (q: any) => (await db.query(q.text, q.values)).rows) as any
   const insert = async (id: string, key: string, status: string, observed: string, eventDate: string | null, precision: string, authority = 'fixture-a') => {
     await db.query(`INSERT INTO "EvidenceDocument" (id,"documentKey","versionHash","observedAt",url,title,publisher,"authorityId",jurisdiction,"eventDate","eventPrecision","contentKind",sections,status,"activeReviewId") VALUES ($1,$2,$1,$3,'https://example.org/source','Fixture flood minutes','Fixture council',$4,'Fixture',$5,$6,'source_excerpt','[]',$7,$8)`, [id,key,observed,authority,eventDate,precision,status,'review-'+id])
     await db.query(`INSERT INTO "EvidenceReview" (id,"documentId",reviewer,claim,excerpt,locator,basis,"evidenceType") VALUES ($1,$2,'fixture-reviewer','Flood investigation agreed','Flood investigation agreed','Page 1','Synthetic test','council_record')`, ['review-'+id,id])
+    await db.query(`UPDATE "EvidenceDocument" SET sensitivity='PUBLIC', "reusePermission"='PERMITTED', "sourceRegisterId"='fixture-source' WHERE id=$1`, [id])
   }
   try {
     await insert('old','source-a','VERIFIED','2026-01-01', '2025-12-01','day')

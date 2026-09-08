@@ -7,7 +7,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:evidence": "node --import tsx --test tests/evidence-contract.test.ts tests/evidence-search.test.ts tests/evidence-hybrid.test.ts",
+    "test:evidence": "node --import tsx --test tests/evidence-*.test.ts",
     "index:evidence": "node --import tsx scripts/index-evidence.ts"
   },
   "prisma": {

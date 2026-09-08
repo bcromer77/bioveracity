@@ -1,3 +1,4 @@
+import { evidenceEligibility } from '../lib/evidence-eligibility'
 import 'dotenv/config'
 import { indexEvidence } from '../lib/evidence-index'
 import { embeddingConfig } from '../lib/evidence-embeddings'
@@ -23,7 +24,7 @@ async function backlogCount(space: string): Promise<number> {
     FROM current_documents d
     JOIN "EvidenceReview" r ON r.id = d."activeReviewId" AND r."documentId" = d.id
     LEFT JOIN "EvidenceEmbedding" e ON e."reviewId" = r.id AND e.space = ${space}
-    WHERE d.status = 'VERIFIED' AND e."reviewId" IS NULL
+    WHERE ${evidenceEligibility('embedding')} AND e."reviewId" IS NULL
   `
   return rows[0]?.count ?? 0
 }

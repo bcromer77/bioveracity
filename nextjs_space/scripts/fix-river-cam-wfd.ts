@@ -14,11 +14,11 @@ async function main() {
   await prisma.asset.update({
     where: { id: cam.id },
     data: {
-      statusDetail: 'Environment Agency WFD classification located — Moderate overall',
+      statusDetail: 'EA ecological classification: Moderate (2022)',
       summary:
-        'The River Cam flows through Cambridge and receives treated effluent from the Cambridge (Milton) Water Recycling Centre. The Environment Agency Water Framework Directive classification for this water body (GB105033042750) has been located: Moderate overall, with ecological status Moderate and chemical status Fail. It is designated a Heavily Modified Water Body.',
+        'The River Cam flows through Cambridge and receives treated effluent from the Cambridge (Milton) Water Recycling Centre. The Environment Agency Water Framework Directive classification for this water body (GB105033042750) has been located: Moderate ecological status (2019 and 2022); chemical status Fail (2019) and Does not require assessment (2022). It is designated a Heavily Modified Water Body.',
       description:
-        'The River Cam is the flagship receiving water of the Cambridgeshire showcase. The reviewed evidence establishes that the Cambridge (Milton) Water Recycling Centre discharges to it and that it sits within the North East Cambridge regeneration area. The Environment Agency Water Framework Directive classification for this water body (GB105033042750) has been located and records the water body as Moderate overall — ecological status Moderate, chemical status Fail — and designates it a Heavily Modified Water Body; these values are attributed to the Environment Agency classification record. A validated water-quality monitoring series adjacent to the Milton WRC discharge has still not been located in the reviewed public sources, so the effect of the discharge on the receiving water remains unresolved. A river is a linear water body rather than a single point, so no map coordinate is asserted.',
+        'The River Cam is the flagship receiving water of the Cambridgeshire showcase. The reviewed evidence establishes that the Cambridge (Milton) Water Recycling Centre discharges to it and that it sits within the North East Cambridge regeneration area. The Environment Agency Water Framework Directive classification for this water body (GB105033042750) has been located and records the water body as Moderate ecological status (2019 and 2022); chemical status Fail (2019) and Does not require assessment (2022) — and designates it a Heavily Modified Water Body; these values are attributed to the Environment Agency classification record. A validated water-quality monitoring series adjacent to the Milton WRC discharge has still not been located in the reviewed public sources, so the effect of the discharge on the receiving water remains unresolved. A river is a linear water body rather than a single point, so no map coordinate is asserted.',
     },
   })
 
@@ -31,7 +31,7 @@ async function main() {
         assetId: cam.id,
         title: evtTitle,
         description:
-          'The Environment Agency classifies this water body (GB105033042750) as Moderate overall — ecological status Moderate, chemical status Fail — and designates it a Heavily Modified Water Body. These values are attributed to the Environment Agency Water Framework Directive classification record.',
+          'The Environment Agency classifies this water body (GB105033042750) as Moderate ecological status (2019 and 2022); chemical status Fail (2019) and Does not require assessment (2022) — and designates it a Heavily Modified Water Body. These values are attributed to the Environment Agency Water Framework Directive classification record.',
         date: new Date('2025-06-01'),
         eventType: 'regulatory',
         evidenceClass: 'O',
