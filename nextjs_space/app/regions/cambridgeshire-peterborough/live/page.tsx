@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { RegionalOperatingPicture } from '@/components/regions/cambridgeshire/operating-picture'
 import type {
@@ -6,17 +5,11 @@ import type {
   OPEvent,
   OPConnection,
 } from '@/components/regions/cambridgeshire/operating-picture'
+import { verifiedDischargeConnections } from '@/lib/region-relations'
 
 export const dynamic = 'force-dynamic'
 
 const REGION_SLUG = 'cambridgeshire'
-
-// Receiving-water relationships are asserted ONLY where the public record supports
-// a direct discharge relationship. Everything else stays null (never inferred).
-const RECEIVING_WATER: Record<string, string> = {
-  'march-wrc': 'River Nene',
-  'milton-wrc': 'River Cam',
-}
 
 export const metadata = {
   title: 'Cambridgeshire & Peterborough — Regional view | BioVeracity',
@@ -25,7 +18,7 @@ export const metadata = {
 }
 
 export default async function CambridgeshireLivePage() {
-  const [assets, eventsRaw] = await Promise.all([
+  const [assets, eventsRaw, relations] = await Promise.all([
     prisma.asset.findMany({
       where: { regionSlug: REGION_SLUG },
       orderBy: { priorityScore: 'desc' },
@@ -42,6 +35,19 @@ export default async function CambridgeshireLivePage() {
         },
       },
     }),
+    prisma.assetRelation.findMany({
+      where: {
+        relationshipType: 'DISCHARGES_TO',
+        verificationState: 'VERIFIED',
+        sourceUrl: { startsWith: 'https://' },
+        fromAsset: { regionSlug: REGION_SLUG },
+        toAsset: { regionSlug: REGION_SLUG },
+      },
+      include: {
+        fromAsset: { select: { slug: true } },
+        toAsset: { select: { slug: true, name: true } },
+      },
+    }),
   ])
 
   const mapCategory = (type: string): string => {
@@ -54,13 +60,8 @@ export default async function CambridgeshireLivePage() {
   const places: OPPoint[] = assets
     .filter((a) => a.latitude != null && a.longitude != null)
     .map((a) => {
-      // Honest evidence posture — no scores. 'verified' is reserved for places
-      // where an official regulator classification has been located and attached.
-      let evidenceState = 'neutral'
-      if (a._count.divergences > 0) evidenceState = 'divergence'
-      else if (a.statusDetail && /\bclassification\b|\bverified\b/i.test(a.statusDetail)) {
-        evidenceState = 'verified'
-      }
+      // Review belongs to individual evidence records, not an entire place.
+      const evidenceState = 'neutral'
       return {
         slug: a.slug,
         name: a.name,
@@ -93,17 +94,8 @@ export default async function CambridgeshireLivePage() {
 
   // Source-backed connections only (WRC → receiving water), both endpoints plotted.
   const plotted = new Set(places.map((p) => p.slug))
-  const waterSlugByName: Record<string, string> = {}
-  for (const a of assets) {
-    if (a.type === 'river' || a.type === 'lake') waterSlugByName[a.name] = a.slug
-  }
-  const connections: OPConnection[] = Object.entries(RECEIVING_WATER)
-    .map(([fromSlug, waterName]) => ({
-      fromSlug,
-      toSlug: waterSlugByName[waterName] ?? '',
-      label: 'discharges to',
-    }))
-    .filter((c) => c.toSlug && plotted.has(c.fromSlug) && plotted.has(c.toSlug))
+  const connections: OPConnection[] = verifiedDischargeConnections(relations, plotted)
+    .map(({ fromSlug, toSlug, label }) => ({ fromSlug, toSlug, label }))
 
   return (
     <RegionalOperatingPicture
@@ -114,9 +106,4 @@ export default async function CambridgeshireLivePage() {
       backHref="/regions/cambridgeshire-peterborough"
     />
   )
-}
-
-// Keep a plain link in the tree for crawlers / no-JS fallback context.
-export function _NoscriptBack() {
-  return <Link href="/regions/cambridgeshire-peterborough">Back to the regional evidence picture</Link>
 }

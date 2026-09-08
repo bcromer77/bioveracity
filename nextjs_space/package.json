@@ -5,12 +5,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:evidence": "node --import tsx --test tests/evidence-*.test.ts",
+    "test:release": "node --import tsx --test tests/*.test.ts",
+    "index:evidence": "node --import tsx scripts/index-evidence.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
     "@next/swc-wasm-nodejs": "16.3.3",
     "@types/bcryptjs": "2.4.6",
     "@types/jsonwebtoken": "9.0.7",
@@ -85,7 +91,6 @@
     "dotenv": "16.5.0",
     "embla-carousel-react": "8.3.0",
     "formik": "2.4.5",
-    "framer-motion": "12.23.12",
     "gray-matter": "4.0.3",
     "input-otp": "1.2.4",
     "jotai": "2.10.0",
@@ -125,8 +130,5 @@
   "engines": {
     "node": ">=20.9.0"
   },
-  "resolutions": {
-    "motion-dom": "12.23.12",
-    "motion-utils": "12.23.6"
-  }
+  "resolutions": {}
 }

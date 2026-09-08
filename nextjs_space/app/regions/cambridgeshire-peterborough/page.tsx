@@ -1,3 +1,4 @@
+import { CamSourceContext } from '@/components/regions/cambridgeshire/cam-source-context'
 import { prisma } from '@/lib/prisma'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
@@ -10,17 +11,11 @@ import {
   type ShowCounts,
 } from '@/components/regions/cambridgeshire/showcase'
 import type { MapPoint } from '@/components/regions/cambridgeshire/regional-map-inner'
+import { verifiedDischargeConnections } from '@/lib/region-relations'
 
 export const dynamic = 'force-dynamic'
 
 const REGION_SLUG = 'cambridgeshire'
-
-// Receiving-water relationships are asserted ONLY where the public record supports
-// a direct discharge relationship. Everything else stays null (not inferred).
-const RECEIVING_WATER: Record<string, string> = {
-  'march-wrc': 'River Nene',
-  'milton-wrc': 'River Cam',
-}
 
 export const metadata = {
   title: 'Cambridgeshire & Peterborough — Regional evidence picture | BioVeracity',
@@ -29,23 +24,42 @@ export const metadata = {
 }
 
 export default async function CambridgeshirePeterboroughPage() {
-  const assets = await prisma.asset.findMany({
-    where: { regionSlug: REGION_SLUG },
-    orderBy: { priorityScore: 'desc' },
-    include: {
-      events: { orderBy: { date: 'desc' } },
-      capitalProjects: { orderBy: { createdAt: 'desc' } },
-      _count: {
-        select: {
-          events: true,
-          evidenceGaps: true,
-          divergences: true,
-          capitalProjects: true,
-          regulatoryItems: true,
+  const [assets, relations] = await Promise.all([
+    prisma.asset.findMany({
+      where: { regionSlug: REGION_SLUG },
+      orderBy: { priorityScore: 'desc' },
+      include: {
+        events: { orderBy: { date: 'desc' } },
+        capitalProjects: { orderBy: { createdAt: 'desc' } },
+        _count: {
+          select: {
+            events: true,
+            evidenceGaps: true,
+            divergences: true,
+            capitalProjects: true,
+            regulatoryItems: true,
+          },
         },
       },
-    },
-  })
+    }),
+    prisma.assetRelation.findMany({
+      where: {
+        relationshipType: 'DISCHARGES_TO',
+        verificationState: 'VERIFIED',
+        sourceUrl: { startsWith: 'https://' },
+        fromAsset: { regionSlug: REGION_SLUG },
+        toAsset: { regionSlug: REGION_SLUG },
+      },
+      include: {
+        fromAsset: { select: { slug: true } },
+        toAsset: { select: { slug: true, name: true } },
+      },
+    }),
+  ])
+
+  const receivingWater = Object.fromEntries(
+    verifiedDischargeConnections(relations).map((relation) => [relation.fromSlug, relation.toName]),
+  )
 
   const [
     measurementCount,
@@ -91,7 +105,7 @@ export default async function CambridgeshirePeterboroughPage() {
     summary: a.summary,
     operatorName: a.operatorName,
     regulatorName: a.regulatorName,
-    receivingWater: RECEIVING_WATER[a.slug] ?? null,
+    receivingWater: receivingWater[a.slug] ?? null,
     projectCount: a._count.capitalProjects,
     regulatoryCount: a._count.regulatoryItems,
     gapCount: a._count.evidenceGaps,
@@ -187,6 +201,7 @@ export default async function CambridgeshirePeterboroughPage() {
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
       <main className="flex-1">
+        <CamSourceContext />
         <CambridgeshireShowcase
           counts={counts}
           wastewater={wastewater}
