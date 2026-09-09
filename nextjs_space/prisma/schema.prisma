@@ -17,6 +17,8 @@ model User {
   image         String?
   password      String?
   role          String      @default("user")
+  privateMemberships PrivateWorkspaceMember[]
+  privateAudit PrivateWorkspaceAudit[]
   accounts      Account[]
   sessions      Session[]
   watchlists    Watchlist[]
@@ -690,3 +692,70 @@ model Watch {
   @@index([areaId])
   @@index([targetType])
 }
+
+model PrivateWorkspace {
+  id String @id
+  name String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  members PrivateWorkspaceMember[]
+  cases PrivateCase[]
+  audit PrivateWorkspaceAudit[]
+}
+model PrivateWorkspaceMember {
+  workspaceId String
+  userId String
+  role String
+  revokedAt DateTime? @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  cases PrivateCaseMember[]
+  @@id([workspaceId, userId])
+  @@index([userId, revokedAt])
+}
+model PrivateCase {
+  id String @id
+  workspaceId String
+  title String
+  template String @default("GENERAL")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  members PrivateCaseMember[]
+  sites PrivateCaseSite[]
+  audit PrivateWorkspaceAudit[]
+  @@unique([workspaceId, id])
+}
+model PrivateCaseMember {
+  workspaceId String
+  caseId String
+  userId String
+  role String
+  canExport Boolean @default(false)
+  revokedAt DateTime? @db.Timestamptz(3)
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  member PrivateWorkspaceMember @relation(fields: [workspaceId, userId], references: [workspaceId, userId], onDelete: Restrict)
+  @@id([workspaceId, caseId, userId])
+  @@index([userId, revokedAt])
+}
+model PrivateCaseSite {
+  id String @id
+  workspaceId String
+  caseId String
+  name String
+  latitude Float?
+  longitude Float?
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  @@index([workspaceId, caseId])
+}
+model PrivateWorkspaceAudit {
+  id String @id
+  workspaceId String
+  caseId String?
+  actorId String
+  action String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  case PrivateCase? @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([workspaceId, createdAt])
+}
+
