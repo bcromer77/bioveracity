@@ -1,0 +1,566 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Acceptance questions, not generated factual answers",
+  "questions": [
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "place",
+      "id": "WX-PLACE-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What evidence is available for Wexford Harbour?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "place",
+      "id": "WX-PLACE-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What is known about the Slaney near Enniscorthy?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "place",
+      "id": "WX-PLACE-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which records cover Rosslare Harbour, Kilrane and Tagoat?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "place",
+      "id": "WX-PLACE-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What evidence covers New Ross and the Barrow?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "place",
+      "id": "WX-PLACE-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which parts of County Wexford are not covered?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "change",
+      "id": "WX-CHANGE-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What changed in the county development plan in July 2026?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "change",
+      "id": "WX-CHANGE-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What changed in the Tagoat wastewater project timeline?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "change",
+      "id": "WX-CHANGE-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which Rosslare investment milestones changed after 2024?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "change",
+      "id": "WX-CHANGE-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What water-status changes are recorded for the Slaney?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "change",
+      "id": "WX-CHANGE-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What dated land-cover changes can be examined near a named site?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "claim",
+      "id": "WX-CLAIM-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Does this annual report's water-quality claim match the cited evidence?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "claim",
+      "id": "WX-CLAIM-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Does a port sustainability claim specify the same place and period as its evidence?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "claim",
+      "id": "WX-CLAIM-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Does a quarry dust claim have suitable monitoring support?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "claim",
+      "id": "WX-CLAIM-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Does a biodiversity claim distinguish a protected boundary from habitat condition?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "claim",
+      "id": "WX-CLAIM-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Does a developer's wastewater-capacity claim have current operator support?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "support",
+      "id": "WX-SUPPORT-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Show the source passage supporting the Tagoat project cost."
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "support",
+      "id": "WX-SUPPORT-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Show the source and effective date for a planning condition."
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "support",
+      "id": "WX-SUPPORT-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Show the evidence underlying a Slaney waterbody classification."
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "support",
+      "id": "WX-SUPPORT-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which evidence supports a claimed environmental improvement?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "support",
+      "id": "WX-SUPPORT-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which records are operator statements rather than independent measurements?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "dependency",
+      "id": "WX-DEPENDENCY-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What must happen before the Tagoat network upgrade can deliver its intended service?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "dependency",
+      "id": "WX-DEPENDENCY-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which Rosslare investment components depend on separate approvals or funding?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "dependency",
+      "id": "WX-DEPENDENCY-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which development proposals need wastewater capacity confirmation?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "dependency",
+      "id": "WX-DEPENDENCY-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which sites need flood-risk assessment against the relevant scenario?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "dependency",
+      "id": "WX-DEPENDENCY-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which proposals may need further ecological assessment?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "incident",
+      "id": "WX-INCIDENT-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What official records describe a reported pollution event on a given date?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "incident",
+      "id": "WX-INCIDENT-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What evidence exists around a reported dust episode?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "incident",
+      "id": "WX-INCIDENT-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Was suitable rainfall or wind data available for that event?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "incident",
+      "id": "WX-INCIDENT-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Is a reported discharge linked to an identified facility by evidence?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "incident",
+      "id": "WX-INCIDENT-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What official follow-up was recorded after a complaint?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "connection",
+      "id": "WX-CONNECTION-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "How does the planned Tagoat connection relate to Kilrane and Rosslare?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "connection",
+      "id": "WX-CONNECTION-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which protected-site boundaries intersect a selected project geometry?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "connection",
+      "id": "WX-CONNECTION-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which planning references refer to the same asset?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "connection",
+      "id": "WX-CONNECTION-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which catchment contains this location, including locations outside the Slaney?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "connection",
+      "id": "WX-CONNECTION-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which records share an original source and should not be counted independently?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "gap",
+      "id": "WX-GAP-1",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What evidence was not located for this company's claim?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "gap",
+      "id": "WX-GAP-2",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which records are too old to answer a current question?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "gap",
+      "id": "WX-GAP-3",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Which sources could not be retrieved or reused?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "gap",
+      "id": "WX-GAP-4",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "Where is there insufficient monitoring to assess a reported event?"
+    },
+    {
+      "executionState": "NOT_RUN",
+      "expectedBehaviour": "Return relevant permitted evidence with source passages, place and date precision; otherwise state the coverage gap. Never fabricate an answer.",
+      "family": "gap",
+      "id": "WX-GAP-5",
+      "passCriteria": [
+        "Evidence type retained",
+        "Source passage supports each factual assertion",
+        "Event date separated from publication date",
+        "Coverage limitations explicit",
+        "Access enforced before retrieval and export"
+      ],
+      "question": "What further evidence would resolve this investment dependency?"
+    }
+  ]
+}

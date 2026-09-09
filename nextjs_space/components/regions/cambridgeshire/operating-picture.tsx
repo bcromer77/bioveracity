@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { InvestigationPanel } from './investigation-panel'
+import { PlaceHistoryPanel } from './place-history-panel'
 import { ArrowLeft, Play, Pause, Search, Info } from 'lucide-react'
 import { getEvidenceDisplay } from '@/lib/evidence-taxonomy'
 
@@ -66,11 +68,11 @@ const CONTEXTS: {
   emphasis: string | null
   blurb: string
 }[] = [
-  { id: 'normal', label: 'Normal', lookbackDays: null, emphasis: null, blurb: 'The full evidence record for the region.' },
-  { id: 'watch', label: 'Watch', lookbackDays: 90, emphasis: null, blurb: 'Activity across the most recent 90 days of the record.' },
-  { id: 'stress', label: 'Stress', lookbackDays: 30, emphasis: 'operations', blurb: 'A tighter 30-day window, weighted to operational evidence.' },
-  { id: 'incident', label: 'Incident', lookbackDays: 3, emphasis: null, blurb: 'The 72 hours around the latest evidence — rewind an event.' },
-  { id: 'recovery', label: 'Recovery', lookbackDays: 180, emphasis: null, blurb: 'The longer arc after an event, to follow what changed.' },
+  { id: 'normal', label: 'All records', lookbackDays: null, emphasis: null, blurb: 'The full evidence record for the region.' },
+  { id: 'watch', label: '90 days', lookbackDays: 90, emphasis: null, blurb: 'Activity across the most recent 90 days of the record.' },
+  { id: 'stress', label: 'Operations', lookbackDays: 30, emphasis: 'operations', blurb: 'A tighter 30-day window, filtered to operational evidence.' },
+  { id: 'incident', label: '3 days', lookbackDays: 3, emphasis: null, blurb: 'The 72 hours around the latest evidence — rewind an event.' },
+  { id: 'recovery', label: '180 days', lookbackDays: 180, emphasis: null, blurb: 'The longer arc after an event, to follow what changed.' },
 ]
 
 const CATEGORIES: { id: string; label: string }[] = [
@@ -209,12 +211,14 @@ export function RegionalOperatingPicture({
 
   const [contextId, setContextId] = useState('normal')
   const [category, setCategory] = useState('all')
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
+  const isCambridge = backHref === '/regions/cambridgeshire-peterborough'
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(isCambridge && places.some(p => p.slug === 'river-cam') ? 'river-cam' : null)
   const [cursorTs, setCursorTs] = useState<number>(maxTs)
   const [lookbackDays, setLookbackDays] = useState<number | null>(null)
   const [searchText, setSearchText] = useState('')
   const [searchNote, setSearchNote] = useState('')
   const [playing, setPlaying] = useState(false)
+  const [historyAnchorId, setHistoryAnchorId] = useState<string | null>(null)
 
   const context = CONTEXTS.find((c) => c.id === contextId) ?? CONTEXTS[0]
   const emphasisCategory = context.emphasis
@@ -249,9 +253,9 @@ export function RegionalOperatingPicture({
 
   // Chronology rail = window + category chip, newest first.
   const railEvents = useMemo(() => {
-    const list = windowEvents.filter((e) => category === 'all' || e.eventType === category)
+    const list = windowEvents.filter((e) => (category === 'all' || e.eventType === category) && (!selectedSlug || e.assetSlug === selectedSlug))
     return [...list].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
-  }, [windowEvents, category])
+  }, [windowEvents, category, selectedSlug])
 
   // Places to pulse: those with at least one event in the rail set (map ↔ rail in sync).
   const activeSlugs = useMemo(() => new Set(railEvents.map((e) => e.assetSlug)), [railEvents])
@@ -267,6 +271,7 @@ export function RegionalOperatingPicture({
 
   const selectEvent = useCallback((e: OPEvent) => {
     setSelectedSlug(e.assetSlug)
+    setHistoryAnchorId(e.id)
     const t = Date.parse(e.date)
     if (!Number.isNaN(t)) setCursorTs(t)
     setPlaying(false)
@@ -358,7 +363,7 @@ export function RegionalOperatingPicture({
           <div className="leading-tight">
             <div className="text-[13px] font-semibold tracking-[0.18em] text-slate-100">BIOVERACITY</div>
             <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">
-              Regional Environmental State
+              Places and evidence
             </div>
           </div>
         </div>
@@ -400,9 +405,9 @@ export function RegionalOperatingPicture({
       </header>
 
       {/* ----------------------------------------------------------------- Body */}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
         {/* Map */}
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-h-[320px] min-w-0 shrink-0 md:min-h-0 md:flex-1">
           <OperatingMapInner
             points={places}
             connections={connections}
@@ -426,15 +431,19 @@ export function RegionalOperatingPicture({
                 <input
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  placeholder='Ask in plain language — e.g. "community reports in the last 90 days"'
+                  placeholder='Filter timeline — e.g. "community reports in the last 90 days"'
                   className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
                 />
                 <button
                   type="submit"
                   className="shrink-0 rounded-md bg-[#E9AD20] px-2.5 py-1 text-[11px] font-semibold text-[#0b1220] transition hover:brightness-110"
                 >
-                  Search
+                  Apply
                 </button>
+              </div>
+              <div className="mt-1 flex justify-between gap-3 px-1 text-[11px] text-slate-300">
+                <span>Topic and time filters · windows end at the latest stored record</span>
+                <Link className="shrink-0 underline" href={`/evidence?q=${encodeURIComponent(selectedSlug ? places.find(p => p.slug === selectedSlug)?.name ?? searchText : searchText || 'River Cam')}`}>Search reviewed sources</Link>
               </div>
               {searchNote && (
                 <div className="mt-1 px-1 text-[11px] text-slate-400">{searchNote}</div>
@@ -451,7 +460,7 @@ export function RegionalOperatingPicture({
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#4ade80' }} />
-                Verified
+                Reviewed record
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: '#cbd5e1' }} />
@@ -465,7 +474,14 @@ export function RegionalOperatingPicture({
         </div>
 
         {/* Chronology rail */}
-        <aside className="flex w-[360px] shrink-0 flex-col border-l border-white/10 bg-[#0a0f1a]">
+        <aside className="flex w-full shrink-0 flex-col md:w-[42%] md:min-w-[290px] md:max-w-[440px] md:overflow-y-auto border-l border-white/10 bg-[#0a0f1a]">
+          <PlaceHistoryPanel records={chronology} slug={selectedSlug}
+            placeName={places.find(p => p.slug === selectedSlug)?.name ?? regionName}
+            anchorId={historyAnchorId} onAnchor={selectEvent} />
+          {isCambridge && <InvestigationPanel records={chronology} selectedSlug={selectedSlug}
+            placeName={places.find(p => p.slug === selectedSlug)?.name ?? 'Cambridge & Peterborough'}
+            onChoose={cat => { setCategory(cat); setLookbackDays(null); setCursorTs(maxTs); setPlaying(false); setContextId('normal') }}
+            onReset={() => { setSelectedSlug(null); setCategory('all'); setLookbackDays(null); setCursorTs(maxTs); setPlaying(false); setContextId('normal') }} />}
           <div className="border-b border-white/10 px-4 py-3">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
               Evidence chronology
@@ -506,7 +522,8 @@ export function RegionalOperatingPicture({
           <div className="min-h-0 flex-1 overflow-y-auto">
             {railEvents.length === 0 ? (
               <div className="px-4 py-10 text-center text-[12px] text-slate-500">
-                No evidence falls inside this window. Widen the time range or clear the filter.
+                No loaded records match this place, topic and period. This does not establish that no event occurred.
+                <button className="mt-3 block w-full text-amber-200 underline" onClick={() => { setCategory('all'); setLookbackDays(null); setCursorTs(maxTs); setSelectedSlug(null) }}>View all available records</button>
               </div>
             ) : (
               <ul className="divide-y divide-white/[0.06]">

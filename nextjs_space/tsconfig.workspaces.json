@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2022", "lib": ["ES2022", "DOM"], "strict": true, "skipLibCheck": true, "noEmit": true, "esModuleInterop": true, "module": "ESNext", "moduleResolution": "bundler", "paths": { "@/*": ["./*"] } },
+  "include": ["lib/workspaces/**/*.ts", "app/api/workspaces/**/*.ts", "tests/private-workspaces.test.ts", "types/next-auth.d.ts"]
+}

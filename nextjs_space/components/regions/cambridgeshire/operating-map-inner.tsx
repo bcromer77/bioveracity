@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, useMap, LayersControl, ZoomControl, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import type { OPPoint, OPConnection } from './operating-picture'
@@ -10,7 +10,7 @@ import type { OPPoint, OPConnection } from './operating-picture'
 // Restrained palette (tuned for a dark satellite basemap)
 // ---------------------------------------------------------------------------
 const COLOR = {
-  neutral: '#cbd5e1', // slate-300 — ordinary place, legible on imagery
+  neutral: '#475569', // slate-300 — ordinary place, legible on imagery
   divergence: '#f87171', // red-400 — genuine evidence divergence only
   verified: '#4ade80', // green-400 — verified / resolved only
   selected: '#E9AD20', // BioVeracity yellow — focused place
@@ -96,16 +96,19 @@ function buildIcon(p: OPPoint, selected: boolean, dimmed: boolean, active: boole
   })
 }
 
-function FitBounds({ points }: { points: OPPoint[] }) {
+function FitBounds({ points, selectedSlug }: { points: OPPoint[]; selectedSlug: string | null }) {
   const map = useMap()
   useEffect(() => {
-    if (points.length > 1) {
+    const selected = points.find(p => p.slug === selectedSlug)
+    if (selected) {
+      map.setView([selected.lat, selected.lng], selected.indicative ? 12 : 14)
+    } else if (points.length > 1) {
       const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng] as [number, number]))
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 11 })
     } else if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 11)
     }
-  }, [points, map])
+  }, [points, selectedSlug, map])
   return null
 }
 
@@ -150,21 +153,21 @@ export default function OperatingMapInner({
       zoom={10}
       className="h-full w-full bg-[#0b1220]"
       zoomControl={false}
-      attributionControl={false}
+      attributionControl={true}
       scrollWheelZoom
     >
-      {/* Esri World Imagery (satellite) — the geographic seriousness of the deck. */}
-      <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        maxZoom={18}
-      />
-      {/* Light place / boundary labels over the imagery for readability. */}
-      <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-        maxZoom={18}
-      />
+      <ZoomControl position="bottomright" />
+      <LayersControl position="topright">
+        <LayersControl.BaseLayer checked name="Reference map">
+          <TileLayer attribution='Tiles &copy; Esri' url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}" maxZoom={16} />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Satellite">
+          <TileLayer attribution='Tiles &copy; Esri, Maxar, Earthstar Geographics and the GIS User Community' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={18} />
+        </LayersControl.BaseLayer>
+      </LayersControl>
+      <TileLayer attribution='Labels &copy; Esri' url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" maxZoom={18} />
 
-      <FitBounds points={points} />
+      <FitBounds points={points} selectedSlug={selectedSlug} />
 
       {/* Source-backed relationships only. */}
       {edges.map((e, i) => {
@@ -196,7 +199,9 @@ export default function OperatingMapInner({
             position={[p.lat, p.lng]}
             icon={buildIcon(p, isSel, dimmed, active)}
             eventHandlers={{ click: () => onSelect(p.slug) }}
-          />
+          >
+            <Tooltip>{p.name}{p.indicative ? ' · indicative location' : ''}</Tooltip>
+          </Marker>
         )
       })}
     </MapContainer>

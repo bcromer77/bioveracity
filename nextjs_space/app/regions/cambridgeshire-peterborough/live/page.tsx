@@ -54,13 +54,8 @@ export default async function CambridgeshireLivePage() {
   const places: OPPoint[] = assets
     .filter((a) => a.latitude != null && a.longitude != null)
     .map((a) => {
-      // Honest evidence posture — no scores. 'verified' is reserved for places
-      // where an official regulator classification has been located and attached.
-      let evidenceState = 'neutral'
-      if (a._count.divergences > 0) evidenceState = 'divergence'
-      else if (a.statusDetail && /\bclassification\b|\bverified\b/i.test(a.statusDetail)) {
-        evidenceState = 'verified'
-      }
+      // Review belongs to individual evidence records, not an entire place.
+      const evidenceState = 'neutral'
       return {
         slug: a.slug,
         name: a.name,
@@ -117,6 +112,6 @@ export default async function CambridgeshireLivePage() {
 }
 
 // Keep a plain link in the tree for crawlers / no-JS fallback context.
-export function _NoscriptBack() {
+function _NoscriptBack() {
   return <Link href="/regions/cambridgeshire-peterborough">Back to the regional evidence picture</Link>
 }
