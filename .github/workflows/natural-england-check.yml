@@ -1,0 +1,21 @@
+name: Natural England connector checks
+on:
+  pull_request:
+    paths:
+      - 'nextjs_space/lib/sources/natural-england.mjs'
+      - 'nextjs_space/scripts/natural-england-snapshot.mjs'
+      - 'nextjs_space/tests/natural-england.test.mjs'
+      - '.github/workflows/natural-england-check.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test nextjs_space/tests/natural-england.test.mjs
+      - run: node --check nextjs_space/lib/sources/natural-england.mjs
