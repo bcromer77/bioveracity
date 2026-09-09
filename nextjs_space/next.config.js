@@ -1,23 +1,11 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
-const { parserFiles } = require('./lib/workspaces/trace-parser.cjs');
 
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   output: process.env.NEXT_OUTPUT_MODE,
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
-  serverExternalPackages: ['pdfjs-dist', 'pdf-lib', 'mailparser', 'mammoth'],
-  async headers() {
-    return [{source:'/workspace',headers:[
-      {key:'Cache-Control',value:'private, no-store'},
-      {key:'Referrer-Policy',value:'no-referrer'},
-      {key:'Content-Security-Policy',value:"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"},
-    ]}]
-  },
-  outputFileTracingIncludes: {
-    '/api/workspaces/**': ['./lib/workspaces/*process.mjs', './lib/workspaces/parse-file.mjs', ...parserFiles(__dirname)],
-  },
   outputFileTracingRoot: process.env.NEXT_OUTPUT_MODE ? path.join(__dirname, '../') : '/',
   typescript: {
     ignoreBuildErrors: true,
@@ -33,7 +21,7 @@ const nextConfig = {
   // the platform's browser checks on the pod browse via 127.0.0.1. Enumerated hosts, never a
   // wildcard: every conversation previews under the same parent domain and serves content its own
   // author controls, so `**.<domain>` would let any UNRELATED app's preview reach this dev server.
-  allowedDevOrigins: ['127.0.0.1', '3f3b98860.na120.preview.abacusai.app', '135878d217.na120.preview.abacusai.app', '126f09400a.na120.preview.abacusai.app', 'd525f92e6.na120.preview.abacusai.app'],
+  allowedDevOrigins: ['127.0.0.1', '3f3b98860.na120.preview.abacusai.app', '135878d217.na120.preview.abacusai.app', '126f09400a.na120.preview.abacusai.app', 'd525f92e6.na120.preview.abacusai.app', '7f3bca4d5.na120.preview.abacusai.app'],
 };
 
 const fs = require('fs');
@@ -50,3 +38,4 @@ if (fs.existsSync(userConfigPath)) {
 }
 
 module.exports = nextConfig;
+
