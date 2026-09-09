@@ -108,6 +108,11 @@ model User {
   image         String?
   password      String?
   role          String      @default("user")
+  privateMemberships PrivateWorkspaceMember[]
+  privateAudit PrivateWorkspaceAudit[]
+  caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
+  caseReviews PrivateCaseEventRevision[] @relation("CaseEventReviewer")
+  caseExports PrivateCaseExport[] @relation("CaseExportRequester")
   accounts      Account[]
   sessions      Session[]
   watchlists    Watchlist[]
@@ -780,4 +785,154 @@ model Watch {
   @@index([assetId])
   @@index([areaId])
   @@index([targetType])
+}
+
+model PrivateWorkspace {
+  id String @id
+  name String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  members PrivateWorkspaceMember[]
+  cases PrivateCase[]
+  audit PrivateWorkspaceAudit[]
+}
+model PrivateWorkspaceMember {
+  workspaceId String
+  userId String
+  role String
+  revokedAt DateTime? @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  cases PrivateCaseMember[]
+  @@id([workspaceId, userId])
+  @@index([userId, revokedAt])
+}
+model PrivateCase {
+  id String @id
+  workspaceId String
+  title String
+  template String @default("GENERAL")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  members PrivateCaseMember[]
+  sites PrivateCaseSite[]
+  audit PrivateWorkspaceAudit[]
+  documents PrivateCaseDocument[]
+  exports PrivateCaseExport[]
+  @@unique([workspaceId, id])
+}
+
+model PrivateCaseDocument {
+  id String @id
+  workspaceId String
+  caseId String
+  name String
+  hash String
+  encryptedBytes Bytes
+  byteLength Int
+  mediaType String
+  status String
+  metadata Json @default("{}")
+  warnings Json @default("[]")
+  parentId String?
+  supersedesId String?
+  sourceUrl String?
+  publicationDate String?
+  parserVersion String
+  importedBy String
+  importedAt DateTime @default(now()) @db.Timestamptz(3)
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  importer User @relation("CaseDocumentImporter", fields: [importedBy], references: [id], onDelete: Restrict)
+  parent PrivateCaseDocument? @relation("EmailAttachments", fields: [workspaceId, caseId, parentId], references: [workspaceId, caseId, id], onDelete: NoAction, onUpdate: NoAction)
+  children PrivateCaseDocument[] @relation("EmailAttachments")
+  supersedes PrivateCaseDocument? @relation("CaseDocumentVersions", fields: [workspaceId, caseId, supersedesId], references: [workspaceId, caseId, id], onDelete: NoAction, onUpdate: NoAction)
+  amendments PrivateCaseDocument[] @relation("CaseDocumentVersions")
+  passages PrivateCasePassage[]
+  @@unique([workspaceId, caseId, id])
+  @@unique([workspaceId, caseId, hash])
+}
+model PrivateCasePassage {
+  id String @id
+  workspaceId String
+  caseId String
+  documentId String
+  ordinal Int
+  locator String
+  text String
+  document PrivateCaseDocument @relation(fields: [workspaceId, caseId, documentId], references: [workspaceId, caseId, id], onDelete: Restrict)
+  events PrivateCaseEvent[]
+  @@unique([workspaceId, caseId, id])
+  @@index([workspaceId, caseId, documentId])
+}
+model PrivateCaseEvent {
+  id String @id
+  workspaceId String
+  caseId String
+  passageId String
+  passage PrivateCasePassage @relation(fields: [workspaceId, caseId, passageId], references: [workspaceId, caseId, id], onDelete: Restrict)
+  revisions PrivateCaseEventRevision[]
+  @@unique([workspaceId, caseId, id])
+  @@index([workspaceId, caseId])
+}
+model PrivateCaseEventRevision {
+  eventId String
+  revision Int
+  title String
+  quote String
+  eventDate String?
+  precision String
+  status String
+  evidenceType String @default("SOURCE_STATEMENT")
+  note String @default("")
+  reviewedBy String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  event PrivateCaseEvent @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  reviewer User? @relation("CaseEventReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  @@id([eventId, revision])
+}
+model PrivateCaseExport {
+  id String @id
+  workspaceId String
+  caseId String
+  requestedBy String
+  encryptedBytes Bytes
+  hash String
+  manifest Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  requester User @relation("CaseExportRequester", fields: [requestedBy], references: [id], onDelete: Restrict)
+  @@index([workspaceId, caseId, requestedBy])
+}
+model PrivateCaseMember {
+  workspaceId String
+  caseId String
+  userId String
+  role String
+  canExport Boolean @default(false)
+  revokedAt DateTime? @db.Timestamptz(3)
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  member PrivateWorkspaceMember @relation(fields: [workspaceId, userId], references: [workspaceId, userId], onDelete: Restrict)
+  @@id([workspaceId, caseId, userId])
+  @@index([userId, revokedAt])
+}
+model PrivateCaseSite {
+  id String @id
+  workspaceId String
+  caseId String
+  name String
+  latitude Float?
+  longitude Float?
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  @@index([workspaceId, caseId])
+}
+model PrivateWorkspaceAudit {
+  id String @id
+  workspaceId String
+  caseId String?
+  actorId String
+  action String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  case PrivateCase? @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([workspaceId, createdAt])
 }

@@ -1,11 +1,23 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
+const { parserFiles } = require('./lib/workspaces/trace-parser.cjs');
 
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   output: process.env.NEXT_OUTPUT_MODE,
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  serverExternalPackages: ['pdfjs-dist', 'pdf-lib', 'mailparser', 'mammoth'],
+  async headers() {
+    return [{source:'/workspace',headers:[
+      {key:'Cache-Control',value:'private, no-store'},
+      {key:'Referrer-Policy',value:'no-referrer'},
+      {key:'Content-Security-Policy',value:"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"},
+    ]}]
+  },
+  outputFileTracingIncludes: {
+    '/api/workspaces/**': ['./lib/workspaces/*process.mjs', './lib/workspaces/parse-file.mjs', ...parserFiles(__dirname)],
+  },
   outputFileTracingRoot: process.env.NEXT_OUTPUT_MODE ? path.join(__dirname, '../') : '/',
   typescript: {
     ignoreBuildErrors: true,
@@ -38,4 +50,3 @@ if (fs.existsSync(userConfigPath)) {
 }
 
 module.exports = nextConfig;
-
