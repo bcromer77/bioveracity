@@ -168,6 +168,9 @@ export async function POST(request: Request) {
       // Conservative entity resolution (never creates a public asset).
       const officialIdentifier = pickStr(o, 'official_identifier', 'asset_id', 'identifier')
       const matchedAssetId = await resolveAsset({
+        jurisdiction: pickStr(o, 'jurisdiction'),
+        identifierAuthority: pickStr(o, 'identifier_authority', 'identifierAuthority'),
+        identifierType: pickStr(o, 'identifier_type', 'identifierType'),
         slug: pickStr(o, 'asset_slug', 'slug'),
         name: pickStr(o, 'asset_name', 'canonical_name', 'place', 'name'),
         officialIdentifier,
@@ -236,6 +239,9 @@ export async function POST(request: Request) {
             : []
 
         const matchedAssetId = await resolveAsset({
+          jurisdiction: pickStr(prop, 'jurisdiction'),
+          identifierAuthority: pickStr(prop, 'identifier_authority', 'identifierAuthority'),
+          identifierType: pickStr(prop, 'identifier_type', 'identifierType'),
           slug: pickStr(prop, 'slug', 'asset_slug'),
           name: canonicalName,
           officialIdentifier,
