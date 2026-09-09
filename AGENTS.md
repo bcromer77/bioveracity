@@ -30,3 +30,11 @@ Preserve a source-linked environmental chronology. Distinguish measurements, reg
 ## Agent tasks
 
 Use bounded branches with a problem statement, scope, acceptance tests and handoff. Suggested lanes: source adapters; claim verification; search; community questions; release checks. Persistent scheduling exists separately in ChatGPT and is not activated by this file.
+
+## Development ownership and handover
+
+- Read docs/DEVELOPMENT_WORKFLOW.md and docs/CURRENT_HANDOVER.md before implementation. Refresh branch heads and open PRs; dated handover entries are evidence snapshots, not live status.
+- Codex owns ordinary implementation and tests; GitHub holds the authoritative code and work register; Abacus remains the hosting/deployment route for now. One implementation owner per task. During the current parser build repair, Abacus owns that repair until a pushed, tested handover is recorded.
+- Push meaningful increments, before changing tools/owners, and at session end. Record the branch and full commit SHA. Push does not mean merge, deployment or live verification.
+- Never start from main merely because it is the default: confirm the approved integration base and preserve unmerged work. Do not merge unrelated PRs or launch overlapping scheduled coding.
+- Include a proportionate cost/capacity check for features that add paid APIs, storage, recurring jobs or human review; distinguish measured costs from assumptions.
