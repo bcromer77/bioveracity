@@ -33,6 +33,13 @@ export function SiteHeader() {
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 z-50 mt-1 w-52 rounded-md border border-border bg-popover p-1 shadow-lg">
                   <Link
+                    href="/workspace"
+                    className="block rounded-sm px-3 py-2 text-[15px] text-foreground hover:bg-secondary"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    My workspace
+                  </Link>
+                  <Link
                     href="/my-places"
                     className="block rounded-sm px-3 py-2 text-[15px] text-foreground hover:bg-secondary"
                     onClick={() => setMenuOpen(false)}

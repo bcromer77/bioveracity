@@ -5,7 +5,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:workspaces": "tsx --test tests/private-workspaces.test.ts",
+    "test:case-files": "tsx --test tests/case-files.test.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
@@ -33,9 +35,15 @@
     "tailwindcss-animate": "1.0.7",
     "ts-node": "10.9.2",
     "tsx": "4.20.3",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "@electric-sql/pglite": "0.5.8",
+    "jszip": "3.10.1"
   },
   "dependencies": {
+    "pdfjs-dist": "6.3.289",
+    "pdf-lib": "1.17.1",
+    "mailparser": "3.9.23",
+    "mammoth": "1.12.2",
     "@auth/prisma-adapter": "2.11.3",
     "@aws-sdk/client-s3": "3.1105.0",
     "@aws-sdk/s3-request-presigner": "3.1105.0",
@@ -123,9 +131,13 @@
     "zustand": "5.0.3"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.13.0"
   },
   "resolutions": {
+    "motion-dom": "12.23.12",
+    "motion-utils": "12.23.6"
+  },
+  "overrides": {
     "motion-dom": "12.23.12",
     "motion-utils": "12.23.6"
   }

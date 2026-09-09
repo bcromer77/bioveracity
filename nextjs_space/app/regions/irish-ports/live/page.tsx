@@ -196,6 +196,6 @@ export default async function IrishPortsLivePage() {
 }
 
 // Keep a plain link in the tree for crawlers / no-JS fallback context.
-export function _NoscriptBack() {
+function _NoscriptBack() {
   return <Link href="/regions/irish-ports">Back to the Irish Ports evidence picture</Link>
 }

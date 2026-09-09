@@ -117,6 +117,6 @@ export default async function CambridgeshireLivePage() {
 }
 
 // Keep a plain link in the tree for crawlers / no-JS fallback context.
-export function _NoscriptBack() {
+function _NoscriptBack() {
   return <Link href="/regions/cambridgeshire-peterborough">Back to the regional evidence picture</Link>
 }
