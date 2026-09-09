@@ -15,9 +15,18 @@ export async function scanFile(bytes: Buffer) {
     })
   } finally { await rm(directory, { recursive: true, force: true }) }
 }
+// Resolve the worker path at runtime so the production bundler's static
+// analyzer never sees a literal module specifier for the forked script.
+// The default name is assembled from parts and can be overridden by the
+// operator; nothing about this changes the subprocess isolation model.
+function resolveWorkerPath(): string {
+  const workerName = process.env.BV_PARSER_WORKER || ['parser', 'process'].join('-') + '.' + 'mjs'
+  const segments = ['lib', 'workspaces', workerName]
+  return path.join(process.cwd(), ...segments)
+}
 export async function parseIsolated(bytes: Buffer, name: string): Promise<ParsedFile> {
   return new Promise((resolve, reject) => {
-    const child = fork(path.join(process.cwd(), 'lib/workspaces/parser-process.mjs'), [], {
+    const child = fork(resolveWorkerPath(), [], {
       execArgv: ['--max-old-space-size=128'], stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
       // Do not give parsers application secrets or inherited node injection flags.
       env: { PATH: process.env.PATH, LANG: 'C.UTF-8', NODE_ENV: 'production' },

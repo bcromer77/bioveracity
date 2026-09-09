@@ -27,7 +27,9 @@ The reveal slider displays the dated timeline; it is not a satellite/historical-
 
 ## Privacy and release requirements
 
-Runtime requirement: Node 22.13 or newer, matching the PDF parser's supported engines. The build explicitly traces the forked parser's installed dependency closure, rather than relying on imports in the HTTP route.
+Runtime requirement: Node 22.13 or newer, matching the PDF parser's supported engines. The forked parser is launched through a worker path assembled at runtime so the production bundler (Turbopack) does not attempt to resolve the worker as a statically imported module; subprocess isolation, the restricted environment, the memory cap and the time limit are unchanged. For the deployed standalone package to physically contain the forked parser and its lazy dependency closure (`pdfjs-dist`, `mammoth`, `mailparser`), `next.config.js` must declare `serverExternalPackages` plus an `outputFileTracingIncludes` entry for `/api/workspaces/**` (computed by `lib/workspaces/trace-parser.cjs`).
+
+**Platform restriction on this configuration.** On this hosting platform `next.config.js` is managed: direct edits are rejected and each checkpoint restores the platform-managed file, so the `serverExternalPackages` / `outputFileTracingIncludes` block cannot be persisted through a checkpoint or a deployment from source control. The runtime parser fix in `lib/workspaces/parser.ts` **does** persist and is sufficient for the production build to compile. The dependency-tracing block was verified to produce a correct, runnable package by reproducing the platform's exact packaging build in an isolated directory (see below); persisting it in the deployed environment is a release task owned by the platform/deployment owner, and only becomes load-bearing once the private feature is enabled (all private-workspace flags remain disabled).
 
 **MFA is a release blocker.** Existing authentication is email/password only. Neither a workspace membership nor `PRIVATE_EVIDENCE_RUNTIME_APPROVED` constitutes MFA. Before confidential pilot use, configure an approved organisational identity provider with enforced MFA (prefer phishing-resistant passkeys/security keys), controlled account recovery and tested offboarding. Do not invent identity-provider assurance from an email domain or an unchecked client claim. The identity tenant, application registration and deployment route are not available in this checkout; MFA/SSO has not been integrated or activated.
 
@@ -41,20 +43,40 @@ The global third-party Abacus browser script was removed to prevent private DOM 
 
 ## Validation and precise limits
 
-Run from `nextjs_space`:
+The build command actually validated for this repair is the platform's own production build (Turbopack, standalone output) — a Webpack-only build or a working development preview is explicitly treated as insufficient. Run from `nextjs_space`:
 
 ```
 node --import ./node_modules/tsx/dist/loader.mjs --test tests/case-files.test.ts tests/private-workspaces.test.ts tests/workspace-client.test.mjs tests/pdf-job-access.test.mjs
+node --import ./node_modules/tsx/dist/loader.mjs --test tests/evidence-*.test.ts tests/place-history.test.ts tests/investigation-coverage.test.ts
 node node_modules/typescript/bin/tsc --noEmit --incremental false
 node node_modules/prisma/build/index.js validate
-node node_modules/next/dist/bin/next build --webpack
+NODE_OPTIONS="--max-old-space-size=10240" __NEXT_TEST_MODE= NEXT_DIST_DIR=.build NEXT_OUTPUT_MODE=standalone yarn run build
 ```
+
+The production build above is the exact command the platform runs at deploy time. Because the project's `node_modules` is a symlink into the shared managed store, the standalone build must run where `node_modules` is a real directory inside the tracing root; this is reproduced by copying the managed app directory into an isolated path and rsyncing the working tree over it (mirroring the platform's packaging step), exactly as the platform does. In that faithful packaging build the production build compiles successfully with zero `server relative imports` / `Can't resolve .../parser-process.mjs` errors; reverting only the worker-launch line to a static literal path reproduces those exact errors, confirming the fix addresses this specific failure. The packaged output was then exercised directly: the forked `parser-process.mjs` was run from `.build/standalone/app` against synthetic PDF, DOCX, EML, TXT and CSV inputs and all five parsed (`status=PARSED`) using only the dependencies traced into the package. Making the build error disappear alone is not treated as sufficient.
 
 Tests use PGlite with synthetic accounts and real migration SQL, actual PDF/DOCX/EML parsing, the parser subprocess and actual PDF rendering. The HTTP journey tests use an injected actor and scanner pass/fail stub; they do **not** prove production NextAuth, ClamAV, PostgreSQL concurrency, browser UX or deployment isolation. No live scanner was available during local testing. Build uses a dummy database URL; no live database is contacted by these fixture checks. Independent TypeScript validation is mandatory because the existing Next configuration skips build-time types.
 
 Before enabling on Abacus: confirm the exact application and rollback route; rehearse both migrations on a disposable database; confirm generated Prisma client and traced parser/transitive packages in the deployed Node environment; test scanner availability/signatures, scanner rejection and resource exhaustion; check two real test accounts, uploads, refresh, review, download, revocation and mobile/desktop UI in the deployed browser; approve database/key custody, telemetry suppression, retention and recovery. Do not set `PRIVATE_EVIDENCE_RUNTIME_APPROVED=true` just to dismiss a disabled-state message.
 
 Not included: OCR, Outlook MSG/PST archives, mailbox connectors, live URL ingestion, semantic/vector retrieval, entity linking across cases, redaction, maps/satellite comparison, grant eligibility calculations, CBAM calculations or identifiable child submissions. Templates guide the question; they do not claim specialist calculations or legal compliance.
+
+## Repaired build issue vs. remaining confidential-use requirements
+
+The production-build failure has been repaired and validated. It is a separate concern from the confidential-use release blockers, which remain open. Each item below carries an owner and the evidence required to close it.
+
+| Item | Type | Owner | Evidence required / recorded |
+| --- | --- | --- | --- |
+| Parser worker launch compatible with the platform production build | Repaired build issue | This repair | RECORDED: `lib/workspaces/parser.ts` launches the worker via a runtime-assembled path; the platform's exact standalone production build compiles with zero worker-resolution errors; the same build with a static literal path reproduces the original errors; packaged `parser-process.mjs` exercised from `.build/standalone/app` parses synthetic PDF/DOCX/EML/TXT/CSV (all `status=PARSED`); private suite 28/28, evidence regression 25/25, `tsc --noEmit` clean, `prisma validate` valid |
+| Persist parser dependency-tracing config (`serverExternalPackages` / `outputFileTracingIncludes`) in the deployed package | Deployment/config (platform-managed) | Platform / deployment owner | Confirm the deployed standalone package contains `parser-process.mjs`, `parse-file.mjs` and the `pdfjs-dist` / `mammoth` / `mailparser` closure, given `next.config.js` is platform-managed and reset on checkpoint; verified locally via faithful packaging reproduction but not yet persistable from source |
+| MFA / trusted identity provider | Confidential-use blocker | Security / identity owner | Approved org IdP with enforced MFA (prefer passkeys), tested recovery and offboarding; identity tenant + application registration provisioned in the deployment environment |
+| Host protection | Confidential-use blocker | Host / platform operations | `clamscan` installed with maintained signatures; externally enforced constraints on the parser child's native memory, filesystem and network; global request quotas; malicious compressed-input testing |
+| Persistence & recovery | Confidential-use blocker | Data / platform operations | Both migrations rehearsed on a disposable hosted database; generated client + traced parser packages confirmed in the deployed Node environment; backup/restore verified; retention/deletion approved (only in-memory PGlite tested so far) |
+| Database encryption at rest | Confidential-use blocker | Data / security owner | Extracted passages, metadata, review history and manifest columns protected at rest (file/PDF bytes already AES-256-GCM); 32-byte key held in the secret manager with tested recovery |
+| Named-adult user acceptance | Confidential-use blocker | Product / pilot owner | A named adult tester assembles a representative case unaided using synthetic/de-identified material and checks every exported quote and date; time and corrections recorded, no invented success rate |
+| Deploy / rollback route | Confidential-use blocker | Deployment owner | Exact Abacus application, preview route, deployment method and rollback confirmed and rehearsed |
+
+All private-workspace flags remain disabled and no production database has been migrated; the items above are prerequisites to enabling confidential use, not part of this build repair.
 
 ## Adult pilot acceptance and ownership
 
