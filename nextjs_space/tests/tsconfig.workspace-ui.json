@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "incremental": false, "noEmit": true },
+  "include": [
+    "../components/workspace/**/*.tsx",
+    "../components/workspace/**/*.mjs",
+    "../app/workspace/**/*.tsx",
+    "../types/**/*.d.ts",
+    "../next-env.d.ts"
+  ],
+  "exclude": ["../node_modules"]
+}
