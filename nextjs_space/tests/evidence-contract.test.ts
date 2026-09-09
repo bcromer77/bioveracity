@@ -58,9 +58,9 @@ test('identifier resolution filters unverified records and refuses conflicting p
       assert.equal(args.where.verified, true)
       return [{ assetId: 'one' }, { assetId: 'two' }]
     }) as any
-    assert.equal(await resolveAsset({ officialIdentifier: 'shared', name: 'misleading fallback' }), null)
+    assert.equal(await resolveAsset({ jurisdiction: 'England', identifierAuthority: 'Fixture authority', identifierType: 'Fixture type', officialIdentifier: 'shared', name: 'misleading fallback' }), null)
     prisma.assetIdentifier.findMany = (async () => []) as any
-    assert.equal(await resolveAsset({ officialIdentifier: 'unverified', name: 'fallback' }), null)
+    assert.equal(await resolveAsset({ jurisdiction: 'England', identifierAuthority: 'Fixture authority', identifierType: 'Fixture type', officialIdentifier: 'unverified', name: 'fallback' }), null)
   } finally { prisma.assetIdentifier.findMany = original }
 })
 test('HTTP intake rejects disabled service and unauthenticated writes before database access', async () => {

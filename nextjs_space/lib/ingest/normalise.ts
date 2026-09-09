@@ -12,7 +12,7 @@
 // ==========================================================================
 
 import { prisma } from '@/lib/prisma'
-import { pickStr, pickNum, pickInt, pickDate } from '@/lib/ingest/schema-2-1'
+import { pickStr, pickNum } from '@/lib/ingest/schema-2-1'
 import { parseEvidenceDate } from '@/lib/evidence-contract'
 
 // The canonical tables the engine can target.
@@ -97,7 +97,7 @@ function hostOf(url: string | null): string | null {
 
 // Preserve only explicit event dates; publication/retrieval are separate facts.
 function recordDate(c: Candidate, o: Record<string, any>): Date | null {
-  const d = parseEvidenceDate(o.event_date ?? o.eventDate ?? o.date, o.event_date_precision ?? o.datePrecision)
+  const d = parseEvidenceDate(o.event_date ?? o.eventDate, o.event_date_precision ?? o.datePrecision)
   if (!d.value) return null
   const padded = d.precision === 'year' ? `${d.value}-01-01` : d.precision === 'month' ? `${d.value}-01` : d.value
   return new Date(`${padded}T00:00:00Z`)
@@ -105,6 +105,25 @@ function recordDate(c: Candidate, o: Record<string, any>): Date | null {
 
 // Derive the canonical shape for a verified candidate. Pure — writes nothing.
 export function computeNormalisation(c: Candidate): NormalisationPlan {
+  try { return computePlan(c) }
+  catch { return { ok: false, reason: 'A source date is invalid or cannot retain its precision in this destination. Retain the candidate for review.' } }
+}
+
+// No precision carrier on these legacy columns: never manufacture day 1.
+function pickDate(o: Record<string, any>, ...keys: string[]): string | null {
+  let result: string | null = null
+  for (const key of keys) {
+    if (o[key] == null || o[key] === '') continue
+    const date = parseEvidenceDate(o[key])
+    if (date.precision !== 'day' || !date.value) throw new Error('Unsupported precision')
+    const iso = `${date.value}T00:00:00.000Z`
+    if (result && result !== iso) throw new Error('Conflicting dates')
+    result = iso
+  }
+  return result
+}
+
+function computePlan(c: Candidate): NormalisationPlan {
   const o = rec(c.rawObservation)
   const type = (c.candidateType ?? c.observationType ?? '').trim().toUpperCase()
   let target: NormalisationTarget | undefined = TYPE_MAP[type]
@@ -133,7 +152,7 @@ export function computeNormalisation(c: Candidate): NormalisationPlan {
   let precision: string
   try {
     date = recordDate(c, o)
-    precision = parseEvidenceDate(o.event_date ?? o.eventDate ?? o.date, o.event_date_precision ?? o.datePrecision).precision
+    precision = parseEvidenceDate(o.event_date ?? o.eventDate, o.event_date_precision ?? o.datePrecision).precision
   } catch { return { ok: false, reason: 'Event date is invalid or its precision is inconsistent. Review required.' } }
   if (date && precision !== 'day' && target !== 'Event') {
     return { ok: false, reason: `${target} cannot currently represent ${precision}-only event dates honestly. Retain for review.` }
