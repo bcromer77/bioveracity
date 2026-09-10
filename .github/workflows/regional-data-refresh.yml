@@ -1,0 +1,47 @@
+name: Regional evidence intake
+on:
+  schedule:
+    - cron: '47 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: regional-evidence-intake
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: vars.REGIONAL_REFRESH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cursor safety tests
+        run: node --test nextjs_space/tests/regional-refresh.test.mjs
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/regional-state/cursors.json
+          key: regional-cursors-v1-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: regional-cursors-v1-${{ github.ref_name }}-
+      - name: Refresh bounded review-queue pages
+        env:
+          REGIONAL_INGEST_ENDPOINT: ${{ secrets.REGIONAL_INGEST_ENDPOINT }}
+          INGEST_CRON_SECRET: ${{ secrets.INGEST_CRON_SECRET }}
+          REGIONAL_STATE_DIR: ${{ runner.temp }}/regional-state
+          REGIONAL_DRY_RUN: ${{ vars.REGIONAL_DRY_RUN }}
+        run: node nextjs_space/scripts/regional-refresh.mjs
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ${{ runner.temp }}/regional-state/cursors.json
+          key: regional-cursors-v1-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regional-intake-counts
+          path: ${{ runner.temp }}/regional-state/report.json
+          retention-days: 3
