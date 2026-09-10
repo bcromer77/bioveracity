@@ -76,6 +76,10 @@ export async function parseFile(bytes, filename, depth = 0) {
     item.mediaType = ext === 'png' ? 'image/png' : 'image/jpeg'
     item.status = 'NEEDS_OCR'
     item.warnings.push('Image retained. No OCR or event date inferred.')
+  } else if ((ext === 'wav' && bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WAVE') || (ext === 'mp3' && (bytes.subarray(0, 3).toString() === 'ID3' || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)))) {
+    item.mediaType = ext === 'wav' ? 'audio/wav' : 'audio/mpeg'
+    item.status = 'RETAINED'
+    item.warnings.push('Audio retained as the original. Transcription is not automated and no content is sent to an AI; add a text note with the relevant quote to place it on the timeline.')
   } else {
     throw new Error(`Unsupported or mismatched file type: ${ext}`)
   }

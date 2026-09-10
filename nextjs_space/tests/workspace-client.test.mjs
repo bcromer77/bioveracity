@@ -44,12 +44,35 @@ test('preserves invalid date as unavailable; displays UTC for creation timestamp
   assert.equal(displayDate('not a date'), 'Date unavailable');
   assert.match(displayDate('2026-09-09T12:00:00Z'), /12:00:00 UTC$/);
 });
-test('UI source has account/workspace/case remount boundaries and no mock storage', () => {
+test('selection screen has account remount boundary, single fetch, persona grid and no mock storage', () => {
   const ui = readFileSync(new URL('../components/workspace/workspace-dashboard.tsx', import.meta.url), 'utf8');
   assert.match(ui, /AccountWorkspace key=\{session.user.id\}/);
-  assert.match(ui, /CaseBoard key=\{selected\}/);
+  assert.match(ui, /data-persona=/);
+  assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 1);
+  assert.doesNotMatch(ui, /localStorage|dangerouslySetInnerHTML/);
+  assert.match(ui, /CBAM liability/);
+  assert.doesNotMatch(ui, /CaseBoard|CaseSummary/);
+});
+test('universal canvas keeps workspace/case remount boundaries and per-fetch cancellation', () => {
+  const ui = readFileSync(new URL('../components/workspace/workspace-canvas.tsx', import.meta.url), 'utf8');
+  assert.match(ui, /CanvasBody key=\{session.user.id\}/);
+  assert.match(ui, /CaseBoard key=\{workspaceId\}/);
   assert.match(ui, /CaseSummary key=\{selected\}/);
-  assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 3);
+  assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 2);
   assert.doesNotMatch(ui, /localStorage|dangerouslySetInnerHTML/);
   assert.match(ui, /not a CBAM calculation/);
+});
+test('five personas expose only presentation-level presets over the shared canvas', async () => {
+  const { personas, getPersona } = await import('../components/workspace/personas.mjs');
+  assert.equal(personas.length, 5);
+  const keys = personas.map(p => p.key);
+  assert.deepEqual(keys, ['ecology', 'planning', 'architecture', 'maritime', 'custom']);
+  for (const p of personas) {
+    assert.ok(p.title && p.exportTitle && p.template);
+    assert.equal(p.prompts.length, 3);
+    assert.ok(Array.isArray(p.layers) && p.layers.length > 0);
+    for (const l of p.layers) assert.equal(typeof l.default, 'boolean');
+  }
+  assert.ok(getPersona('custom').layers.every(l => l.default));
+  assert.equal(getPersona('does-not-exist').key, 'custom');
 });
