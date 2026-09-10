@@ -82,3 +82,34 @@ test('five personas expose only presentation-level presets over the shared canva
   assert.ok(getPersona('custom').layers.every(l => l.default));
   assert.equal(getPersona('does-not-exist').key, 'custom');
 });
+
+test('investigation repairs: URL-persisted case, stale-response guards, real audit export, honest map, term-expansion retrieval', () => {
+  const ui = readFileSync(new URL('../components/workspace/workspace-canvas.tsx', import.meta.url), 'utf8');
+  // A1 — selected case persisted in the URL so a reload restores it.
+  assert.match(ui, /useSearchParams/);
+  assert.match(ui, /params\.get\('case'\)/);
+  assert.match(ui, /router\.replace/);
+  assert.match(ui, /sp\.set\('case'/);
+  // A2 — monotonic sequence guards prevent a slow earlier response overwriting a newer one.
+  for (const seq of ['placeSeq', 'askSeq', 'claimSeq']) assert.match(ui, new RegExp(`${seq}\\.current`));
+  assert.match(ui, /seq === askSeq\.current/);
+  assert.match(ui, /seq === claimSeq\.current/);
+  assert.match(ui, /seq === placeSeq\.current/);
+  // A3 — the header "Generate audit pack" runs the real export, not just a scroll.
+  assert.match(ui, /async function generateAuditPack/);
+  assert.match(ui, /onClick=\{generateAuditPack\}/);
+  assert.match(ui, /generateAuditPack[\s\S]*?produceExport\(\)/);
+  // A4 — map draws a real metre buffer; species/water are honestly not plotted; no fake "boundary" layer.
+  assert.match(ui, /buffer: true/);
+  assert.match(ui, /bufferMeters=\{BUFFER_METERS\}/);
+  assert.match(ui, /Search buffer/);
+  assert.match(ui, /not plotted/);
+  assert.doesNotMatch(ui, /boundary: true|'boundary'|Site boundary/);
+  // A5 — term-expansion retrieval reuses the existing permissioned search endpoint.
+  assert.match(ui, /expandQuery, rankResults/);
+  assert.match(ui, /async function retrieve/);
+  assert.match(ui, /questionHits\.ranked/);
+  assert.match(ui, /claimHits\.ranked/);
+  assert.match(ui, /term-expansion/i);
+  assert.doesNotMatch(ui, /exact text search/);
+});

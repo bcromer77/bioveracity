@@ -20,16 +20,18 @@ export function InvestigationMap({
   zoom,
   name,
   layers,
+  bufferMeters,
 }: {
   lat: number
   lng: number
   zoom: number
   name: string
   layers: MapLayers
+  bufferMeters?: number
 }) {
   return (
     <div className="h-full w-full overflow-hidden rounded-lg border border-border/60">
-      <InvestigationMapInner lat={lat} lng={lng} zoom={zoom} name={name} layers={layers} />
+      <InvestigationMapInner lat={lat} lng={lng} zoom={zoom} name={name} layers={layers} bufferMeters={bufferMeters} />
     </div>
   )
 }

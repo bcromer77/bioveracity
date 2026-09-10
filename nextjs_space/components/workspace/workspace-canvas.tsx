@@ -1,16 +1,20 @@
 'use client'
 
-import { DragEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { DragEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { caseListPath, casePayload, displayDate, templates, workspaceRequest } from './workspace-client.mjs'
 import { getPersona } from './personas.mjs'
 import { geocode, dataFeedsForCounty } from './geocode.mjs'
 import { searchGazetteer } from './ireland-gazetteer.mjs'
+import { expandQuery, rankResults } from './retrieval.mjs'
 import { InvestigationMap, type MapLayers } from './investigation-map'
 import { CaseEvidence } from './case-evidence'
+
+// Metre-scale proximity buffer drawn on the map (a search buffer, not a boundary).
+const BUFFER_METERS = 500
 
 type Case = { id: string; workspaceId: string; title: string; template: string; createdAt: string }
 type CaseDetail = Case & { sites: { id: string; name: string; latitude: number | null; longitude: number | null }[] }
@@ -20,6 +24,9 @@ type Suggestion = { name: string; county: string; lat: number; lng: number; zoom
 type Entry = { id: string; passageId: string; documentId: string; name: string; locator: string; title: string; quote: string; eventDate: string | null; precision: string; status: string; evidenceType: string; note: string; revision: number; superseded: boolean }
 type Doc = { id: string; name: string; hash: string; status: string; warnings: string[]; importedAt: string; parentId: string | null; supersedesId: string | null; sourceUrl: string | null; publicationDate: string | null }
 type Hit = { id: string; caseId: string; documentId: string; name: string; caseTitle: string; locator: string; text: string }
+// A hit enriched by term-expansion retrieval: which query terms it matched and a score.
+type RankedHit = Hit & { matchedTerms: string[]; score: number }
+type Retrieval = { ranked: RankedHit[]; matchedConcepts: string[]; unmatchedConcepts: string[] }
 
 // The gazetteer/feeds modules are authored in .mjs, so rows type-infer loosely as
 // string | number. Coerce to strict shapes for the typed UI.
@@ -92,8 +99,21 @@ export function WorkspaceCanvas({ workspaceId }: { workspaceId: string }) {
 }
 
 function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Persona }) {
-  const [selected, setSelected] = useState('')
+  const router = useRouter()
+  const pathname = usePathname()
+  const params = useSearchParams()
+  // The open case is persisted in the URL (?case=...) so a reload restores it.
+  const [selected, setSelected] = useState(() => params.get('case') || '')
   const [selectedTitle, setSelectedTitle] = useState('')
+
+  const setSelectedId = useCallback((id: string) => {
+    setSelected(id)
+    const sp = new URLSearchParams(Array.from(params.entries()))
+    if (id) sp.set('case', id); else sp.delete('case')
+    const qs = sp.toString()
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+  }, [params, pathname, router])
+  const selectCase = useCallback((id: string, title: string) => { setSelectedTitle(title); setSelectedId(id) }, [setSelectedId])
 
   return <div className="space-y-6">
     <header className="space-y-3">
@@ -105,10 +125,10 @@ function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Pe
       <div className="rounded-md bg-secondary p-3 text-sm">This is a private evidence workspace — it organises the sources you upload and shows what still needs review. It does not determine compliance, calculate CBAM liability or promise grant eligibility. Everything below is driven by the sources in the case you select; nothing is pre-filled with sample findings.</div>
     </header>
 
-    <CaseBoard key={workspaceId} workspaceId={workspaceId} defaultTemplate={persona.template} selected={selected} onSelect={(id, title) => { setSelected(id); setSelectedTitle(title) }} />
+    <CaseBoard key={workspaceId} workspaceId={workspaceId} defaultTemplate={persona.template} selected={selected} onSelect={selectCase} onResolved={(_id, title) => setSelectedTitle(title)} />
 
     {selected
-      ? <Investigation key={selected} workspaceId={workspaceId} caseId={selected} persona={persona} onSelectCase={setSelected} reportTitle={persona.exportTitle} />
+      ? <Investigation key={selected} workspaceId={workspaceId} caseId={selected} persona={persona} onSelectCase={setSelectedId} reportTitle={persona.exportTitle} />
       : <section className={panel} aria-label="Getting started">
           <h2 className="font-display text-lg font-semibold">Select or create a case to open the investigation</h2>
           <p className="mt-2 text-sm text-muted-foreground">Choose a case above (or create one) to load its real evidence, search its source passages, cross-check claims across your own uploads, and build a reviewed audit pack. This workspace never shows sample findings as if they were your analysis.</p>
@@ -116,7 +136,7 @@ function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Pe
   </div>
 }
 
-function CaseBoard({ workspaceId, defaultTemplate, selected, onSelect }: { workspaceId: string; defaultTemplate: string; selected: string; onSelect: (id: string, title: string) => void }) {
+function CaseBoard({ workspaceId, defaultTemplate, selected, onSelect, onResolved }: { workspaceId: string; defaultTemplate: string; selected: string; onSelect: (id: string, title: string) => void; onResolved?: (id: string, title: string) => void }) {
   const [cases, setCases] = useState<Case[]>([])
   const [title, setTitle] = useState('')
   const [template, setTemplate] = useState(defaultTemplate)
@@ -129,7 +149,7 @@ function CaseBoard({ workspaceId, defaultTemplate, selected, onSelect }: { works
     const controller = new AbortController()
     setLoading(true); setCases([]); setError('')
     workspaceRequest(caseListPath(workspaceId), { signal: controller.signal })
-      .then((data: { cases: Case[] }) => { if (!controller.signal.aborted) { if (!Array.isArray(data.cases)) throw new Error('Unexpected case response. Please retry.'); setCases(data.cases) } })
+      .then((data: { cases: Case[] }) => { if (!controller.signal.aborted) { if (!Array.isArray(data.cases)) throw new Error('Unexpected case response. Please retry.'); setCases(data.cases); if (selected) { const match = data.cases.find(c => c.id === selected); if (match) onResolved?.(match.id, match.title) } } })
       .catch((e: unknown) => { if (!controller.signal.aborted) setError(message(e)) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
@@ -183,21 +203,22 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [searching, setSearching] = useState(false)
   const [placeHits, setPlaceHits] = useState<Hit[] | null>(null)
-  const [layers, setLayers] = useState<MapLayers>(() => ({
-    water: persona.layers.some(l => (l.id === 'rivers' || l.id === 'foreshore') && l.default),
-    species: persona.layers.some(l => l.id === 'species' && l.default),
-    boundary: true,
-  }))
+  const [layers, setLayers] = useState<MapLayers>({ water: false, species: false, buffer: true })
 
-  // Question search
+  // Question search (term-expansion retrieval)
   const [question, setQuestion] = useState('')
-  const [questionHits, setQuestionHits] = useState<Hit[] | null>(null)
+  const [questionHits, setQuestionHits] = useState<Retrieval | null>(null)
   const [asking, setAsking] = useState(false)
 
   // Cross-check (internal vs external)
   const [claim, setClaim] = useState('')
-  const [claimHits, setClaimHits] = useState<Hit[] | null>(null)
+  const [claimHits, setClaimHits] = useState<Retrieval | null>(null)
   const [checking, setChecking] = useState(false)
+
+  // Monotonic sequence guards so a slower earlier request can never overwrite a newer result.
+  const placeSeq = useRef(0)
+  const askSeq = useRef(0)
+  const claimSeq = useRef(0)
 
   // Export
   const [exportId, setExportId] = useState('')
@@ -243,6 +264,15 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     return Array.isArray(data.results) ? data.results : []
   }
 
+  // Term-expansion retrieval: expand the question into related terms, run the existing
+  // permissioned substring search for each, and merge/rank the hits. Private content is
+  // never sent to an AI — only the same backend search endpoint is used, multiple times.
+  async function retrieve(q: string): Promise<Retrieval> {
+    const { tokens, terms } = expandQuery(q)
+    const perTerm = await Promise.all(terms.map(async (term: string) => ({ term, hits: await runSearch(term) })))
+    return rankResults(perTerm, tokens) as Retrieval
+  }
+
   async function importFiles(files: FileList | null) {
     if (!files?.length || busy) return
     const list = Array.from(files)
@@ -278,8 +308,9 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   async function selectPlace(next: Place) {
     setPlace(next); setSuggestions([]); setQuery(next.name); setError('')
     // A town selection retrieves the source records that actually mention it.
+    const seq = ++placeSeq.current
     setPlaceHits(null)
-    try { setPlaceHits(await runSearch(next.name)) } catch (e) { setError(message(e)) }
+    try { const hits = await runSearch(next.name); if (seq === placeSeq.current) setPlaceHits(hits) } catch (e) { if (seq === placeSeq.current) setError(message(e)) }
   }
 
   async function submitPlaceSearch(event: FormEvent) {
@@ -296,15 +327,17 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   async function submitQuestion(event: FormEvent) {
     event.preventDefault()
     const q = question.trim(); if (!q) return
+    const seq = ++askSeq.current
     setAsking(true); setError(''); setQuestionHits(null)
-    try { setQuestionHits(await runSearch(q)) } catch (e) { setError(message(e)) } finally { setAsking(false) }
+    try { const r = await retrieve(q); if (seq === askSeq.current) setQuestionHits(r) } catch (e) { if (seq === askSeq.current) setError(message(e)) } finally { if (seq === askSeq.current) setAsking(false) }
   }
 
   async function submitClaim(event: FormEvent) {
     event.preventDefault()
     const q = claim.trim(); if (!q) return
+    const seq = ++claimSeq.current
     setChecking(true); setError(''); setClaimHits(null)
-    try { setClaimHits(await runSearch(q)) } catch (e) { setError(message(e)) } finally { setChecking(false) }
+    try { const r = await retrieve(q); if (seq === claimSeq.current) setClaimHits(r) } catch (e) { if (seq === claimSeq.current) setError(message(e)) } finally { if (seq === claimSeq.current) setChecking(false) }
   }
 
   async function enableExport() {
@@ -319,14 +352,24 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     catch (e) { setError(message(e)) } finally { setExportBusy(false) }
   }
 
+  // The header "Generate audit pack" button runs the real export (not just a scroll):
+  // it requires an accepted entry, jumps to the audit-pack panel, and produces the PDF.
+  async function generateAuditPack() {
+    if (accepted.length === 0) { setError('To generate an audit pack, first accept at least one source-linked entry in Detailed review below. The pack exports only accepted entries.'); reviewRef.current?.scrollIntoView({ behavior: 'smooth' }); return }
+    auditRef.current?.scrollIntoView({ behavior: 'smooth' })
+    await produceExport()
+  }
+
   async function download(url: string, name: string) {
     setError('')
     try { const blob = await (await read(url)).blob(); const object = URL.createObjectURL(blob), a = document.createElement('a'); a.href = object; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(object), 1000) }
     catch (e) { setError(message(e)) }
   }
 
-  const claimDocs = claimHits ? Array.from(new Set(claimHits.map(h => h.documentId))) : []
+  const claimDocs = claimHits ? Array.from(new Set(claimHits.ranked.map(h => h.documentId))) : []
   const externalWired = feeds.feeds.filter(f => f.status === 'available')
+  const speciesFeed = feeds.feeds.find(f => f.id === 'species')
+  const waterFeed = feeds.feeds.find(f => f.id === 'water')
 
   return <div className="space-y-6">
     {/* Actions header */}
@@ -341,7 +384,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
       </div>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => reviewRef.current?.scrollIntoView({ behavior: 'smooth' })}>Detailed review</Button>
-        <Button type="button" onClick={() => auditRef.current?.scrollIntoView({ behavior: 'smooth' })}>Generate audit pack</Button>
+        <Button type="button" disabled={exportBusy} onClick={generateAuditPack}>{exportBusy ? 'Preparing…' : 'Generate audit pack'}</Button>
       </div>
     </div>
 
@@ -443,14 +486,15 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
           <div className="flex flex-wrap items-center justify-between gap-2">
             <PanelHeading id="map-heading">Aerial map</PanelHeading>
             <div className="flex flex-wrap gap-2">
-              {([['water', 'Water'], ['species', 'Species'], ['boundary', 'Site boundary']] as const).map(([key, label]) => (
-                <button key={key} type="button" aria-pressed={layers[key]} onClick={() => setLayers(c => ({ ...c, [key]: !c[key] }))} className={`rounded-full border px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${layers[key] ? 'border-primary bg-secondary font-medium' : 'border-border text-muted-foreground'}`}>{layers[key] ? '✓ ' : ''}{label}</button>
-              ))}
+              <button type="button" aria-pressed={layers.buffer} onClick={() => setLayers(c => ({ ...c, buffer: !c.buffer }))} className={`rounded-full border px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${layers.buffer ? 'border-primary bg-secondary font-medium' : 'border-border text-muted-foreground'}`}>{layers.buffer ? '✓ ' : ''}Search buffer ({BUFFER_METERS} m)</button>
+              <button type="button" disabled aria-disabled title={`Species features are not plotted on this map. Species feed for ${feeds.county ? `Co. ${feeds.county}` : 'this area'}: ${feedLabel(speciesFeed?.status ?? 'not-wired')}. See Local data feeds below.`} className="cursor-not-allowed rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground opacity-70">Species (not plotted)</button>
+              <button type="button" disabled aria-disabled title={`Water features are not plotted on this map. Water feed for ${feeds.county ? `Co. ${feeds.county}` : 'this area'}: ${feedLabel(waterFeed?.status ?? 'unverified')}. See Local data feeds below.`} className="cursor-not-allowed rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground opacity-70">Water (not plotted)</button>
             </div>
           </div>
           <div className="mt-3 h-[320px] w-full">
-            <InvestigationMap lat={place.lat} lng={place.lng} zoom={place.zoom} name={place.name} layers={layers} />
+            <InvestigationMap lat={place.lat} lng={place.lng} zoom={place.zoom} name={place.name} layers={layers} bufferMeters={BUFFER_METERS} />
           </div>
+          <p className="mt-2 text-xs text-muted-foreground">The map shows a {BUFFER_METERS} m proximity search buffer around the selected centre — a navigation aid, not a surveyed site boundary. Species and water features are not plotted on the map; their retrieval status is shown under Local data feeds below.</p>
           {/* Records mentioning the selected place */}
           <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Records mentioning {place.name}</p>
@@ -498,14 +542,17 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         </section>
         <section className={panel} aria-labelledby="ask-heading">
           <PanelHeading id="ask-heading">Ask your evidence</PanelHeading>
-          <p className="mt-1 text-xs text-muted-foreground">Runs an exact text search across this case’s source passages — not a semantic or AI answer.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Keyword + term-expansion retrieval across this case’s source passages — it expands wording (e.g. bats → Pipistrelle, flooding → inundation) to find relevant passages. Not a semantic or AI answer; nothing is sent to an external service.</p>
           <form className="mt-3 space-y-2" onSubmit={submitQuestion}>
             <input className={field} style={{ marginTop: 0 }} value={question} maxLength={160} onChange={e => setQuestion(e.target.value)} placeholder="Find a phrase, permit number or name" />
             <Button type="submit" disabled={asking}>{asking ? 'Searching...' : 'Search evidence'}</Button>
           </form>
           {questionHits !== null && <div className="mt-3 space-y-2">
-            {questionHits.length === 0 ? <p className="text-sm text-muted-foreground">No source passage matches. Missing coverage for this question.</p>
-              : questionHits.slice(0, 6).map(h => <article key={h.id} className="rounded-md border border-border bg-background p-3 text-sm"><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs">“{h.text}”</p></article>)}
+            {questionHits.ranked.length === 0 ? <div className="text-sm text-muted-foreground"><p>No source passage matches. Missing coverage for this question.</p>{questionHits.unmatchedConcepts.length > 0 && <p className="mt-1">No coverage for: {questionHits.unmatchedConcepts.join(', ')}.</p>}</div>
+              : <>
+                  <p className="text-xs text-muted-foreground">Term-expansion retrieval — {questionHits.ranked.length} passage{questionHits.ranked.length === 1 ? '' : 's'}, ranked by how many query terms each matched.{questionHits.unmatchedConcepts.length > 0 && ` No coverage for: ${questionHits.unmatchedConcepts.join(', ')}.`}</p>
+                  {questionHits.ranked.slice(0, 6).map(h => <article key={h.id} className="rounded-md border border-border bg-background p-3 text-sm"><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs">“{h.text}”</p>{h.matchedTerms.length > 0 && <p className="mt-1 text-xs text-muted-foreground">matched: {h.matchedTerms.slice(0, 4).join(', ')}</p>}</article>)}
+                </>}
           </div>}
         </section>
         <section className={panel} aria-labelledby="prompts-heading">
@@ -530,9 +577,9 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
       {claimHits !== null && <div className="mt-4 grid gap-4 md:grid-cols-2">
         <div>
           <h3 className="text-sm font-semibold">Internal — your own sources</h3>
-          {claimHits.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No uploaded source mentions this. Missing coverage.</p>
-            : claimDocs.length < 2 ? <div className="mt-2 space-y-2"><p className="text-sm text-muted-foreground">Only one of your sources mentions this — no internal corroboration (missing coverage).</p>{claimHits.slice(0, 3).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>
-            : <div className="mt-2 space-y-2"><p className="text-sm">{claimDocs.length} of your sources mention this — compare the supporting passages below for agreement or contradiction.</p>{claimHits.slice(0, 6).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>}
+          {claimHits.ranked.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No uploaded source mentions this. Missing coverage.</p>
+            : claimDocs.length < 2 ? <div className="mt-2 space-y-2"><p className="text-sm text-muted-foreground">Only one of your sources mentions this — no internal corroboration (missing coverage).</p>{claimHits.ranked.slice(0, 3).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>
+            : <div className="mt-2 space-y-2"><p className="text-sm">{claimDocs.length} of your sources mention this — compare the supporting passages below for agreement or contradiction.</p>{claimHits.ranked.slice(0, 6).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>}
         </div>
         <div>
           <h3 className="text-sm font-semibold">External — agency records</h3>

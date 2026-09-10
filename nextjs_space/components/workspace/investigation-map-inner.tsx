@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -15,7 +15,11 @@ const markerIcon = L.icon({
   shadowSize: [41, 41],
 })
 
-export type MapLayers = { water: boolean; species: boolean; boundary: boolean }
+// water/species are agency-feed layers that require real retrieved features to
+// draw; until such features exist for a location they stay disabled in the UI
+// and this map draws nothing for them. `buffer` is a genuine geometric search
+// buffer measured in metres (see bufferMeters), NOT a surveyed boundary.
+export type MapLayers = { water: boolean; species: boolean; buffer: boolean }
 
 // Recenters the map whenever the resolved location changes (e.g. after a search).
 function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
@@ -32,12 +36,14 @@ export default function InvestigationMapInner({
   zoom,
   name,
   layers,
+  bufferMeters = 500,
 }: {
   lat: number
   lng: number
   zoom: number
   name: string
   layers: MapLayers
+  bufferMeters?: number
 }) {
   return (
     <MapContainer
@@ -60,55 +66,24 @@ export default function InvestigationMapInner({
       />
       <Recenter lat={lat} lng={lng} zoom={zoom} />
 
-      {/* Site boundary lens — an indicative area around the location, not a
-          surveyed red-line boundary. */}
-      {layers.boundary && (
-        <CircleMarker
+      {/* Search buffer — a REAL circle of radius `bufferMeters` metres around the
+          navigation centre. Leaflet's Circle takes its radius in metres, so this
+          scales correctly at every zoom level (unlike a fixed-pixel marker). It
+          is a search/proximity buffer for locating nearby evidence, NOT a
+          surveyed red-line site boundary. */}
+      {layers.buffer && (
+        <Circle
           center={[lat, lng]}
-          radius={70}
-          pathOptions={{ color: '#2f6f4f', fillColor: '#2f6f4f', fillOpacity: 0.08, weight: 1.5, dashArray: '5 5' }}
+          radius={bufferMeters}
+          pathOptions={{ color: '#2f6f4f', fillColor: '#2f6f4f', fillOpacity: 0.06, weight: 1.5, dashArray: '5 5' }}
         >
           <Popup>
             <div style={{ fontSize: '12px' }}>
-              <strong>Indicative site boundary</strong>
-              <div style={{ color: '#666' }}>Illustrative extent — not a surveyed red-line.</div>
+              <strong>Search buffer — {bufferMeters} m radius</strong>
+              <div style={{ color: '#666' }}>A proximity buffer for locating nearby evidence. This is not a surveyed site boundary or red-line.</div>
             </div>
           </Popup>
-        </CircleMarker>
-      )}
-
-      {/* Water lens — an indicative buffer near the location. Water-quality status
-          is never auto-filled; this is a navigation lens only. */}
-      {layers.water && (
-        <CircleMarker
-          center={[lat, lng]}
-          radius={38}
-          pathOptions={{ color: '#2b6cb0', fillColor: '#2b6cb0', fillOpacity: 0.12, weight: 1.5 }}
-        >
-          <Popup>
-            <div style={{ fontSize: '12px' }}>
-              <strong>Water lens</strong>
-              <div style={{ color: '#666' }}>EPA WFD status is not auto-filled — add it from a reviewed source.</div>
-            </div>
-          </Popup>
-        </CircleMarker>
-      )}
-
-      {/* Species lens — indicative search radius. Live occurrences load only for
-          wired counties; here we mark the search area rather than assert records. */}
-      {layers.species && (
-        <CircleMarker
-          center={[lat, lng]}
-          radius={20}
-          pathOptions={{ color: '#b7791f', fillColor: '#b7791f', fillOpacity: 0.14, weight: 1.5 }}
-        >
-          <Popup>
-            <div style={{ fontSize: '12px' }}>
-              <strong>Species search area</strong>
-              <div style={{ color: '#666' }}>Indicative 500m radius — confirm any record against its source.</div>
-            </div>
-          </Popup>
-        </CircleMarker>
+        </Circle>
       )}
 
       <Marker position={[lat, lng]} icon={markerIcon}>
