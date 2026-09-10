@@ -6,19 +6,20 @@ export type EvidenceInput = {
   event_date: string | null; event_date_precision: 'unknown' | 'day' | 'month' | 'year'; publication_date: null;
   acquisition_permitted: boolean; sections: { locator: string; text: string }[];
 }
+export type RejectionNote = { locator: string | null; reason: RejectionReason }
 export type ConnectorResult = {
   source: string; status: 'ok' | 'partial' | 'error' | 'blocked'; records: EvidenceInput[];
-  nextOffset: number | null; rejected: number; error?: string; coverage: string;
+  nextOffset: number | null; rejected: number; rejections?: RejectionNote[]; error?: string; coverage: string;
 }
 export type Options = { fetcher?: typeof fetch; now?: () => Date; offset?: number; limit?: number }
 export const SEPA_URL = 'https://timeseries.sepa.org.uk/KiWIS/KiWIS'
 export const SSSI_URL = 'https://services1.arcgis.com/LM9GyVFsughzHdbO/arcgis/rest/services/Sites_of_Special_Scientific_Interest/FeatureServer/0'
 const MAX_BYTES = 4 * 1024 * 1024
-function object(value: unknown): Record<string, unknown> {
+export function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid source object')
   return value as Record<string, unknown>
 }
-function id(value: unknown): string {
+export function id(value: unknown): string {
   if ((typeof value !== 'string' && typeof value !== 'number') || !String(value).trim() || String(value).length > 200) throw new Error('Missing source identity')
   return String(value)
 }
@@ -34,7 +35,7 @@ export function bbox(value: string) {
   if (![w,s,e,n].every(Number.isFinite) || w < -180 || e > 180 || s < -90 || n > 90 || w >= e || s >= n) throw new Error('Invalid bounding box')
   return [w,s,e,n].join(',')
 }
-async function json(url: string, options: Options): Promise<unknown> {
+export async function json(url: string, options: Options): Promise<unknown> {
   const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 15000)
   try {
     const res = await (options.fetcher ?? fetch)(url, { headers: { Accept: 'application/json' }, cache: 'no-store', redirect: 'error', signal: controller.signal })
@@ -55,7 +56,7 @@ async function json(url: string, options: Options): Promise<unknown> {
     return data
   } finally { clearTimeout(timer) }
 }
-function record(url: string, title: string, publisher: string, authority: string, key: string, raw: unknown, retrieved: string, day: string | null = null): EvidenceInput {
+export function record(url: string, title: string, publisher: string, authority: string, key: string, raw: unknown, retrieved: string, day: string | null = null): EvidenceInput {
   const text = JSON.stringify(raw)
   if (text.length > 95000) throw new Error('Source feature too large')
   return { url, title, publisher, authority_id: authority, jurisdiction: 'Scotland', representation_id: key,
@@ -63,10 +64,24 @@ function record(url: string, title: string, publisher: string, authority: string
     publication_date: null, acquisition_permitted: false,
     sections: [{ locator: key, text }] }
 }
-function failure(source: string, coverage: string, error: unknown): ConnectorResult {
+export function failure(source: string, coverage: string, error: unknown): ConnectorResult {
   // Never echo an upstream body or arbitrary error message.
   return { source, coverage, status: 'error', records: [], nextOffset: null, rejected: 0,
     error: error instanceof Error && /^Upstream HTTP \d{3}$/.test(error.message) ? error.message : 'Source unavailable or schema invalid' }
+}
+// Fixed allowlist of rejection reason codes. A skipped record is only ever tagged with one of
+// these exact, developer-authored reasons; any other error collapses to the generic code, so an
+// upstream body, arbitrary text or PII can never reach the report. Extend this list deliberately
+// when a connector introduces a new validation throw.
+export const REJECTION_REASONS = [
+  'Wrong publisher or county', 'Wrong authority', 'Withheld/generalised source needs separate review',
+  'Missing taxon', 'Missing source identity', 'Invalid source object', 'Source feature too large',
+] as const
+export type RejectionReason = typeof REJECTION_REASONS[number] | 'Rejected by validation'
+const REJECTION_REASON_SET: ReadonlySet<string> = new Set(REJECTION_REASONS)
+export function safeReason(error: unknown): RejectionReason {
+  const message = error instanceof Error ? error.message : ''
+  return (REJECTION_REASON_SET.has(message) ? message : 'Rejected by validation') as RejectionReason
 }
 export async function fetchSEPARiverLevels(options: Options = {}): Promise<ConnectorResult> {
   const source = 'sepa', coverage = 'Bounded page of latest SG river readings; excludes tidal series. Latest can be stale.'

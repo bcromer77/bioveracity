@@ -1,5 +1,7 @@
 # Scottish and ecology source ingestion
 
+Regional extension: docs/regional-population.md supersedes the external route request and environment settings below. Scottish adapter behaviour remains as documented.
+
 Implemented 10 September 2026 on a review branch based on packaging/self-contained-worker at 35ac0821de4c59b712b4f4b27bcaf3db735ed806. No deployment, migration, secret installation, feature activation or nightly scheduling performed.
 
 ## What differs from the supplied draft

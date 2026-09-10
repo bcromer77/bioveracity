@@ -52,9 +52,10 @@ export async function handleScotlandPost(request: Request, settings: Settings, r
       } catch { failedWrites++ }
     }
     const incomplete = failedWrites > 0 || results.some(s => s.status !== 'ok')
-    return Response.json({ success: !incomplete, dryRun, created, duplicates, catalogueOnly, failedWrites,
+    return Response.json({ success: !incomplete, dryRun, writesAcknowledged: !dryRun, created, duplicates, catalogueOnly, failedWrites,
+      rejected: results.reduce((n,s) => n+s.rejected,0),
       totalFetched: results.reduce((n,s) => n+s.records.length,0),
-      meaning: 'Source intake only; never automatic verification or publication. Follow nextOffset for more records.',
+      meaning: 'Source intake only; never automatic verification or publication. writesAcknowledged is true only for a confirmed (non-dry-run) write pass; a client must require writesAcknowledged and failedWrites === 0 before advancing its cursor. Rejected records carry a fixed reason code, are recorded for review and skipped; failed writes are retried and never advance the cursor.',
       sources: results.map(({ records, ...r }) => ({ ...r, fetched: records.length })) }, { status: incomplete ? 207 : 200 })
   } catch { return Response.json({ error: 'Scottish ingestion failed' }, { status: 502 }) }
 }
