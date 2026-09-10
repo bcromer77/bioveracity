@@ -12,6 +12,7 @@
     "test:workspaces": "tsx --test tests/private-workspaces.test.ts",
     "test:case-files": "tsx --test tests/case-files.test.ts",
     "test:uploads": "node --test tests/upload-feedback.test.mjs tests/upload-scanner.test.mjs",
+    "test:intelligence": "node --import tsx --test tests/document-intelligence*.test.*",
     "check:uploads": "node scripts/check-upload-runtime.mjs",
     "build:worker": "node scripts/build-parser-worker.mjs",
     "check:worker": "node scripts/check-parser-worker.mjs"

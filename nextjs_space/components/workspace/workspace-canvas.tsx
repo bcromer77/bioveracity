@@ -12,6 +12,7 @@ import { searchGazetteer } from './ireland-gazetteer.mjs'
 import { expandQuery, rankResults } from './retrieval.mjs'
 import { InvestigationMap, type MapLayers } from './investigation-map'
 import { CaseEvidence } from './case-evidence'
+import { DocumentIntelligence } from './document-intelligence'
 
 // Metre-scale proximity buffer drawn on the map (a search buffer, not a boundary).
 const BUFFER_METERS = 500
@@ -636,6 +637,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     {/* Detailed review & amendments (full backend workflow) */}
     <div ref={reviewRef} className="space-y-3">
       <div className="rounded-md bg-secondary p-3 text-sm">Detailed review &amp; amendments — accept or reject each extracted entry against its exact source passage, record amendments, and inspect revision history. Changes here update the overview above.</div>
+      <DocumentIntelligence endpoint={endpoint} documents={docs} revision={revision} />
       <CaseSummary key={caseId} workspaceId={workspaceId} caseId={caseId} onSelectCase={onSelectCase} reportTitle={reportTitle} externalRevision={revision} onChanged={bump} />
     </div>
   </div>

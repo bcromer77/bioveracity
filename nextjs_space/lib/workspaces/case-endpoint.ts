@@ -2,6 +2,7 @@ import { body } from './request-body'
 import { WorkspaceError, type Database } from './service'
 import { caseFiles } from './case-files'
 import { admit } from './admission'
+import { COVERAGE_CHECKS } from './document-intelligence'
 import type { ParsedFile } from './parser'
 export const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff' }
 type Dependencies={getActor:()=>Promise<string|null>;db:Database;env:Record<string,string|undefined>;scan:(bytes:Buffer)=>Promise<void>;parse:(bytes:Buffer,name:string)=>Promise<ParsedFile>;render:(manifest:Record<string,unknown>)=>Promise<Buffer>}
@@ -24,6 +25,10 @@ return async function handle(request:Request,context:Context,write:boolean) {
       if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new WorkspaceError(400,'Expected object')
       const input=raw as Record<string,unknown>
       switch(input.action) {
+        case 'analyse': {
+          if (typeof input.documentId !== 'string' || !Array.isArray(input.checkIds) || input.checkIds.some(id => typeof id !== 'string')) throw new WorkspaceError(400, 'Select a document and coverage checks.')
+          result = await service.analyse(w,c,input.documentId,input.checkIds as string[]); break
+        }
         case 'import': {
           await service.check(w,c,'write')
           if(typeof input.name!=='string'||input.name.length>180||typeof input.bytes!=='string'||! /^[A-Za-z0-9+/]+={0,2}$/.test(input.bytes))throw new WorkspaceError(400,'Invalid file')
@@ -39,6 +44,7 @@ return async function handle(request:Request,context:Context,write:boolean) {
       }
     } else {
       switch(query.get('action')) {
+        case 'intelligenceChecks':await service.check(w,c);result={checks:COVERAGE_CHECKS.map(({id,question})=>({id,question}))};break
         case 'passage':result=await service.passage(w,c,query.get('id')??'');break
         case 'history':result={revisions:await service.history(w,c,query.get('id')??'')};break
         case 'search':result={results:await service.search(w,c,query.get('q')??'',query.get('earlier')==='true'),mode:'Exact text search; authorised cases only'};break
