@@ -57,10 +57,16 @@ test('universal canvas keeps workspace/case remount boundaries and per-fetch can
   const ui = readFileSync(new URL('../components/workspace/workspace-canvas.tsx', import.meta.url), 'utf8');
   assert.match(ui, /CanvasBody key=\{session.user.id\}/);
   assert.match(ui, /CaseBoard key=\{workspaceId\}/);
-  assert.match(ui, /CaseSummary key=\{selected\}/);
-  assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 2);
+  assert.match(ui, /Investigation key=\{selected\}/);
+  assert.match(ui, /CaseSummary key=\{caseId\}/);
+  assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 3);
   assert.doesNotMatch(ui, /localStorage|dangerouslySetInnerHTML/);
   assert.match(ui, /not a CBAM calculation/);
+  // Real backend wiring, not sample data.
+  assert.doesNotMatch(ui, /investigation-data|SAMPLE_/);
+  assert.match(ui, /action=search&q=/);
+  assert.match(ui, /action: 'import'/);
+  assert.match(ui, /action: 'export'/);
 });
 test('five personas expose only presentation-level presets over the shared canvas', async () => {
   const { personas, getPersona } = await import('../components/workspace/personas.mjs');
