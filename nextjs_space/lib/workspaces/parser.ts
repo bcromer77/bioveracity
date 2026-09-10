@@ -1,19 +1,15 @@
-import { fork, execFile } from 'node:child_process'
-import { mkdtemp, writeFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { fork } from 'node:child_process'
 import path from 'node:path'
 import { WorkspaceError } from './service'
+import { scanLocalFile, ScanError } from './scan-file.mjs'
 export type ParsedFile = { name: string; hash: string; bytes: string; mediaType: string; status: string; warnings: string[]; metadata: Record<string, unknown>; passages: { locator: string; text: string }[]; children: ParsedFile[] }
 export async function scanFile(bytes: Buffer) {
-  // Mandatory local scanner; never send private files to an external API.
-  const directory = await mkdtemp(path.join(tmpdir(), 'bv-scan-'))
   try {
-    const file = path.join(directory, 'input')
-    await writeFile(file, bytes, { mode: 0o600 })
-    await new Promise<void>((resolve, reject) => {
-      execFile('clamscan', ['--no-summary', '--max-filesize=6M', '--max-scansize=25M', '--max-recursion=3', '--alert-exceeds-max=yes', file], { timeout: 20000, maxBuffer: 8192 }, error => error ? reject(new WorkspaceError(422, 'Malware scan did not pass or the scanner is unavailable. Nothing imported.')) : resolve())
-    })
-  } finally { await rm(directory, { recursive: true, force: true }) }
+    await scanLocalFile(bytes)
+  } catch (error) {
+    if (error instanceof ScanError) throw new WorkspaceError(error.status, error.message)
+    throw new WorkspaceError(503, 'The server could not prepare the security scan. Nothing imported. Please contact the site operator.')
+  }
 }
 // Resolve the worker path at runtime so the production bundler's static
 // analyzer never sees a literal module specifier for the forked script.
