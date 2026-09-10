@@ -1,0 +1,79 @@
+# CI integrity gate for the self-contained parser worker bundle.
+#
+# What this workflow does:
+#   On pull requests into the integration and main branches (and on pushes to
+#   those branches) it runs `yarn check:worker`, which rebuilds
+#   public/parser/worker.mjs from its sources and pinned dependencies and fails
+#   if the committed bundle is no longer byte-identical - i.e. someone edited the
+#   parser sources, bumped pdfjs-dist/mammoth/mailparser/esbuild, or changed the
+#   build config without regenerating the committed artifacts.
+#
+# What this workflow does NOT do:
+#   Adding this file does NOT, by itself, make the check a required status check.
+#   Requiring it is a separate, manual repository setting: a maintainer must go
+#   to Settings -> Branches -> the branch protection rule for the target branch,
+#   enable "Require status checks to pass before merging", and add the check
+#   named "Parser worker integrity / check-worker" (it only appears in that list
+#   after this workflow has run at least once). Until a maintainer does that,
+#   this workflow runs and reports status but does not block merges.
+#
+# Trigger strategy (required-check compatible):
+#   This workflow intentionally has NO `paths:` filter. A path-filtered check is
+#   skipped on PRs that do not touch those paths, and GitHub treats a *required*
+#   check that never runs as permanently "Expected" / pending - which blocks the
+#   PR forever. Running on every PR into the target branches keeps the check
+#   eligible to be marked required.
+#
+# Reproducible install:
+#   nextjs_space/yarn.lock is a symlink into the platform-managed dependency
+#   store and does not resolve off-platform. This job instead uses the committed,
+#   portable nextjs_space/ci/yarn.lock and installs with --immutable, so it never
+#   silently resolves new dependency versions and reproduces the byte-identical
+#   bundle from a genuinely fresh install (independent of the managed store).
+name: Parser worker integrity
+
+on:
+  pull_request:
+    branches: [integrate/evidence-search, main]
+  push:
+    branches: [integrate/evidence-search, main]
+
+jobs:
+  check-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nextjs_space
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Activate Yarn 4
+        run: corepack enable && corepack prepare yarn@4.13.0 --activate
+
+      - name: Use the committed portable lockfile
+        # The repo's yarn.lock is a symlink into the managed store and does not
+        # resolve off-platform; replace it with the committed portable lockfile.
+        run: |
+          rm -f yarn.lock
+          cp ci/yarn.lock yarn.lock
+
+      - name: Pin a self-contained Yarn config
+        # Ignore the committed .yarnrc.yml, which points the global cache/folder
+        # at platform-only paths (/opt/...). A minimal local config makes the
+        # install self-contained and independent of the managed dependency store.
+        run: |
+          cat > .yarnrc.yml <<'YARNRC'
+          enableGlobalCache: false
+          enableTelemetry: false
+          nodeLinker: node-modules
+          YARNRC
+
+      - name: Fresh immutable install (no silent version resolution)
+        run: yarn install --immutable
+
+      - name: Parser worker integrity gate
+        run: yarn check:worker

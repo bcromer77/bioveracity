@@ -17,11 +17,17 @@ export async function scanFile(bytes: Buffer) {
 }
 // Resolve the worker path at runtime so the production bundler's static
 // analyzer never sees a literal module specifier for the forked script.
-// The default name is assembled from parts and can be overridden by the
-// operator; nothing about this changes the subprocess isolation model.
+// The forked worker is a self-contained, pre-bundled ES module committed
+// at public/parser/worker.mjs (see scripts/build-parser-worker.mjs). It inlines
+// every heavy parser dependency, so it needs nothing from node_modules on the
+// deployed host, and it ships automatically because the deploy step always
+// copies public/ into the standalone artifact — independent of the
+// platform-managed next.config.js file-tracing configuration.
+// The path is assembled from parts (dynamic spread) so the analyzer treats the
+// fork argument as opaque; an operator can override it with BV_PARSER_WORKER.
 function resolveWorkerPath(): string {
-  const workerName = process.env.BV_PARSER_WORKER || ['parser', 'process'].join('-') + '.' + 'mjs'
-  const segments = ['lib', 'workspaces', workerName]
+  if (process.env.BV_PARSER_WORKER) return process.env.BV_PARSER_WORKER
+  const segments = ['public', 'parser', ['worker', 'mjs'].join('.')]
   return path.join(process.cwd(), ...segments)
 }
 export async function parseIsolated(bytes: Buffer, name: string): Promise<ParsedFile> {
