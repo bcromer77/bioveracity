@@ -15,9 +15,12 @@ test('NBDC selection uses the validated GADM level-1 GID and excludes locality, 
  assert.doesNotMatch(r.records[0].sections[0].text,/private place|person|decimalLatitude|2003-03-04|stateProvince/)
  // A record whose GADM area is a different county is rejected, not misassigned to the requested county.
  const wrong=await fetchNBDCEcologySouthEast('Carlow',{now,fetcher:mock({results:[value],endOfRecords:true})});assert.equal(wrong.rejected,1);assert.equal(wrong.records.length,0)
+ // A rejected record records a short, safe reason and the record locator for review, never an upstream body.
+ assert.equal(wrong.status,'partial');assert.deepEqual(wrong.rejections,[{locator:'1',reason:'Wrong publisher or county'}])
  // Records without a GADM level-1 area cannot be assigned to any county.
  const noGadm=await fetchNBDCEcologySouthEast('Wexford',{now,fetcher:mock({results:[{...value,gadm:undefined}],endOfRecords:true})});assert.equal(noGadm.records.length,0);assert.equal(noGadm.rejected,1)
- const withheld=await fetchNBDCEcologySouthEast('Wexford',{now,fetcher:mock({results:[{...value,informationWithheld:'sensitive'}],endOfRecords:true})});assert.equal(withheld.records.length,0)
+ assert.equal(noGadm.rejections?.[0]?.reason,'Invalid source object')
+ const withheld=await fetchNBDCEcologySouthEast('Wexford',{now,fetcher:mock({results:[{...value,informationWithheld:'sensitive'}],endOfRecords:true})});assert.equal(withheld.records.length,0);assert.equal(withheld.rejections?.[0]?.reason,'Withheld/generalised source needs separate review')
 })
 test('NBDC assigns every south-east county to its own validated GADM GID',async()=>{
  for(const county of COUNTIES){

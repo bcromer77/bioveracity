@@ -5,12 +5,42 @@ import os from 'node:os'
 import path from 'node:path'
 import {nextCursor,refresh,SOURCES} from '../scripts/regional-refresh.mjs'
 test('cursor only advances after confirmed successful writes',()=>{
- const ok={success:true,failedWrites:0,sources:[{status:'ok',nextOffset:5}]}
+ const ok={success:true,failedWrites:0,sources:[{status:'ok',rejected:0,nextOffset:5}]}
  assert.equal(nextCursor(0,ok,false),5);assert.equal(nextCursor(0,ok,true),0)
  assert.equal(nextCursor(0,{...ok,failedWrites:1},false),0)
- assert.equal(nextCursor(0,{...ok,success:false},false),0)
+ // A fetch error or a blocked source holds the cursor so nothing is skipped unread.
+ assert.equal(nextCursor(0,{...ok,sources:[{status:'error',nextOffset:5}]},false),0)
+ assert.equal(nextCursor(0,{...ok,sources:[{status:'blocked',nextOffset:null}]},false),0)
  assert.equal(nextCursor(5,{...ok,sources:[{status:'ok',nextOffset:null}]},false),0)
  assert.throws(()=>nextCursor(0,{...ok,sources:[{status:'ok',nextOffset:-1}]},false))
+})
+test('a permanently-rejected record advances the cursor instead of stalling the county',()=>{
+ // A rejected record marks the page 'partial' but is permanent, so the cursor must still move past it.
+ const partial={success:false,failedWrites:0,sources:[{status:'partial',rejected:1,rejections:[{locator:'123',reason:'Wrong publisher or county'}],nextOffset:20}]}
+ assert.equal(nextCursor(0,partial,false),20)
+ // End of records on a partial page resets to 0 for the next full sweep.
+ assert.equal(nextCursor(20,{...partial,sources:[{...partial.sources[0],nextOffset:null}]},false),0)
+ // A failed DB write on the same page is transient: hold the cursor so the page is retried.
+ assert.equal(nextCursor(0,{...partial,failedWrites:1},false),0)
+ assert.equal(nextCursor(0,partial,true),0)
+})
+test('a rejected record never stalls a county across repeated sweeps',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'regional-sweep-'));const secret='c'.repeat(64)
+ const seen=[];const step={0:10,10:20,20:null}
+ const fetcher=async(_,o)=>{
+  const {source,offset}=JSON.parse(o.body)
+  if(source==='nbdc-wexford'){
+   seen.push(offset)
+   return Response.json({success:false,failedWrites:0,totalFetched:1,created:1,duplicates:0,catalogueOnly:0,rejected:1,
+    sources:[{source,status:'partial',rejected:1,rejections:[{locator:String(offset),reason:'Wrong publisher or county'}],nextOffset:step[offset]}]})
+  }
+  return Response.json({success:true,failedWrites:0,totalFetched:0,created:0,duplicates:0,catalogueOnly:0,rejected:0,sources:[{source,status:'ok',rejected:0,nextOffset:null}]})
+ }
+ try{
+  for(let i=0;i<4;i++)await refresh({endpoint:'https://example.com/api/ingest/external',secret,stateDir:dir,dryRun:false,fetcher})
+  // The county is read at offset 0,10,20 then resets to 0 for the next sweep - never stuck on one offset.
+  assert.deepEqual(seen,[0,10,20,0])
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
 })
 test('refresh checkpoints source cursors without secrets; bad source does not stop others',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'regional-test-'));const secret='b'.repeat(64)

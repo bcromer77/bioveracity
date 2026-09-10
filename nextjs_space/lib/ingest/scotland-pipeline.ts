@@ -53,8 +53,9 @@ export async function handleScotlandPost(request: Request, settings: Settings, r
     }
     const incomplete = failedWrites > 0 || results.some(s => s.status !== 'ok')
     return Response.json({ success: !incomplete, dryRun, created, duplicates, catalogueOnly, failedWrites,
+      rejected: results.reduce((n,s) => n+s.rejected,0),
       totalFetched: results.reduce((n,s) => n+s.records.length,0),
-      meaning: 'Source intake only; never automatic verification or publication. Follow nextOffset for more records.',
+      meaning: 'Source intake only; never automatic verification or publication. Follow nextOffset for more records. Rejected records are recorded for review and skipped; failed writes are retried and never advance the cursor.',
       sources: results.map(({ records, ...r }) => ({ ...r, fetched: records.length })) }, { status: incomplete ? 207 : 200 })
   } catch { return Response.json({ error: 'Scottish ingestion failed' }, { status: 502 }) }
 }

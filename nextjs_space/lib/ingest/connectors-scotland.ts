@@ -6,9 +6,10 @@ export type EvidenceInput = {
   event_date: string | null; event_date_precision: 'unknown' | 'day' | 'month' | 'year'; publication_date: null;
   acquisition_permitted: boolean; sections: { locator: string; text: string }[];
 }
+export type RejectionNote = { locator: string | null; reason: string }
 export type ConnectorResult = {
   source: string; status: 'ok' | 'partial' | 'error' | 'blocked'; records: EvidenceInput[];
-  nextOffset: number | null; rejected: number; error?: string; coverage: string;
+  nextOffset: number | null; rejected: number; rejections?: RejectionNote[]; error?: string; coverage: string;
 }
 export type Options = { fetcher?: typeof fetch; now?: () => Date; offset?: number; limit?: number }
 export const SEPA_URL = 'https://timeseries.sepa.org.uk/KiWIS/KiWIS'
@@ -67,6 +68,12 @@ export function failure(source: string, coverage: string, error: unknown): Conne
   // Never echo an upstream body or arbitrary error message.
   return { source, coverage, status: 'error', records: [], nextOffset: null, rejected: 0,
     error: error instanceof Error && /^Upstream HTTP \d{3}$/.test(error.message) ? error.message : 'Source unavailable or schema invalid' }
+}
+// Record why one record was skipped, without ever echoing an upstream body or arbitrary text.
+// Only short, developer-authored validation messages pass through; anything else is generic.
+export function safeReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : ''
+  return /^[\w .,'()\/-]{1,120}$/.test(message) ? message : 'Rejected by validation'
 }
 export async function fetchSEPARiverLevels(options: Options = {}): Promise<ConnectorResult> {
   const source = 'sepa', coverage = 'Bounded page of latest SG river readings; excludes tidal series. Latest can be stale.'
