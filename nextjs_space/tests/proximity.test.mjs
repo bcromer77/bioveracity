@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { haversineMeters, pairPlanningNearBats, countGeneralised } from '../components/workspace/proximity.mjs'
+import { haversineMeters, pairPlanningNearBats, countGeneralised, countImprecise, hasPrecisePoint } from '../components/workspace/proximity.mjs'
 
 test('haversineMeters computes a correct great-circle distance', () => {
   // Two points ~1 km apart near Enniscorthy.
@@ -44,16 +44,33 @@ test('generalised bat records are never used for distance comparison', () => {
 })
 
 test('pairs are sorted nearest first', () => {
-  const closeBat = { id: 'gbif:close', title: 'Close bat', eventDate: '2022', sourceUrl: 'https://gbif/close', lat: 52.50005, lng: -6.56, generalised: false }
-  const farBat = { id: 'gbif:far', title: 'Far bat', eventDate: '2022', sourceUrl: 'https://gbif/far', lat: 52.508, lng: -6.56, generalised: false }
+  const closeBat = { id: 'gbif:close', title: 'Close bat', eventDate: '2022', sourceUrl: 'https://gbif/close', lat: 52.50005, lng: -6.56, generalised: false, precisionMeters: 50 }
+  const farBat = { id: 'gbif:far', title: 'Far bat', eventDate: '2022', sourceUrl: 'https://gbif/far', lat: 52.508, lng: -6.56, generalised: false, precisionMeters: 50 }
   const pairs = pairPlanningNearBats([planning[0]], [farBat, closeBat], 3000)
   assert.equal(pairs.length, 2)
   assert.equal(pairs[0].batId, 'gbif:close')
   assert.ok(pairs[0].distanceMeters <= pairs[1].distanceMeters)
 })
 
+test('a bat whose precision is NOT stated is not treated as precise', () => {
+  // generalised:false but no precisionMeters -> "location precision not stated".
+  // It must NOT be used for a distance measurement (would overclaim precision),
+  // and it must be counted among the imprecise/excluded records.
+  const unstated = { id: 'gbif:unstated', title: 'Unstated precision bat', eventDate: '2020', sourceUrl: 'https://gbif/u', lat: 52.5001, lng: -6.56, generalised: false }
+  assert.equal(hasPrecisePoint(unstated), false)
+  const pairs = pairPlanningNearBats(planning, [unstated], 2000)
+  assert.equal(pairs.length, 0)
+  assert.equal(countImprecise([unstated]), 1)
+  // A record with a stated precision IS usable.
+  assert.equal(hasPrecisePoint(bats[0]), true)
+  // countImprecise counts both generalised and precision-not-stated on-map bats.
+  assert.equal(countImprecise([bats[0], bats[1], unstated]), 2)
+})
+
 test('empty / missing inputs are handled safely', () => {
   assert.deepEqual(pairPlanningNearBats(undefined, undefined), [])
   assert.deepEqual(pairPlanningNearBats([], []), [])
   assert.equal(countGeneralised(undefined), 0)
+  assert.equal(countImprecise(undefined), 0)
+  assert.equal(hasPrecisePoint(undefined), false)
 })

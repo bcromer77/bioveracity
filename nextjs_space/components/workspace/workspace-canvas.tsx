@@ -11,7 +11,7 @@ import { geocode, dataFeedsForCounty } from './geocode.mjs'
 import { searchGazetteer } from './ireland-gazetteer.mjs'
 import { expandQuery, rankResults } from './retrieval.mjs'
 import { InvestigationMap, type MapLayers, type MapPoint } from './investigation-map'
-import { pairPlanningNearBats, countGeneralised } from './proximity.mjs'
+import { pairPlanningNearBats, countImprecise } from './proximity.mjs'
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
 
@@ -422,7 +422,9 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const planningPoints: MapPoint[] = planningResult?.status === 'ok' ? (planningResult.records as MapPoint[]) : []
   // Review-only proximity: planning applications near precisely-located bats.
   const proximityPairs = useMemo(() => pairPlanningNearBats(planningPoints, speciesPoints, PROXIMITY_METERS), [planningResult, speciesResult])
-  const generalisedExcluded = useMemo(() => countGeneralised(speciesPoints), [speciesResult])
+  // Bats left out of the distances: generalised OR precision not stated. A
+  // record whose precision is "not stated" is never treated as precise.
+  const impreciseExcluded = useMemo(() => countImprecise(speciesPoints), [speciesResult])
   const canCompare = speciesPoints.length > 0 && planningPoints.length > 0
 
   return <div className="space-y-6">
@@ -657,7 +659,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
                       <p className="mt-1 text-xs"><span className="font-medium">{pair.bat.title}</span> · {pair.bat.date ?? 'date unknown'} · <a className="underline" href={pair.bat.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
                     </article>))}
                 </>}
-            {generalisedExcluded > 0 && <p className="text-xs text-muted-foreground">{generalisedExcluded} generalised bat record{generalisedExcluded === 1 ? ' was' : 's were'} excluded from the distance comparison because {generalisedExcluded === 1 ? 'its' : 'their'} location is not precise.</p>}
+            {impreciseExcluded > 0 && <p className="text-xs text-muted-foreground">{impreciseExcluded} bat record{impreciseExcluded === 1 ? ' was' : 's were'} excluded from the distance comparison because {impreciseExcluded === 1 ? 'its' : 'their'} location is not precise — either generalised or with no stated precision.</p>}
             <p className="text-xs text-muted-foreground">Proximity is something to review, not evidence of ecological conflict.</p>
           </div>}
         </section>

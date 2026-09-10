@@ -18,13 +18,26 @@ export function haversineMeters(a, b) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)))
 }
 
+// A bat observation may be used for a distance measurement ONLY if it has a
+// stated precise point: not generalised, real coordinates, AND an explicit
+// coordinate precision. A record whose precision is "not stated"
+// (precisionMeters null/absent) is NOT treated as precise — measuring a
+// distance from it would describe an unstated precision as if it were exact.
+export function hasPrecisePoint(b) {
+  return Boolean(b)
+    && b.generalised !== true
+    && Number.isFinite(b.lat) && Number.isFinite(b.lng)
+    && Number.isFinite(b.precisionMeters) && b.precisionMeters > 0
+}
+
 // For each planning application, find nearby bat observations within
-// `radiusMeters`. Generalised bat records are skipped entirely (their precise
-// location is unknown) — count them separately with `countGeneralised` so the
-// UI can say honestly how many were left out. Returns pairs sorted nearest
-// first, each carrying both source links and both dates for the reviewer.
+// `radiusMeters`. Only bats with a stated precise point are used (see
+// `hasPrecisePoint`); generalised OR precision-not-stated records are skipped —
+// count them with `countImprecise` so the UI can say honestly how many were
+// left out. Returns pairs sorted nearest first, each carrying both source
+// links and both dates for the reviewer.
 export function pairPlanningNearBats(planning, bats, radiusMeters = 2000) {
-  const precise = (bats || []).filter(b => b && !b.generalised && Number.isFinite(b.lat) && Number.isFinite(b.lng))
+  const precise = (bats || []).filter(hasPrecisePoint)
   const pairs = []
   for (const p of planning || []) {
     if (!p || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue
@@ -47,4 +60,12 @@ export function pairPlanningNearBats(planning, bats, radiusMeters = 2000) {
 // How many bat records were generalised (excluded from distance comparison).
 export function countGeneralised(bats) {
   return (bats || []).filter(b => b && b.generalised).length
+}
+
+// How many plotted bat records were excluded from the distance comparison
+// because their location is not precise — either generalised OR precision not
+// stated. Counts only records that have coordinates (i.e. are plotted), so the
+// UI can report exactly how many on-map bats were left out of the distances.
+export function countImprecise(bats) {
+  return (bats || []).filter(b => b && Number.isFinite(b.lat) && Number.isFinite(b.lng) && !hasPrecisePoint(b)).length
 }
