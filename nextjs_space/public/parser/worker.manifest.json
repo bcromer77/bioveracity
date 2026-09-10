@@ -8,10 +8,17 @@
     "base64-js": "1.5.1",
     "bluebird": "3.4.7",
     "core-util-is": "1.0.3",
+    "deepmerge-ts": "8.0.2",
     "dingbat-to-unicode": "1.0.1",
+    "dom-serializer": "2.0.0",
+    "domelementtype": "2.3.0",
+    "domhandler": "5.0.3",
+    "domutils": "3.2.2",
     "encoding-japanese": "2.3.0",
+    "entities": "4.5.0",
     "he": "1.2.0",
     "html-to-text": "10.0.1",
+    "htmlparser2": "10.1.0",
     "iconv-lite": "0.7.3",
     "immediate": "3.0.6",
     "inherits": "2.0.4",
@@ -51,5 +58,5 @@
     "lib/workspaces/parser.ts": "75665241ae58e7737a234a78948e8e8b293c9654a389898b993716191f9f2eab"
   },
   "worker": "ac385816156c10e7b858cee1bfc0db8bb492e95cbb0df9d581b346c38f041e73",
-  "licenses": "cc522c9b0c1b10388109d285cd4a280376c8f35bef627723474b4603b13ef32a"
+  "licenses": "6ae923f511946373e28e05abc029c6163ae5b21ebc8d992265ad717181c51dbb"
 }

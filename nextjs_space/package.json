@@ -31,6 +31,7 @@
     "@types/react-plotly.js": "2.6.3",
     "@typescript-eslint/eslint-plugin": "8.18.0",
     "@typescript-eslint/parser": "8.18.0",
+    "esbuild": "0.28.2",
     "eslint": "9.33.0",
     "eslint-config-next": "16.3.3",
     "eslint-plugin-prettier": "5.1.3",

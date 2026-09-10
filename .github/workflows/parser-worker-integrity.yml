@@ -1,0 +1,63 @@
+# Required merge/release gate for the self-contained parser worker bundle.
+#
+# Why this lives in CI rather than in the deploy build:
+#   The platform deploy step runs `yarn run build`. Wiring the integrity check
+#   into a `prebuild` script would make any bundle drift abort a production
+#   deploy - the opposite of what we want operationally. Instead this workflow
+#   makes `yarn check:worker` a REQUIRED status check on pull requests into the
+#   integration and main branches, so drift is caught before merge without ever
+#   putting the deploy pipeline at risk.
+#
+# It deliberately deletes the repo's yarn.lock (which is a symlink into the
+# platform-managed dependency store and does not resolve off-platform) and runs
+# a clean install from package.json. Because esbuild is pinned to an exact
+# version in package.json, that clean install reproduces the byte-identical
+# bundle - this job therefore also proves the reproducibility fix does not
+# depend on Abacus's existing dependency store.
+name: Parser worker integrity
+
+on:
+  pull_request:
+    branches: [integrate/evidence-search, main]
+    paths:
+      - 'nextjs_space/lib/workspaces/parse-file.mjs'
+      - 'nextjs_space/lib/workspaces/parser-process.mjs'
+      - 'nextjs_space/lib/workspaces/parser.ts'
+      - 'nextjs_space/public/parser/**'
+      - 'nextjs_space/scripts/parser-worker.config.mjs'
+      - 'nextjs_space/scripts/build-parser-worker.mjs'
+      - 'nextjs_space/scripts/check-parser-worker.mjs'
+      - 'nextjs_space/package.json'
+      - '.github/workflows/parser-worker-integrity.yml'
+  push:
+    branches: [integrate/evidence-search, main]
+
+jobs:
+  check-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nextjs_space
+    # Keep the install self-contained: do not rely on the platform's global
+    # cache/global folder paths from the committed .yarnrc.yml.
+    env:
+      YARN_ENABLE_GLOBAL_CACHE: 'false'
+      YARN_NM_MODE: 'classic'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Drop platform-managed lockfile symlink (resolve cleanly from package.json)
+        run: rm -f yarn.lock
+
+      - name: Activate Yarn 4
+        run: corepack enable && corepack prepare yarn@4.13.0 --activate
+
+      - name: Clean install (must not depend on the managed dependency store)
+        run: yarn install --no-immutable
+
+      - name: Parser worker integrity gate
+        run: yarn check:worker

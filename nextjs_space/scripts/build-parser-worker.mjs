@@ -54,13 +54,48 @@ const licenceCandidates = [
   'COPYING', 'COPYING.md',
 ]
 
+// Resolve a package's directory even when its `exports` map blocks the
+// `<name>/package.json` subpath (Node throws ERR_PACKAGE_PATH_NOT_EXPORTED for
+// packages such as entities, domhandler, htmlparser2, deepmerge-ts). Falling
+// back to resolving the package entry and walking up to the package.json whose
+// `name` matches recovers those directories so their attribution is never
+// silently dropped.
+function resolvePkgDir(name) {
+  try {
+    return path.dirname(require.resolve(`${name}/package.json`))
+  } catch {
+    /* exports map may block the package.json subpath; fall through */
+  }
+  try {
+    let dir = path.dirname(require.resolve(name))
+    while (dir !== path.dirname(dir)) {
+      const pj = path.join(dir, 'package.json')
+      if (fs.existsSync(pj)) {
+        try {
+          if (JSON.parse(fs.readFileSync(pj, 'utf8')).name === name) return dir
+        } catch {
+          /* ignore malformed nested package.json */
+        }
+      }
+      dir = path.dirname(dir)
+    }
+  } catch {
+    /* fall through to node_modules scan */
+  }
+  for (const base of require.resolve.paths(name) || []) {
+    const cand = path.join(base, ...name.split('/'))
+    if (fs.existsSync(path.join(cand, 'package.json'))) return cand
+  }
+  return null
+}
+
 const deps = {}
 const blocks = []
+const unattributed = []
 for (const name of [...pkgNames].sort()) {
-  let pkgDir
-  try {
-    pkgDir = path.dirname(require.resolve(`${name}/package.json`))
-  } catch {
+  const pkgDir = resolvePkgDir(name)
+  if (!pkgDir) {
+    unattributed.push(name)
     continue
   }
   let meta = {}
@@ -70,6 +105,7 @@ for (const name of [...pkgNames].sort()) {
     /* ignore */
   }
   deps[name] = meta.version || 'unknown'
+  const spdx = meta.license || meta.licenses || 'UNSTATED'
   let licenceText = ''
   for (const cand of licenceCandidates) {
     const p = path.join(pkgDir, cand)
@@ -78,10 +114,21 @@ for (const name of [...pkgNames].sort()) {
       break
     }
   }
-  const header = `${name}@${meta.version || '?'}  (${meta.license || meta.licenses || 'see below'})`
+  const header = `${name}@${meta.version || '?'}  (${spdx})`
   blocks.push(
     `${'='.repeat(78)}\n${header}\n${'='.repeat(78)}\n\n` +
-      (licenceText || '(No licence file bundled in the package; see the package metadata above.)'),
+      (licenceText ||
+        `(No licence file is bundled in this package. Its declared SPDX licence is "${spdx}" ` +
+          '(from the package metadata above); no separate NOTICE/COPYING file was published.)'),
+  )
+}
+
+// Fail loudly: a package inlined into the bundle whose attribution could not be
+// collected must never be silently dropped from the licence notices.
+if (unattributed.length) {
+  throw new Error(
+    `Unable to resolve licence attribution for inlined package(s): ${unattributed.join(', ')}. ` +
+      'Fix resolvePkgDir() or add an explicit mapping before regenerating the bundle.',
   )
 }
 
