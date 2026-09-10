@@ -81,12 +81,19 @@ function mapAsset(a: any, score: number): PlaceResult {
 }
 
 export async function searchPlaces(query: string, limit = 25): Promise<PlaceResult[]> {
-  const assets = await prisma.asset.findMany({
+  const allAssets = await prisma.asset.findMany({
     include: {
       events: { orderBy: { date: 'desc' }, take: 30 },
       _count: { select: { events: true, evidenceGaps: true, divergences: true } },
     },
   })
+
+  // Hide test-preview seed records (e.g. the River Cam demo asset) from live
+  // search results without deleting the row, which is still referenced by the
+  // region operating-picture page. Legitimate records are unaffected.
+  const assets = allAssets.filter(
+    (a: any) => !/seeded into the isolated test preview/i.test(a?.summary ?? '')
+  )
 
   const q = (query ?? '').trim().toLowerCase()
   const terms = q

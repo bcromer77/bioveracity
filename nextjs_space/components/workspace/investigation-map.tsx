@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import type { MapLayers } from './investigation-map-inner'
+import type { MapLayers, MapPoint } from './investigation-map-inner'
 
 const InvestigationMapInner = dynamic(() => import('./investigation-map-inner'), {
   ssr: false,
@@ -12,7 +12,7 @@ const InvestigationMapInner = dynamic(() => import('./investigation-map-inner'),
   ),
 })
 
-export type { MapLayers }
+export type { MapLayers, MapPoint }
 
 export function InvestigationMap({
   lat,
@@ -21,6 +21,10 @@ export function InvestigationMap({
   name,
   layers,
   bufferMeters,
+  species,
+  planning,
+  selectedId,
+  onSelectRecord,
 }: {
   lat: number
   lng: number
@@ -28,10 +32,25 @@ export function InvestigationMap({
   name: string
   layers: MapLayers
   bufferMeters?: number
+  species?: MapPoint[]
+  planning?: MapPoint[]
+  selectedId?: string | null
+  onSelectRecord?: (id: string) => void
 }) {
   return (
     <div className="h-full w-full overflow-hidden rounded-lg border border-border/60">
-      <InvestigationMapInner lat={lat} lng={lng} zoom={zoom} name={name} layers={layers} bufferMeters={bufferMeters} />
+      <InvestigationMapInner
+        lat={lat}
+        lng={lng}
+        zoom={zoom}
+        name={name}
+        layers={layers}
+        bufferMeters={bufferMeters}
+        species={species}
+        planning={planning}
+        selectedId={selectedId}
+        onSelectRecord={onSelectRecord}
+      />
     </div>
   )
 }

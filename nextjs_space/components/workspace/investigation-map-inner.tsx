@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -15,11 +15,33 @@ const markerIcon = L.icon({
   shadowSize: [41, 41],
 })
 
-// water/species are agency-feed layers that require real retrieved features to
-// draw; until such features exist for a location they stay disabled in the UI
-// and this map draws nothing for them. `buffer` is a genuine geometric search
-// buffer measured in metres (see bufferMeters), NOT a surveyed boundary.
-export type MapLayers = { water: boolean; species: boolean; buffer: boolean }
+// `buffer` is a genuine geometric search buffer in metres (see bufferMeters),
+// NOT a surveyed boundary. `species` and `planning` toggle the display of REAL
+// retrieved public records (bat occurrences from GBIF, planning applications
+// from the national ArcGIS layer); each layer is only enabled by the parent
+// after its retrieval actually succeeds.
+export type MapLayers = { buffer: boolean; species: boolean; planning: boolean }
+
+// The plottable subset of a retrieved public record.
+export type MapPoint = {
+  id: string
+  kind: 'species' | 'planning'
+  title: string
+  subtitle: string
+  lat: number
+  lng: number
+  precisionMeters: number | null
+  generalised: boolean
+  eventDate: string | null
+  datePrecision?: string
+  status: string | null
+  detail: string | null
+  sourceUrl: string
+}
+
+const SPECIES_COLOR = '#2f6f4f'
+const PLANNING_COLOR = '#b7791f'
+const SELECTED_COLOR = '#b91c1c'
 
 // Recenters the map whenever the resolved location changes (e.g. after a search).
 function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
@@ -30,6 +52,58 @@ function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }
   return null
 }
 
+// Pans to a record when it is selected from a card (cross-highlight), without
+// changing the zoom the user set.
+function FocusSelected({ point }: { point: MapPoint | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (point) map.panTo([point.lat, point.lng], { animate: true })
+  }, [point, map])
+  return null
+}
+
+function dateLabel(point: MapPoint): string {
+  if (!point.eventDate) return 'date unknown'
+  return point.eventDate
+}
+
+function RecordMarker({ point, selected, onSelect }: { point: MapPoint; selected: boolean; onSelect?: (id: string) => void }) {
+  const base = point.kind === 'species' ? SPECIES_COLOR : PLANNING_COLOR
+  const color = selected ? SELECTED_COLOR : base
+  const radius = selected ? 10 : 6
+  return (
+    <>
+      {/* A generalised species record has no precise point: show its stated
+          uncertainty area as a translucent circle rather than implying a
+          pin-point location. */}
+      {point.kind === 'species' && point.generalised && point.precisionMeters && (
+        <Circle center={[point.lat, point.lng]} radius={point.precisionMeters}
+          pathOptions={{ color: base, fillColor: base, fillOpacity: 0.05, weight: 1, dashArray: '4 4' }} />
+      )}
+      <CircleMarker
+        center={[point.lat, point.lng]}
+        radius={radius}
+        pathOptions={{ color, fillColor: color, fillOpacity: selected ? 0.9 : 0.7, weight: selected ? 3 : 1.5 }}
+        eventHandlers={{ click: () => onSelect?.(point.id) }}
+      >
+        <Popup>
+          <div style={{ fontSize: '12px', maxWidth: '220px' }}>
+            <strong>{point.title}</strong>
+            <div style={{ color: '#555' }}>{point.subtitle}</div>
+            {point.status && <div style={{ color: '#555' }}>{point.status}</div>}
+            {point.detail && <div style={{ color: '#555', marginTop: '2px' }}>{point.detail}</div>}
+            <div style={{ color: '#555', marginTop: '2px' }}>Date: {dateLabel(point)}</div>
+            {point.kind === 'species' && (
+              <div style={{ color: '#555' }}>{point.generalised ? 'Generalised location (area shown, not a precise point)' : point.precisionMeters ? `Location precision ±${point.precisionMeters} m` : 'Location precision not stated'}</div>
+            )}
+            <a href={point.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '4px', color: '#1d4ed8' }}>View source record</a>
+          </div>
+        </Popup>
+      </CircleMarker>
+    </>
+  )
+}
+
 export default function InvestigationMapInner({
   lat,
   lng,
@@ -37,6 +111,10 @@ export default function InvestigationMapInner({
   name,
   layers,
   bufferMeters = 500,
+  species = [],
+  planning = [],
+  selectedId = null,
+  onSelectRecord,
 }: {
   lat: number
   lng: number
@@ -44,7 +122,12 @@ export default function InvestigationMapInner({
   name: string
   layers: MapLayers
   bufferMeters?: number
+  species?: MapPoint[]
+  planning?: MapPoint[]
+  selectedId?: string | null
+  onSelectRecord?: (id: string) => void
 }) {
+  const selectedPoint = selectedId ? [...species, ...planning].find(p => p.id === selectedId) ?? null : null
   return (
     <MapContainer
       center={[lat, lng]}
@@ -65,12 +148,11 @@ export default function InvestigationMapInner({
         maxZoom={16}
       />
       <Recenter lat={lat} lng={lng} zoom={zoom} />
+      <FocusSelected point={selectedPoint} />
 
       {/* Search buffer — a REAL circle of radius `bufferMeters` metres around the
-          navigation centre. Leaflet's Circle takes its radius in metres, so this
-          scales correctly at every zoom level (unlike a fixed-pixel marker). It
-          is a search/proximity buffer for locating nearby evidence, NOT a
-          surveyed red-line site boundary. */}
+          navigation centre. It is a search/proximity buffer for locating nearby
+          evidence, NOT a surveyed red-line site boundary. */}
       {layers.buffer && (
         <Circle
           center={[lat, lng]}
@@ -85,6 +167,13 @@ export default function InvestigationMapInner({
           </Popup>
         </Circle>
       )}
+
+      {layers.species && species.map(point => (
+        <RecordMarker key={point.id} point={point} selected={point.id === selectedId} onSelect={onSelectRecord} />
+      ))}
+      {layers.planning && planning.map(point => (
+        <RecordMarker key={point.id} point={point} selected={point.id === selectedId} onSelect={onSelectRecord} />
+      ))}
 
       <Marker position={[lat, lng]} icon={markerIcon}>
         <Popup>

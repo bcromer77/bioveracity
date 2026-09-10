@@ -10,7 +10,9 @@ import { getPersona } from './personas.mjs'
 import { geocode, dataFeedsForCounty } from './geocode.mjs'
 import { searchGazetteer } from './ireland-gazetteer.mjs'
 import { expandQuery, rankResults } from './retrieval.mjs'
-import { InvestigationMap, type MapLayers } from './investigation-map'
+import { InvestigationMap, type MapLayers, type MapPoint } from './investigation-map'
+import { pairPlanningNearBats, countGeneralised } from './proximity.mjs'
+import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
 
 // Metre-scale proximity buffer drawn on the map (a search buffer, not a boundary).
@@ -70,6 +72,13 @@ function findingAccent(kind: string): string {
 }
 
 const IRELAND: Place = { name: 'Ireland', county: null, lat: 53.4, lng: -7.9, zoom: 7 }
+// The prominent starting investigation. Coordinates are the Enniscorthy town
+// centre from the Irish gazetteer (approximate navigation centre only).
+const ENNISCORTHY: Place = { name: 'Enniscorthy', county: 'Wexford', lat: 52.5017, lng: -6.5658, zoom: 13 }
+// "Near" for the review-only proximity comparison. A prompt to review, not a
+// finding: distances are measured only between planning points and precisely
+// located bat observations (generalised records are excluded).
+const PROXIMITY_METERS = 2000
 
 async function read(url: string, init: RequestInit = {}) {
   const response = await fetch(url, { ...init, cache: 'no-store', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...init.headers } })
@@ -188,6 +197,7 @@ function CaseBoard({ workspaceId, defaultTemplate, selected, onSelect, onResolve
 
 function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle }: { workspaceId: string; caseId: string; persona: Persona; onSelectCase: (id: string) => void; reportTitle: string }) {
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/evidence`
+  const publicEndpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/public-records`
   const [revision, setRevision] = useState(0)
   const bump = () => setRevision(x => x + 1)
   const [docs, setDocs] = useState<Doc[]>([])
@@ -204,7 +214,18 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [searching, setSearching] = useState(false)
   const [placeHits, setPlaceHits] = useState<Hit[] | null>(null)
-  const [layers, setLayers] = useState<MapLayers>({ water: false, species: false, buffer: true })
+  const [layers, setLayers] = useState<MapLayers>({ buffer: true, species: false, planning: false })
+
+  // Public records for the map (bat occurrences + planning applications). These
+  // are retrieved read-only and kept STRICTLY SEPARATE from private uploaded
+  // evidence — they are never added to the case, accepted, or exported.
+  const [speciesResult, setSpeciesResult] = useState<MapLayerResult | null>(null)
+  const [planningResult, setPlanningResult] = useState<MapLayerResult | null>(null)
+  const [publicBusy, setPublicBusy] = useState(false)
+  const [publicError, setPublicError] = useState('')
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
+  const [compared, setCompared] = useState(false)
+  const publicSeq = useRef(0)
 
   // Question search (term-expansion retrieval)
   const [question, setQuestion] = useState('')
@@ -308,9 +329,33 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     setSuggestions(value.trim() ? toSuggestions(searchGazetteer(value, 5)) : [])
   }
 
+  // Retrieve PUBLIC records (bats + planning) for the map. Read-only, kept
+  // separate from private evidence. A layer is only switched on AFTER its own
+  // retrieval returns status 'ok'; empty/error results leave the layer off and
+  // surface an explanation in the cards below.
+  async function retrievePublicRecords(next: Place) {
+    const seq = ++publicSeq.current
+    setPublicBusy(true); setPublicError(''); setSpeciesResult(null); setPlanningResult(null); setSelectedRecordId(null); setCompared(false)
+    setLayers(c => ({ ...c, species: false, planning: false }))
+    try {
+      const data = await (await read(`${publicEndpoint}?lat=${encodeURIComponent(next.lat)}&lng=${encodeURIComponent(next.lng)}&radius=20`)).json()
+      if (seq !== publicSeq.current) return
+      const sp: MapLayerResult | null = data.species ?? null
+      const pl: MapLayerResult | null = data.planning ?? null
+      setSpeciesResult(sp); setPlanningResult(pl)
+      setLayers(c => ({ ...c, species: sp?.status === 'ok', planning: pl?.status === 'ok' }))
+    } catch (e) {
+      if (seq === publicSeq.current) setPublicError(message(e))
+    } finally {
+      if (seq === publicSeq.current) setPublicBusy(false)
+    }
+  }
+
   async function selectPlace(next: Place) {
     setPlace(next); setSuggestions([]); setQuery(next.name); setError('')
-    // A town selection retrieves the source records that actually mention it.
+    // Public map records run alongside, but stay SEPARATE from, private passages.
+    retrievePublicRecords(next)
+    // A town selection also retrieves the private source records that mention it.
     const seq = ++placeSeq.current
     setPlaceHits(null)
     try { const hits = await runSearch(next.name); if (seq === placeSeq.current) setPlaceHits(hits) } catch (e) { if (seq === placeSeq.current) setError(message(e)) }
@@ -371,8 +416,14 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
 
   const claimDocs = claimHits ? Array.from(new Set(claimHits.ranked.map(h => h.documentId))) : []
   const externalWired = feeds.feeds.filter(f => f.status === 'available')
-  const speciesFeed = feeds.feeds.find(f => f.id === 'species')
-  const waterFeed = feeds.feeds.find(f => f.id === 'water')
+
+  // Plottable public records (only when a retrieval actually succeeded).
+  const speciesPoints: MapPoint[] = speciesResult?.status === 'ok' ? (speciesResult.records as MapPoint[]) : []
+  const planningPoints: MapPoint[] = planningResult?.status === 'ok' ? (planningResult.records as MapPoint[]) : []
+  // Review-only proximity: planning applications near precisely-located bats.
+  const proximityPairs = useMemo(() => pairPlanningNearBats(planningPoints, speciesPoints, PROXIMITY_METERS), [planningResult, speciesResult])
+  const generalisedExcluded = useMemo(() => countGeneralised(speciesPoints), [speciesResult])
+  const canCompare = speciesPoints.length > 0 && planningPoints.length > 0
 
   return <div className="space-y-6">
     {/* Actions header */}
@@ -390,6 +441,20 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         <Button type="button" disabled={exportBusy} onClick={generateAuditPack}>{exportBusy ? 'Preparing…' : 'Generate audit pack'}</Button>
       </div>
     </div>
+
+    {/* Prominent starting action: the flagship public-evidence investigation. It
+        needs no upload — it retrieves REAL bat occurrences and nearby planning
+        applications around Enniscorthy and plots them on the map. */}
+    <section className="rounded-lg border-2 border-accent/60 bg-accent/5 p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0 max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Start here — no upload needed</p>
+          <h2 className="mt-0.5 font-display text-lg font-semibold">🦇 Bats and planning around Enniscorthy</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Retrieve genuine bat occurrence records and nearby planning applications around Enniscorthy, Co. Wexford from public sources, plotted on the map with their source dates and links. These public records stay separate from your private case evidence — they are never accepted or exported.</p>
+        </div>
+        <Button type="button" disabled={publicBusy} onClick={() => selectPlace(ENNISCORTHY)}>{publicBusy && place.name === 'Enniscorthy' ? 'Retrieving…' : 'Start investigation'}</Button>
+      </div>
+    </section>
 
     {error && <Failure text={error} />}
     {loadError && <Failure text={`Could not refresh evidence: ${loadError}`} />}
@@ -491,14 +556,22 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <PanelHeading id="map-heading">Aerial map</PanelHeading>
             <div className="flex flex-wrap gap-2">
               <button type="button" aria-pressed={layers.buffer} onClick={() => setLayers(c => ({ ...c, buffer: !c.buffer }))} className={`rounded-full border px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${layers.buffer ? 'border-primary bg-secondary font-medium' : 'border-border text-muted-foreground'}`}>{layers.buffer ? '✓ ' : ''}Search buffer ({BUFFER_METERS} m)</button>
-              <button type="button" disabled aria-disabled title={`Species features are not plotted on this map. Species feed for ${feeds.county ? `Co. ${feeds.county}` : 'this area'}: ${feedLabel(speciesFeed?.status ?? 'not-wired')}. See Local data feeds below.`} className="cursor-not-allowed rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground opacity-70">Species (not plotted)</button>
-              <button type="button" disabled aria-disabled title={`Water features are not plotted on this map. Water feed for ${feeds.county ? `Co. ${feeds.county}` : 'this area'}: ${feedLabel(waterFeed?.status ?? 'unverified')}. See Local data feeds below.`} className="cursor-not-allowed rounded-full border border-dashed border-border px-3 py-1 text-xs text-muted-foreground opacity-70">Water (not plotted)</button>
+              {(() => {
+                const ok = speciesResult?.status === 'ok'
+                const reason = publicBusy ? 'Retrieving bat records…' : speciesResult == null ? 'Search a town to retrieve bat records.' : speciesResult.status === 'empty' ? 'No bat records were returned for this area.' : speciesResult.status === 'error' ? (speciesResult.error ?? 'Bat records could not be retrieved.') : ''
+                return <button type="button" disabled={!ok} aria-disabled={!ok} aria-pressed={ok && layers.species} title={reason || undefined} onClick={() => ok && setLayers(c => ({ ...c, species: !c.species }))} className={`rounded-full border px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${ok && layers.species ? 'border-primary bg-secondary font-medium' : ok ? 'border-border text-muted-foreground' : 'cursor-not-allowed border-dashed border-border text-muted-foreground opacity-70'}`}>{ok && layers.species ? '✓ ' : ''}Bats{ok ? ` (${speciesPoints.length})` : ''}</button>
+              })()}
+              {(() => {
+                const ok = planningResult?.status === 'ok'
+                const reason = publicBusy ? 'Retrieving planning applications…' : planningResult == null ? 'Search a town to retrieve planning applications.' : planningResult.status === 'empty' ? 'No planning applications were returned for this area.' : planningResult.status === 'error' ? (planningResult.error ?? 'Planning applications could not be retrieved.') : ''
+                return <button type="button" disabled={!ok} aria-disabled={!ok} aria-pressed={ok && layers.planning} title={reason || undefined} onClick={() => ok && setLayers(c => ({ ...c, planning: !c.planning }))} className={`rounded-full border px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${ok && layers.planning ? 'border-primary bg-secondary font-medium' : ok ? 'border-border text-muted-foreground' : 'cursor-not-allowed border-dashed border-border text-muted-foreground opacity-70'}`}>{ok && layers.planning ? '✓ ' : ''}Planning{ok ? ` (${planningPoints.length})` : ''}</button>
+              })()}
             </div>
           </div>
           <div className="mt-3 h-[320px] w-full">
-            <InvestigationMap lat={place.lat} lng={place.lng} zoom={place.zoom} name={place.name} layers={layers} bufferMeters={BUFFER_METERS} />
+            <InvestigationMap lat={place.lat} lng={place.lng} zoom={place.zoom} name={place.name} layers={layers} bufferMeters={BUFFER_METERS} species={speciesPoints} planning={planningPoints} selectedId={selectedRecordId} onSelectRecord={id => setSelectedRecordId(prev => prev === id ? null : id)} />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">The map shows a {BUFFER_METERS} m proximity search buffer around the selected centre — a navigation aid, not a surveyed site boundary. Species and water features are not plotted on the map; their retrieval status is shown under Local data feeds below.</p>
+          <p className="mt-2 text-xs text-muted-foreground">The map shows a {BUFFER_METERS} m proximity search buffer around the selected centre — a navigation aid, not a surveyed site boundary. Retrieved bat occurrences (green) and planning applications (amber) are plotted only after each public source returns records; a generalised bat location is drawn as its stated uncertainty area, not a precise pin. Public records are shown separately from your private case evidence. Select a record on the map or in the list below to highlight it in both.</p>
           {/* Records mentioning the selected place */}
           <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Records mentioning {place.name}</p>
@@ -513,6 +586,82 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <p className="mt-1 text-xs text-muted-foreground">{latestReviewed.name} · {latestReviewed.locator}</p>
           </div>}
         </section>
+
+        {/* Public records retrieved for the map — STRICTLY SEPARATE from private
+            evidence. Each card cross-highlights its map marker; the whole card
+            toggles selection, and the source link opens the provider record. */}
+        <section className={panel} aria-labelledby="public-heading">
+          <PanelHeading id="public-heading">Public records near {place.name}</PanelHeading>
+          <p className="mt-1 text-xs text-muted-foreground">Retrieved live from public sources — bat occurrences from GBIF and planning applications from the national planning layer. Shown for context only: they are never added to your private evidence, accepted, or included in an audit pack. Select a card to highlight it on the map.</p>
+          {publicBusy && <p className="mt-3 text-sm text-muted-foreground" role="status">Retrieving public records…</p>}
+          {publicError && <p className="mt-3 rounded-md border border-destructive p-3 text-sm" role="alert">{publicError}</p>}
+          {!publicBusy && !publicError && speciesResult == null && planningResult == null && <p className="mt-3 rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">Run the Enniscorthy investigation above, or search any town, to retrieve bat records and nearby planning applications.</p>}
+
+          {(speciesResult || planningResult) && <>
+            <div className="mt-4">
+              <div className="flex items-center gap-2">
+                <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: '#2f6f4f' }} />
+                <h3 className="text-sm font-semibold">Bat occurrences{speciesResult?.status === 'ok' ? ` (${speciesPoints.length})` : ''}</h3>
+              </div>
+              {speciesResult == null ? <p className="mt-2 text-xs text-muted-foreground">Not retrieved.</p>
+                : speciesResult.status === 'error' ? <p className="mt-2 text-xs text-destructive">{speciesResult.error}</p>
+                : speciesResult.status === 'empty' ? <p className="mt-2 text-xs text-muted-foreground">No bat records were returned for this area.</p>
+                : <ul className="mt-2 space-y-2">{speciesPoints.slice(0, 12).map(r => (
+                    <li key={r.id}>
+                      <button type="button" aria-pressed={selectedRecordId === r.id} onClick={() => setSelectedRecordId(prev => prev === r.id ? null : r.id)} className={`w-full rounded-md border p-2 text-left text-xs transition-colors ${selectedRecordId === r.id ? 'border-primary bg-secondary' : 'border-border hover:border-primary/40'}`}>
+                        <span className="block font-medium break-words">{r.title}</span>
+                        <span className="mt-0.5 block text-muted-foreground">{r.subtitle} · {r.eventDate ?? 'date unknown'}</span>
+                        <span className="mt-0.5 block text-muted-foreground">{r.generalised ? 'Generalised location (area shown, not a precise point)' : r.precisionMeters ? `Location precision ±${r.precisionMeters} m` : 'Location precision not stated'}</span>
+                        <a href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">View source record</a>
+                      </button>
+                    </li>))}</ul>}
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center gap-2">
+                <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: '#b7791f' }} />
+                <h3 className="text-sm font-semibold">Planning applications{planningResult?.status === 'ok' ? ` (${planningPoints.length})` : ''}</h3>
+              </div>
+              {planningResult == null ? <p className="mt-2 text-xs text-muted-foreground">Not retrieved.</p>
+                : planningResult.status === 'error' ? <p className="mt-2 text-xs text-destructive">{planningResult.error}</p>
+                : planningResult.status === 'empty' ? <p className="mt-2 text-xs text-muted-foreground">No planning applications were returned for this area.</p>
+                : <ul className="mt-2 space-y-2">{planningPoints.slice(0, 12).map(r => (
+                    <li key={r.id}>
+                      <button type="button" aria-pressed={selectedRecordId === r.id} onClick={() => setSelectedRecordId(prev => prev === r.id ? null : r.id)} className={`w-full rounded-md border p-2 text-left text-xs transition-colors ${selectedRecordId === r.id ? 'border-primary bg-secondary' : 'border-border hover:border-primary/40'}`}>
+                        <span className="block font-medium break-words">{r.title}</span>
+                        <span className="mt-0.5 block text-muted-foreground">{r.subtitle}{r.status ? ` · ${r.status}` : ''} · {r.eventDate ?? 'date unknown'}</span>
+                        {r.detail && <span className="mt-0.5 block break-words text-muted-foreground">{r.detail}</span>}
+                        <a href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">View source record</a>
+                      </button>
+                    </li>))}</ul>}
+            </div>
+          </>}
+        </section>
+
+        {/* The ONE review question comparing the two public layers geographically.
+            Framed as something to review, never a finding of ecological conflict;
+            distances use only precisely-located bat records. */}
+        <section className={panel} aria-labelledby="proximity-heading">
+          <PanelHeading id="proximity-heading" size="text-base">Which planning applications are near recorded bat observations?</PanelHeading>
+          <p className="mt-1 text-xs text-muted-foreground">Compares the retrieved public records geographically, within {(PROXIMITY_METERS / 1000).toFixed(1)} km. Proximity is something to review — not evidence of ecological conflict — and this does not use your private case evidence.</p>
+          <Button type="button" className="mt-3" disabled={!canCompare} onClick={() => setCompared(true)}>Compare proximity</Button>
+          {!canCompare && <p className="mt-2 text-xs text-muted-foreground">Retrieve both bat records and planning applications (run the investigation or search a town) to enable this comparison.</p>}
+          {compared && canCompare && <div className="mt-3 space-y-2">
+            {proximityPairs.length === 0
+              ? <p className="text-sm text-muted-foreground">No planning application is within {(PROXIMITY_METERS / 1000).toFixed(1)} km of a precisely-located bat observation.</p>
+              : <>
+                  <p className="text-xs text-muted-foreground">{proximityPairs.length} pair{proximityPairs.length === 1 ? '' : 's'} within {(PROXIMITY_METERS / 1000).toFixed(1)} km, nearest first. Distance is measured only to bat observations with a precise location.</p>
+                  {proximityPairs.slice(0, 10).map(pair => (
+                    <article key={`${pair.planningId}|${pair.batId}`} className="rounded-md border border-border bg-background p-3 text-sm">
+                      <p className="font-medium">≈ {pair.distanceMeters < 1000 ? `${pair.distanceMeters} m` : `${(pair.distanceMeters / 1000).toFixed(2)} km`} apart — to review</p>
+                      <p className="mt-1 text-xs"><span className="font-medium">{pair.planning.title}</span>{pair.planning.status ? ` · ${pair.planning.status}` : ''} · {pair.planning.date ?? 'date unknown'} · <a className="underline" href={pair.planning.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
+                      <p className="mt-1 text-xs"><span className="font-medium">{pair.bat.title}</span> · {pair.bat.date ?? 'date unknown'} · <a className="underline" href={pair.bat.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
+                    </article>))}
+                </>}
+            {generalisedExcluded > 0 && <p className="text-xs text-muted-foreground">{generalisedExcluded} generalised bat record{generalisedExcluded === 1 ? ' was' : 's were'} excluded from the distance comparison because {generalisedExcluded === 1 ? 'its' : 'their'} location is not precise.</p>}
+            <p className="text-xs text-muted-foreground">Proximity is something to review, not evidence of ecological conflict.</p>
+          </div>}
+        </section>
+
         <section className={panel} aria-labelledby="feeds-heading">
           <PanelHeading id="feeds-heading">Local data feeds{feeds.county ? ` — Co. ${feeds.county}` : ''}</PanelHeading>
           <ul className="mt-3 space-y-2">
