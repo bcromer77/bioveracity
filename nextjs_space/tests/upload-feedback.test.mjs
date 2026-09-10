@@ -47,6 +47,7 @@ async function mount(t, control, post, options = {}) {
       return post(body)
     }
     if (url === endpoint) { gets++; return options.get ? options.get(gets) : Response.json({ documents: [], events: [] }) }
+    if (url === `${endpoint}?action=intelligenceChecks`) return Response.json({ checks: [] })
     if (url === '/api/workspaces/w/cases/c') return Response.json({ id: 'c', title: 'Synthetic case', createdAt: '2026-09-10', sites: [] })
     throw new Error(`Unexpected fetch: ${url}`)
   }

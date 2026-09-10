@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID }
 import { WorkspaceError, permits, type Database, type Sql, type Action } from './service'
 import type { ParsedFile } from './parser'
 import { proposedDate, PARSER_VERSION } from './parse-file.mjs'
+import { analyseDocumentText, type IntelligenceDocument, type IntelligencePassage } from './document-intelligence'
 
 export function cipher(keyHex: string) {
   if (!/^[a-f\d]{64}$/i.test(keyHex)) throw new WorkspaceError(503, 'Private evidence encryption is not configured')
@@ -36,6 +37,17 @@ export function caseFiles(db: Database, actor: string, keyHex: string) {
   async function audit(tx: Sql, w: string, c: string, action: string) { await tx.query('INSERT INTO "PrivateWorkspaceAudit" (id,"workspaceId","caseId","actorId",action) VALUES ($1,$2,$3,$4,$5)', [randomUUID(),w,c,actor,action]) }
   return {
     async check(w: string, c: string, action: Action = 'read') { return db.transaction(tx => access(tx,w,c,action)) },
+    async analyse(w: string, c: string, targetDocumentId: string, checkIds: string[]) {
+      return db.transaction(async tx => {
+        await access(tx, w, c, 'read')
+        const documents = await tx.query<IntelligenceDocument>(`SELECT d.id,d.name,d.hash,d.status,d.warnings,d."parserVersion",
+          EXISTS (SELECT 1 FROM "PrivateCaseDocument" newer WHERE newer."workspaceId"=d."workspaceId" AND newer."caseId"=d."caseId" AND newer."supersedesId"=d.id) AS superseded
+          FROM "PrivateCaseDocument" d WHERE d."workspaceId"=$1 AND d."caseId"=$2 ORDER BY d.id`, [w,c])
+        if (!documents.some(d => d.id === targetDocumentId)) throw missing()
+        const passages = await tx.query<IntelligencePassage>('SELECT id,"documentId",locator,text FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 ORDER BY "documentId",ordinal', [w,c])
+        return analyseDocumentText({ workspaceId: w, caseId: c, targetDocumentId, checkIds, documents, passages })
+      })
+    },
     async import(w: string, c: string, parsed: ParsedFile, options: { sourceUrl?: string; publicationDate?: string; supersedesId?: string } = {}) {
       return db.transaction(async tx => {
         await access(tx,w,c,'write')
