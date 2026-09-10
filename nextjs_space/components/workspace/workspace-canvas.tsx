@@ -85,8 +85,8 @@ function sortByEventDate(a: Entry, b: Entry) {
   return a.eventDate < b.eventDate ? -1 : a.eventDate > b.eventDate ? 1 : 0
 }
 
-function Failure({ text }: { text: string }) {
-  return <div role="alert" className="rounded-md border border-destructive p-3 text-sm"><p>{text}</p><Link className="mt-2 inline-block underline" href="/login?callbackUrl=/workspace">Sign in again</Link></div>
+function Failure({ text, signIn = false }: { text: string; signIn?: boolean }) {
+  return <div role="alert" className="rounded-md border border-destructive p-3 text-sm"><p>{text}</p>{signIn && <Link className="mt-2 inline-block underline" href="/login?callbackUrl=/workspace">Sign in again</Link>}</div>
 }
 
 export function WorkspaceCanvas({ workspaceId }: { workspaceId: string }) {
@@ -94,7 +94,7 @@ export function WorkspaceCanvas({ workspaceId }: { workspaceId: string }) {
   const params = useSearchParams()
   const persona = getPersona(params.get('persona'))
   if (status === 'loading') return <p role="status">Checking your session...</p>
-  if (status !== 'authenticated' || !session?.user?.id) return <Failure text="Sign in to open your private workspace." />
+  if (status !== 'authenticated' || !session?.user?.id) return <Failure text="Sign in to open your private workspace." signIn />
   return <CanvasBody key={session.user.id} workspaceId={workspaceId} persona={persona} />
 }
 
@@ -194,6 +194,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const [events, setEvents] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -234,10 +235,10 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
 
   useEffect(() => {
     const controller = new AbortController()
-    setLoading(true); setError('')
+    setLoading(true); setLoadError('')
     read(endpoint, { signal: controller.signal }).then(r => r.json())
       .then(data => { if (!controller.signal.aborted) { setDocs(Array.isArray(data.documents) ? data.documents : []); setEvents(Array.isArray(data.events) ? data.events : []) } })
-      .catch(e => { if (!controller.signal.aborted) setError(message(e)) })
+      .catch(e => { if (!controller.signal.aborted) setLoadError(message(e)) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [endpoint, revision])
@@ -276,10 +277,10 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   async function importFiles(files: FileList | null) {
     if (!files?.length || busy) return
     const list = Array.from(files)
-    if (list.length > 5) { setError('Import up to five files per batch.'); return }
     setBusy(true); setError(''); setNotice('')
     let imported = 0
     try {
+      if (list.length > 5) throw new Error('Import up to five files per batch.')
       for (const file of list) {
         if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name}: maximum 5 MiB per file.`)
         setNotice(`Processing “${file.name}” — scanning and extracting…`)
@@ -289,8 +290,10 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         setNotice(result.duplicate ? `“${file.name}”: an identical document was already held — reused, not duplicated.` : `Imported ${imported} of ${list.length}. Extracted entries need review below.`)
       }
     } catch (e) {
+      setNotice('')
       setError(`${message(e)} (${imported} file(s) imported before this error.)`)
     } finally {
+      if (fileInputRef.current) fileInputRef.current.value = ''
       setBusy(false); bump()
     }
   }
@@ -389,6 +392,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     </div>
 
     {error && <Failure text={error} />}
+    {loadError && <Failure text={`Could not refresh evidence: ${loadError}`} />}
     {notice && <p role="status" className="animate-fade-in rounded-md border-l-4 border-l-accent bg-secondary p-3 text-sm">{notice}</p>}
 
     {/* Search + ingestion bar */}

@@ -50,9 +50,9 @@ test('HTTP journey: guards, scanner failure, import, source review and actual PD
   for(const m of ['20260909_private_workspace_foundation','20260909_private_case_files'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${m}/migration.sql`,import.meta.url),'utf8'))
   const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(text:string,values:unknown[])=>(await client.query<T>(text,values)).rows});const db:Database={...sql(pg),transaction:f=>pg.transaction(tx=>f(sql(tx)))}
   const s=workspaceService(db,'owner'),w=await s.createWorkspace({name:'HTTP fixture'}),c=await s.createCase(w.id,{title:'HTTP case'})
-  let actor:string|null='owner',scans=0,scannerPass=true
+  let actor:string|null='owner',scans=0,scannerPass=true,scannerUnavailable=false
   const env={PRIVATE_WORKSPACES_ENABLED:'true',PRIVATE_EVIDENCE_ENABLED:'true',PRIVATE_EVIDENCE_RUNTIME_APPROVED:'true',PRIVATE_EVIDENCE_KEY:key}
-  const endpoint=createCaseEndpoint({getActor:async()=>actor,db,env,scan:async()=>{scans++;if(!scannerPass)throw new WorkspaceError(422,'Scanner did not pass')},parse:parseIsolated,render:renderCase})
+  const endpoint=createCaseEndpoint({getActor:async()=>actor,db,env,scan:async()=>{scans++;if(scannerUnavailable)throw new WorkspaceError(503,'Security scanner unavailable. Nothing imported.');if(!scannerPass)throw new WorkspaceError(422,'Scanner did not pass')},parse:parseIsolated,render:renderCase})
   const context={params:Promise.resolve({workspaceId:w.id,caseId:c.id})},url=`https://fixture.test/api/workspaces/${w.id}/cases/${c.id}/evidence`
   const post=(payload:unknown,origin='https://fixture.test')=>endpoint(new Request(url,{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(payload)}),context,true)
   const get=(query='')=>endpoint(new Request(url+query),context,false)
@@ -62,6 +62,7 @@ test('HTTP journey: guards, scanner failure, import, source review and actual PD
   actor='owner';assert.equal((await post(input,'https://evil.test')).status,403);assert.equal(scans,0)
   env.PRIVATE_EVIDENCE_RUNTIME_APPROVED='false';assert.equal((await post(input)).status,503);env.PRIVATE_EVIDENCE_RUNTIME_APPROVED='true'
   scannerPass=false;assert.equal((await post(input)).status,422);assert.equal((await (await get()).json()).documents.length,0)
+  scannerUnavailable=true;const unavailable=await post(input);assert.equal(unavailable.status,503);assert.match((await unavailable.json()).error,/Security scanner unavailable/);assert.equal((await (await get()).json()).documents.length,0);scannerUnavailable=false
   scannerPass=true;const imported=await post(input);assert.equal(imported.status,200);assert.equal(imported.headers.get('Cache-Control'),'private, no-store')
   const data=await (await get()).json(),e=data.events[0]
   const review={action:'review',eventId:e.id,revision:e.revision,title:'Water observation received',quote:e.quote,eventDate:'2026-09-08',precision:'DAY',status:'ACCEPTED',evidenceType:'COMMUNITY_OBSERVATION',note:'Observation only'}
