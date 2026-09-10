@@ -34,7 +34,7 @@ return async function handle(request:Request,context:Context,write:boolean) {
         }
         case 'review':result=await service.review(w,c,String(input.eventId),input);break
         case 'exportPermission':if(typeof input.enabled!=='boolean')throw new WorkspaceError(400,'Invalid permission');result=await service.setExport(w,c,input.enabled);break
-        case 'export':result=await service.export(w,c,deps.render);break
+        case 'export':{const rt=typeof input.reportTitle==='string'&&input.reportTitle.trim()?input.reportTitle.trim().slice(0,160):undefined;result=await service.export(w,c,deps.render,rt);break}
         default:throw new WorkspaceError(400,'Unsupported operation')
       }
     } else {
@@ -51,4 +51,3 @@ return async function handle(request:Request,context:Context,write:boolean) {
   } catch(error) {return Response.json({error:error instanceof WorkspaceError?error.message:'Private evidence request failed. Reload before retrying.'},{status:error instanceof WorkspaceError?error.status:500,headers:privateHeaders})}
   finally {release?.()}
 }}
-

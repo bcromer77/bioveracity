@@ -540,9 +540,9 @@
   ],
   "sources": {
     "lib/workspaces/parser-process.mjs": "217aa497707762c6fc842611abb999d077af8e2513516fe7309f022b3e483beb",
-    "lib/workspaces/parse-file.mjs": "a49e2f3532e721fd2f6527acb7b165509b2ef3eefd95c80c05dd2f91255a1c76",
+    "lib/workspaces/parse-file.mjs": "149eaca3525ccfe18512a3cd56641d24339c0150abe3460acc5fe48a13582eee",
     "lib/workspaces/parser.ts": "75665241ae58e7737a234a78948e8e8b293c9654a389898b993716191f9f2eab"
   },
-  "worker": "c39f2bc893a3486cc9d385adfa2656d882c5401cd526a520cbc0fbf818003df7",
+  "worker": "aae7e94f1053590f4c6fb596da609fb876ab338d556b65e65159c44208c93ecb",
   "licenses": "e1b57854af7b658a12f8eb8d903cfbff2b7ab1da05b487f9843c3cb32fc5d245"
 }

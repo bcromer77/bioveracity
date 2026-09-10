@@ -28,7 +28,7 @@ export async function handleRegionalPost(request:Request,settings:Parameters<typ
   const input:unknown=size?JSON.parse(Buffer.concat(chunks).toString('utf8')):{}
   if(!input||typeof input!=='object'||Array.isArray(input))throw Error()
   const p=input as Record<string,unknown>
-  if(Object.keys(p).some(k=>!['source','offset','limit','dryRun'].includes(k))||typeof p.source!=='string'||!Object.hasOwn(registry,p.source))throw Error()
+  if(Object.keys(p).some(k=>!['source','offset','limit','dryRun'].includes(k))||typeof p.source!=='string'||!Object.prototype.hasOwnProperty.call(registry,p.source))throw Error()
   page({offset:p.offset as number|undefined,limit:p.limit as number|undefined})
   if(p.dryRun!==undefined&&typeof p.dryRun!=='boolean')throw Error()
   const forwarded=new Request(request.url,{method:'POST',headers:{authorization:request.headers.get('authorization')!},body:JSON.stringify({offset:p.offset,limit:p.limit,dryRun:p.dryRun})})

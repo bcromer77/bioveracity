@@ -44,12 +44,72 @@ test('preserves invalid date as unavailable; displays UTC for creation timestamp
   assert.equal(displayDate('not a date'), 'Date unavailable');
   assert.match(displayDate('2026-09-09T12:00:00Z'), /12:00:00 UTC$/);
 });
-test('UI source has account/workspace/case remount boundaries and no mock storage', () => {
+test('selection screen has account remount boundary, single fetch, persona grid and no mock storage', () => {
   const ui = readFileSync(new URL('../components/workspace/workspace-dashboard.tsx', import.meta.url), 'utf8');
   assert.match(ui, /AccountWorkspace key=\{session.user.id\}/);
-  assert.match(ui, /CaseBoard key=\{selected\}/);
-  assert.match(ui, /CaseSummary key=\{selected\}/);
+  assert.match(ui, /data-persona=/);
+  assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 1);
+  assert.doesNotMatch(ui, /localStorage|dangerouslySetInnerHTML/);
+  assert.match(ui, /CBAM liability/);
+  assert.doesNotMatch(ui, /CaseBoard|CaseSummary/);
+});
+test('universal canvas keeps workspace/case remount boundaries and per-fetch cancellation', () => {
+  const ui = readFileSync(new URL('../components/workspace/workspace-canvas.tsx', import.meta.url), 'utf8');
+  assert.match(ui, /CanvasBody key=\{session.user.id\}/);
+  assert.match(ui, /CaseBoard key=\{workspaceId\}/);
+  assert.match(ui, /Investigation key=\{selected\}/);
+  assert.match(ui, /CaseSummary key=\{caseId\}/);
   assert.equal((ui.match(/return \(\) => controller.abort\(\)/g) || []).length, 3);
   assert.doesNotMatch(ui, /localStorage|dangerouslySetInnerHTML/);
   assert.match(ui, /not a CBAM calculation/);
+  // Real backend wiring, not sample data.
+  assert.doesNotMatch(ui, /investigation-data|SAMPLE_/);
+  assert.match(ui, /action=search&q=/);
+  assert.match(ui, /action: 'import'/);
+  assert.match(ui, /action: 'export'/);
+});
+test('five personas expose only presentation-level presets over the shared canvas', async () => {
+  const { personas, getPersona } = await import('../components/workspace/personas.mjs');
+  assert.equal(personas.length, 5);
+  const keys = personas.map(p => p.key);
+  assert.deepEqual(keys, ['ecology', 'planning', 'architecture', 'maritime', 'custom']);
+  for (const p of personas) {
+    assert.ok(p.title && p.exportTitle && p.template);
+    assert.equal(p.prompts.length, 3);
+    assert.ok(Array.isArray(p.layers) && p.layers.length > 0);
+    for (const l of p.layers) assert.equal(typeof l.default, 'boolean');
+  }
+  assert.ok(getPersona('custom').layers.every(l => l.default));
+  assert.equal(getPersona('does-not-exist').key, 'custom');
+});
+
+test('investigation repairs: URL-persisted case, stale-response guards, real audit export, honest map, term-expansion retrieval', () => {
+  const ui = readFileSync(new URL('../components/workspace/workspace-canvas.tsx', import.meta.url), 'utf8');
+  // A1 — selected case persisted in the URL so a reload restores it.
+  assert.match(ui, /useSearchParams/);
+  assert.match(ui, /params\.get\('case'\)/);
+  assert.match(ui, /router\.replace/);
+  assert.match(ui, /sp\.set\('case'/);
+  // A2 — monotonic sequence guards prevent a slow earlier response overwriting a newer one.
+  for (const seq of ['placeSeq', 'askSeq', 'claimSeq']) assert.match(ui, new RegExp(`${seq}\\.current`));
+  assert.match(ui, /seq === askSeq\.current/);
+  assert.match(ui, /seq === claimSeq\.current/);
+  assert.match(ui, /seq === placeSeq\.current/);
+  // A3 — the header "Generate audit pack" runs the real export, not just a scroll.
+  assert.match(ui, /async function generateAuditPack/);
+  assert.match(ui, /onClick=\{generateAuditPack\}/);
+  assert.match(ui, /generateAuditPack[\s\S]*?produceExport\(\)/);
+  // A4 — map draws a real metre buffer; species/water are honestly not plotted; no fake "boundary" layer.
+  assert.match(ui, /buffer: true/);
+  assert.match(ui, /bufferMeters=\{BUFFER_METERS\}/);
+  assert.match(ui, /Search buffer/);
+  assert.match(ui, /not plotted/);
+  assert.doesNotMatch(ui, /boundary: true|'boundary'|Site boundary/);
+  // A5 — term-expansion retrieval reuses the existing permissioned search endpoint.
+  assert.match(ui, /expandQuery, rankResults/);
+  assert.match(ui, /async function retrieve/);
+  assert.match(ui, /questionHits\.ranked/);
+  assert.match(ui, /claimHits\.ranked/);
+  assert.match(ui, /term-expansion/i);
+  assert.doesNotMatch(ui, /exact text search/);
 });
