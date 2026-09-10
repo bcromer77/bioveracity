@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { StationRainfallPanel } from './station-rainfall-panel'
 import { exactHistoryDay, groupPlaceHistory, historyDateLabel, historySourceUrl } from '@/lib/place-history'
 import { getEvidenceDisplay } from '@/lib/evidence-taxonomy'
 import type { OPEvent } from './operating-picture'
@@ -20,19 +22,19 @@ export function PlaceHistoryPanel({ records, slug, placeName, anchorId, onAnchor
     {slug && <>
       <p className="mt-2 text-slate-400">Uses all loaded records for this place, independently of timeline filters. Coverage is incomplete.</p>
       {!anchor ? <p className="mt-3">No records with a confirmed day are loaded. {scoped.length} records need more precise dates before a before-and-after comparison.</p> : <>
-        <label className="mt-3 block">Anchor record
-          <select className="mt-1 w-full rounded border border-slate-600 bg-slate-950 p-2 text-slate-100" value={anchor.id} onChange={event => { const next = choices.find(record => record.id === event.target.value); if (next) onAnchor(next) }}>
+        <label className="mt-3 block">Event to explore
+          <select className="mt-1 w-full min-w-0 rounded border border-slate-600 bg-slate-950 p-2 text-slate-100" value={anchor.id} onChange={event => { const next = choices.find(record => record.id === event.target.value); if (next) onAnchor(next) }}>
             {choices.map(record => <option key={record.id} value={record.id}>{historyDateLabel(record)} · {record.title}</option>)}
           </select>
         </label>
-        <label className="mt-3 flex items-center justify-between gap-2">Days either side
+        <label className="mt-3 flex items-center justify-between gap-2">Days before and after
           <select className="rounded border border-slate-600 bg-slate-950 p-1" value={days} onChange={event => setDays(Number(event.target.value))}>{[1, 7, 30, 90].map(value => <option key={value} value={value}>{value}</option>)}</select>
         </label>
         <div className="mt-3 flex flex-wrap gap-1" aria-label="History period">
-          {(['before', 'during', 'after', 'uncertain'] as const).map(key => <button key={key} aria-pressed={phase === key} onClick={() => setPhase(key)} className={`rounded px-2 py-1.5 ${phase === key ? 'bg-amber-300 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{({ before: 'Before', during: 'Same day', after: 'After', uncertain: 'Unplaced dates' })[key]} ({grouped[key].length})</button>)}
+          {(['before', 'during', 'after', 'uncertain'] as const).map(key => <button key={key} aria-pressed={phase === key} onClick={() => setPhase(key)} className={`rounded px-2 py-1.5 ${phase === key ? 'bg-amber-300 text-slate-950' : 'bg-slate-800 text-slate-200'}`}>{({ before: 'Before', during: 'Same day', after: 'After', uncertain: 'Date uncertain' })[key]} ({grouped[key].length})</button>)}
         </div>
         <p className="mt-2 text-[11px] text-slate-400">Same-day records are not necessarily simultaneous. Later records do not establish recovery or causation.</p>
-        <ul className="mt-3 max-h-80 space-y-3 overflow-y-auto">
+        <ul className="mt-3 space-y-3 md:max-h-80 md:overflow-y-auto">
           {grouped[phase].map(record => { const source = historySourceUrl(record.sourceUrl); return <li key={record.id} className="rounded border border-slate-700 bg-slate-950/60 p-3">
             <p className="text-[11px] text-slate-400">{historyDateLabel(record)} · {getEvidenceDisplay(record.evidenceClass).label}</p>
             <p className="mt-1 font-medium text-slate-100">{record.title}</p>
@@ -41,7 +43,9 @@ export function PlaceHistoryPanel({ records, slug, placeName, anchorId, onAnchor
           </li> })}
         </ul>
         {!grouped[phase].length && <p className="mt-3">No loaded records in this group. This does not establish that nothing happened.</p>}
-        <p className="mt-2 text-[11px] text-slate-400">{grouped.outside} dated records outside this window. Rainfall totals, river readings and comparisons with earlier incidents have not been assembled by this panel.</p>
+        <p className="mt-2 text-[11px] text-slate-400">{grouped.outside} dated records outside this window. River readings and comparisons with earlier incidents are not connected. Station rainfall can be explored separately for supported places.</p>
+        {slug === 'march-wrc' && <Link className="mt-3 block text-amber-200 underline" href="/regions/cambridgeshire-peterborough/cases/march-liming-2025">Read the sourced March case brief</Link>}
+        {['march-wrc', 'river-cam', 'milton-wrc'].includes(slug) && <StationRainfallPanel key={`${slug}:${anchor.date}`} date={anchor.date.slice(0, 10)} defaultStation={slug === 'march-wrc' ? 'chatteris' : slug === 'milton-wrc' ? 'uttons-drove' : 'fleam-dyke'} />}
       </>}
     </>}
   </section>

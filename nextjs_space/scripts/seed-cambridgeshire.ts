@@ -213,16 +213,17 @@ async function main() {
   })
 
   await ensureEvent(march.id, {
-    title: 'Anglian Water pauses lime-related waste treatment (27 Jul - 22 Sep 2025)',
+    title: 'Scheduled start of announced lime-treatment pause',
     description:
-      'Anglian Water temporarily paused waste-treatment operations involving lime from 27 July to 22 September 2025, stating the measure was intended to reduce odour and vehicle impacts during the school holidays. The period offers a quasi-experimental before/during/after comparison.',
+      'Anglian Water announced a pause scheduled for 27 July to 22 September 2025. Published 9 July 2025. Actual cessation, restart and measured improvement are not confirmed by this statement.',
     date: new Date('2025-07-27'),
     endDate: new Date('2025-09-22'),
     eventType: 'operational',
     evidenceClass: 'O',
     changeType: 'material_change',
     sourceDomain: 'marchtowncouncil.gov.uk',
-    verified: true,
+    sourceUrl: 'https://www.marchtowncouncil.gov.uk/anglian-water-march-water-recycling-centre-pausing-liming-work-for-the-summer-holidays/',
+    verified: false,
   })
 
   const marchGaps = [
