@@ -145,7 +145,7 @@ def collect(store, config, *, mode='incremental', max_documents=25, fetcher=None
                 raise ValueError('Final URL outside reviewed source hosts')
             sections, links = extract(raw, content_type)
             import hashlib
-            record = {'url': url, 'resolved_url': final_url, 'title': url.rsplit('/', 1)[-1],
+            record = {'url': url, 'resolved_url': final_url, 'title': url.rsplit('/', 1)[-1] or url,
                 'publisher': source['publisher'], 'authority_id': source['authority_id'],
                 'jurisdiction': source['jurisdiction'], 'retrieved_at': utcnow(),
                 'publication_date': None, 'event_date': None, 'event_date_precision': 'unknown',

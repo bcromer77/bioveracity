@@ -1,0 +1,236 @@
+{
+  "scope": "Northern Ireland: 11 councils, HTML discovery staging only",
+  "sources": [
+    {
+      "id": "ann",
+      "authority_id": "uk:mysociety:ANN",
+      "publisher": "Antrim and Newtownabbey Borough Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "antrimandnewtownabbey.gov.uk",
+        "www.antrimandnewtownabbey.gov.uk"
+      ],
+      "seed_urls": [
+        "https://antrimandnewtownabbey.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "and",
+      "authority_id": "uk:mysociety:AND",
+      "publisher": "Ards and North Down Borough Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.ardsandnorthdown.gov.uk",
+        "ardsandnorthdown.gov.uk"
+      ],
+      "seed_urls": [
+        "https://www.ardsandnorthdown.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "abc",
+      "authority_id": "uk:mysociety:ABC",
+      "publisher": "Armagh City, Banbridge and Craigavon Borough Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.armaghbanbridgecraigavon.gov.uk",
+        "armaghbanbridgecraigavon.gov.uk"
+      ],
+      "seed_urls": [
+        "https://www.armaghbanbridgecraigavon.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "bfs",
+      "authority_id": "uk:mysociety:BFS",
+      "publisher": "Belfast City Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.belfastcity.gov.uk",
+        "belfastcity.gov.uk"
+      ],
+      "seed_urls": [
+        "https://www.belfastcity.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "ccg",
+      "authority_id": "uk:mysociety:CCG",
+      "publisher": "Causeway Coast and Glens Borough Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "causewaycoastandglens.gov.uk",
+        "www.causewaycoastandglens.gov.uk"
+      ],
+      "seed_urls": [
+        "https://causewaycoastandglens.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "drs",
+      "authority_id": "uk:mysociety:DRS",
+      "publisher": "Derry City and Strabane District Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.derrystrabane.com",
+        "derrystrabane.com"
+      ],
+      "seed_urls": [
+        "https://www.derrystrabane.com/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "fmo",
+      "authority_id": "uk:mysociety:FMO",
+      "publisher": "Fermanagh and Omagh District Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.fermanaghomagh.com",
+        "fermanaghomagh.com"
+      ],
+      "seed_urls": [
+        "https://www.fermanaghomagh.com/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "lbc",
+      "authority_id": "uk:mysociety:LBC",
+      "publisher": "Lisburn and Castlereagh City Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.lisburncastlereagh.gov.uk",
+        "lisburncastlereagh.gov.uk"
+      ],
+      "seed_urls": [
+        "https://www.lisburncastlereagh.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "mul",
+      "authority_id": "uk:mysociety:MUL",
+      "publisher": "Mid Ulster District Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.midulstercouncil.org",
+        "midulstercouncil.org"
+      ],
+      "seed_urls": [
+        "https://www.midulstercouncil.org/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "mea",
+      "authority_id": "uk:mysociety:MEA",
+      "publisher": "Mid and East Antrim Borough Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.midandeastantrim.gov.uk",
+        "midandeastantrim.gov.uk"
+      ],
+      "seed_urls": [
+        "https://www.midandeastantrim.gov.uk/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    },
+    {
+      "id": "nmd",
+      "authority_id": "uk:mysociety:NMD",
+      "publisher": "Newry, Mourne and Down District Council",
+      "jurisdiction": "Northern Ireland",
+      "enabled": true,
+      "allowed_hosts": [
+        "www.newrymournedown.org",
+        "newrymournedown.org"
+      ],
+      "seed_urls": [
+        "https://www.newrymournedown.org/"
+      ],
+      "follow_patterns": [
+        "/(news|latest-news|council|planning|environment)(/|$)"
+      ],
+      "identity_source": "https://www.nidirect.gov.uk/contacts/local-councils-in-northern-ireland",
+      "checked_on": "2026-09-10",
+      "scope": "Official homepage and bounded discovered HTML pages; not full planning, committee or enforcement coverage",
+      "reuse_status": "not_reviewed; internal staging only"
+    }
+  ]
+}
