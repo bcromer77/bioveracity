@@ -43,6 +43,17 @@ export function buildOptions(overrides = {}) {
     external: [],
     legalComments: 'none',
     logLevel: 'silent',
+    // Reproducibility: do NOT resolve symlinks when computing module paths.
+    // In the managed workspace node_modules is a symlink into the shared
+    // dependency store (/opt/hostedapp/.../node_modules); with the default
+    // (symlink-following) behaviour esbuild embeds that absolute store path in
+    // the bundle's internal module keys and `// path` comments, so the same
+    // sources produce different bytes in a fresh install (real node_modules).
+    // Keeping symlinks unresolved makes every module path relative to the
+    // project root (node_modules/<pkg>/...), so build and check-parser-worker
+    // produce byte-identical output in both the shared store and a genuinely
+    // fresh `yarn install`, and no host build path leaks into the artifact.
+    preserveSymlinks: true,
     // Some inlined CommonJS dependencies (e.g. mammoth) call require('fs') and
     // other Node built-ins. In ESM output esbuild routes unresolved requires
     // through a __require shim that throws unless a real top-level `require`

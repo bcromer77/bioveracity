@@ -15,13 +15,14 @@
     "domhandler": "5.0.3",
     "domutils": "3.2.2",
     "encoding-japanese": "2.3.0",
-    "entities": "4.5.0",
+    "entities": "7.0.1",
     "he": "1.2.0",
     "html-to-text": "10.0.1",
     "htmlparser2": "10.1.0",
     "iconv-lite": "0.7.3",
     "immediate": "3.0.6",
     "inherits": "2.0.4",
+    "isarray": "1.0.0",
     "jszip": "3.10.1",
     "leac": "0.7.0",
     "libbase64": "1.3.0",
@@ -42,6 +43,7 @@
     "process-nextick-args": "2.0.1",
     "punycode.js": "2.3.1",
     "readable-stream": "2.3.8",
+    "safe-buffer": "5.1.2",
     "safer-buffer": "2.1.2",
     "selderee": "0.12.0",
     "setimmediate": "1.0.5",
@@ -52,11 +54,495 @@
     "util-deprecate": "1.0.2",
     "xmlbuilder": "10.1.1"
   },
+  "licenceSummary": {
+    "packagesInlined": 53,
+    "attributedFromFiles": 51,
+    "reconstructed": [
+      "dingbat-to-unicode@1.0.1",
+      "isarray@1.0.0"
+    ]
+  },
+  "notices": [
+    {
+      "name": "@selderee/plugin-htmlparser2",
+      "version": "0.12.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "@xmldom/xmldom",
+      "version": "0.8.15",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "@zone-eu/mailsplit",
+      "version": "5.4.16",
+      "spdx": "(MIT OR EUPL-1.1+)",
+      "files": [
+        "LICENSE.EUPL-1.2",
+        "LICENSE.MIT"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "base64-js",
+      "version": "1.5.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "bluebird",
+      "version": "3.4.7",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "core-util-is",
+      "version": "1.0.3",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "deepmerge-ts",
+      "version": "8.0.2",
+      "spdx": "BSD-3-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "dingbat-to-unicode",
+      "version": "1.0.1",
+      "spdx": "BSD-2-Clause",
+      "files": [],
+      "reconstructed": true
+    },
+    {
+      "name": "dom-serializer",
+      "version": "2.0.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "domelementtype",
+      "version": "2.3.0",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "domhandler",
+      "version": "5.0.3",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "domutils",
+      "version": "3.2.2",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "encoding-japanese",
+      "version": "2.3.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "entities",
+      "version": "4.5.0",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "entities",
+      "version": "7.0.1",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "he",
+      "version": "1.2.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE-MIT.txt"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "html-to-text",
+      "version": "10.0.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "htmlparser2",
+      "version": "10.1.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "iconv-lite",
+      "version": "0.7.3",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "immediate",
+      "version": "3.0.6",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE.txt"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.4",
+      "spdx": "ISC",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "isarray",
+      "version": "1.0.0",
+      "spdx": "MIT",
+      "files": [],
+      "reconstructed": true
+    },
+    {
+      "name": "jszip",
+      "version": "3.10.1",
+      "spdx": "(MIT OR GPL-3.0-or-later)",
+      "files": [
+        "LICENSE.markdown"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "leac",
+      "version": "0.7.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "libbase64",
+      "version": "1.3.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "libmime",
+      "version": "5.4.3",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "libqp",
+      "version": "2.1.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "lie",
+      "version": "3.3.0",
+      "spdx": "MIT",
+      "files": [
+        "license.md"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "linkify-it",
+      "version": "5.0.2",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "lop",
+      "version": "0.4.2",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "mailparser",
+      "version": "3.9.23",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "mammoth",
+      "version": "1.12.2",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "nodemailer",
+      "version": "10.0.1",
+      "spdx": "MIT-0",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "option",
+      "version": "0.2.4",
+      "spdx": "BSD-2-Clause",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "pako",
+      "version": "1.0.11",
+      "spdx": "(MIT AND Zlib)",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "parseley",
+      "version": "0.13.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "path-is-absolute",
+      "version": "1.0.1",
+      "spdx": "MIT",
+      "files": [
+        "license"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "pdfjs-dist",
+      "version": "6.3.289",
+      "spdx": "Apache-2.0",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "peberminta",
+      "version": "0.10.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "process-nextick-args",
+      "version": "2.0.1",
+      "spdx": "MIT",
+      "files": [
+        "license.md"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "punycode.js",
+      "version": "2.3.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE-MIT.txt"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "readable-stream",
+      "version": "2.3.8",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.1.2",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.1.2",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "selderee",
+      "version": "0.12.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "setimmediate",
+      "version": "1.0.5",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE.txt"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "string_decoder",
+      "version": "1.1.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "tlds",
+      "version": "1.261.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "uc.micro",
+      "version": "2.1.0",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE.txt"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "underscore",
+      "version": "1.13.8",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "util-deprecate",
+      "version": "1.0.2",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    },
+    {
+      "name": "xmlbuilder",
+      "version": "10.1.1",
+      "spdx": "MIT",
+      "files": [
+        "LICENSE"
+      ],
+      "reconstructed": false
+    }
+  ],
   "sources": {
     "lib/workspaces/parser-process.mjs": "217aa497707762c6fc842611abb999d077af8e2513516fe7309f022b3e483beb",
     "lib/workspaces/parse-file.mjs": "a49e2f3532e721fd2f6527acb7b165509b2ef3eefd95c80c05dd2f91255a1c76",
     "lib/workspaces/parser.ts": "75665241ae58e7737a234a78948e8e8b293c9654a389898b993716191f9f2eab"
   },
-  "worker": "ac385816156c10e7b858cee1bfc0db8bb492e95cbb0df9d581b346c38f041e73",
-  "licenses": "6ae923f511946373e28e05abc029c6163ae5b21ebc8d992265ad717181c51dbb"
+  "worker": "c39f2bc893a3486cc9d385adfa2656d882c5401cd526a520cbc0fbf818003df7",
+  "licenses": "e1b57854af7b658a12f8eb8d903cfbff2b7ab1da05b487f9843c3cb32fc5d245"
 }

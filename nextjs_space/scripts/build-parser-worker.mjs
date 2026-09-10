@@ -42,102 +42,201 @@ const rel = (p) => path.relative(root, p).split(path.sep).join('/')
 const result = await build(buildOptions({ outfile, write: true, metafile: true }))
 
 // ---- Collect third-party licence notices for everything actually inlined ----
-const pkgNames = new Set()
-for (const input of Object.keys(result.metafile.inputs)) {
-  const m = input.match(/node_modules\/((@[^/]+\/)?[^/]+)\//)
-  if (m) pkgNames.add(m[1])
+//
+// Attribution is driven by esbuild's own input graph, not by re-resolving
+// package names. Each inlined input file is mapped to the EXACT package
+// directory that contains it - the last `node_modules/<pkg>` segment in its
+// path - so nested and duplicated versions (e.g. htmlparser2's private copy of
+// `entities`, or readable-stream's private `safe-buffer`) are attributed from
+// the precise directory esbuild inlined rather than from a hoisted copy that
+// might be a different version.
+function inputToPkgDir(inputKey) {
+  const norm = path.resolve(root, inputKey).split(path.sep).join('/')
+  const marker = '/node_modules/'
+  const idx = norm.lastIndexOf(marker)
+  if (idx === -1) return null
+  const after = norm.slice(idx + marker.length).split('/')
+  const pkg = after[0].startsWith('@') ? `${after[0]}/${after[1]}` : after[0]
+  return { pkg, dir: `${norm.slice(0, idx + marker.length)}${pkg}` }
 }
 
-const licenceCandidates = [
-  'LICENSE', 'LICENSE.md', 'LICENSE.txt',
-  'LICENCE', 'LICENCE.md', 'LICENCE.txt',
-  'COPYING', 'COPYING.md',
-]
-
-// Resolve a package's directory even when its `exports` map blocks the
-// `<name>/package.json` subpath (Node throws ERR_PACKAGE_PATH_NOT_EXPORTED for
-// packages such as entities, domhandler, htmlparser2, deepmerge-ts). Falling
-// back to resolving the package entry and walking up to the package.json whose
-// `name` matches recovers those directories so their attribution is never
-// silently dropped.
-function resolvePkgDir(name) {
+// Case-insensitive match for licence, copying and NOTICE files, so variants the
+// old fixed list missed (license.md, LICENSE-MIT.txt, LICENSE.markdown, a bare
+// lowercase `license`, dual-licence LICENSE.MIT + LICENSE.EUPL-1.2, NOTICE) are
+// all collected - and ALL matches are kept, not just the first.
+const LICENCE_RE = /^(licen[cs]e|copying|notice)/i
+function collectLicenceFiles(dir) {
+  let names = []
   try {
-    return path.dirname(require.resolve(`${name}/package.json`))
+    names = fs.readdirSync(dir)
   } catch {
-    /* exports map may block the package.json subpath; fall through */
+    return []
   }
-  try {
-    let dir = path.dirname(require.resolve(name))
-    while (dir !== path.dirname(dir)) {
-      const pj = path.join(dir, 'package.json')
-      if (fs.existsSync(pj)) {
-        try {
-          if (JSON.parse(fs.readFileSync(pj, 'utf8')).name === name) return dir
-        } catch {
-          /* ignore malformed nested package.json */
-        }
+  return names
+    .filter((n) => LICENCE_RE.test(n))
+    .filter((n) => {
+      try {
+        return fs.statSync(path.join(dir, n)).isFile()
+      } catch {
+        return false
       }
-      dir = path.dirname(dir)
-    }
-  } catch {
-    /* fall through to node_modules scan */
-  }
-  for (const base of require.resolve.paths(name) || []) {
-    const cand = path.join(base, ...name.split('/'))
-    if (fs.existsSync(path.join(cand, 'package.json'))) return cand
+    })
+    .sort()
+}
+
+function authorString(meta) {
+  const a = meta.author
+  if (!a) return null
+  if (typeof a === 'string') return a
+  if (typeof a === 'object') {
+    return [a.name, a.email ? `<${a.email}>` : null].filter(Boolean).join(' ') || null
   }
   return null
 }
 
+function normaliseSpdx(lic) {
+  if (!lic) return null
+  if (typeof lic === 'string') return lic
+  if (Array.isArray(lic)) {
+    return lic.map((l) => (typeof l === 'string' ? l : l && l.type)).filter(Boolean).join(' OR ') || null
+  }
+  if (typeof lic === 'object') return lic.type || null
+  return null
+}
+
+// Canonical templates for the short permissive licences we may need to
+// reconstruct when a package ships NO licence file at all. Only used for the
+// reconstructed category, and always clearly labelled as non-verbatim.
+const BSD_2_CLAUSE = (holder) =>
+  `BSD 2-Clause License\n\n` +
+  `Copyright (c) ${holder}\n` +
+  `All rights reserved.\n\n` +
+  `Redistribution and use in source and binary forms, with or without\n` +
+  `modification, are permitted provided that the following conditions are met:\n\n` +
+  `1. Redistributions of source code must retain the above copyright notice, this\n` +
+  `   list of conditions and the following disclaimer.\n\n` +
+  `2. Redistributions in binary form must reproduce the above copyright notice,\n` +
+  `   this list of conditions and the following disclaimer in the documentation\n` +
+  `   and/or other materials provided with the distribution.\n\n` +
+  `THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"\n` +
+  `AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\n` +
+  `IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\n` +
+  `DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\n` +
+  `FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\n` +
+  `DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\n` +
+  `SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\n` +
+  `CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\n` +
+  `OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\n` +
+  `OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`
+const MIT = (holder) =>
+  `MIT License\n\n` +
+  `Copyright (c) ${holder}\n\n` +
+  `Permission is hereby granted, free of charge, to any person obtaining a copy\n` +
+  `of this software and associated documentation files (the "Software"), to deal\n` +
+  `in the Software without restriction, including without limitation the rights\n` +
+  `to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n` +
+  `copies of the Software, and to permit persons to whom the Software is\n` +
+  `furnished to do so, subject to the following conditions:\n\n` +
+  `The above copyright notice and this permission notice shall be included in all\n` +
+  `copies or substantial portions of the Software.\n\n` +
+  `THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n` +
+  `IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n` +
+  `FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n` +
+  `AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n` +
+  `LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n` +
+  `OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n` +
+  `SOFTWARE.`
+const SPDX_TEMPLATES = { 'BSD-2-Clause': BSD_2_CLAUSE, MIT }
+
+function reconstructNotice(spdx, meta) {
+  const holder = authorString(meta) || meta.name || 'the package authors'
+  const preamble =
+    'NOTE: This package publishes no licence file in its distribution. The text\n' +
+    `below is RECONSTRUCTED from the package's declared SPDX identifier (${spdx}) and\n` +
+    'its package.json metadata; it is NOT a verbatim copy of an upstream file.\n\n'
+  const tmpl = SPDX_TEMPLATES[spdx]
+  if (tmpl) return preamble + tmpl(holder)
+  return (
+    preamble +
+    `Declared licence: ${spdx}\n` +
+    `Copyright holder (from metadata): ${holder}\n` +
+    'No canonical template is embedded for this SPDX identifier; consult the\n' +
+    'package repository for the authoritative licence text.'
+  )
+}
+
+// Map every inlined input to its exact enclosing package directory. Keyed by
+// absolute dir so two versions of the same package name are kept distinct.
+const pkgDirs = new Map() // absolute dir -> package name
+for (const input of Object.keys(result.metafile.inputs)) {
+  const info = inputToPkgDir(input)
+  if (info) pkgDirs.set(info.dir, info.pkg)
+}
+
+const entries = [...pkgDirs.entries()]
+  .map(([dir, name]) => ({ dir, name }))
+  .sort((a, b) => a.name.localeCompare(b.name) || a.dir.localeCompare(b.dir))
+
 const deps = {}
 const blocks = []
+const notices = []
 const unattributed = []
-for (const name of [...pkgNames].sort()) {
-  const pkgDir = resolvePkgDir(name)
-  if (!pkgDir) {
-    unattributed.push(name)
+for (const { dir, name } of entries) {
+  let meta
+  try {
+    meta = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+  } catch {
+    unattributed.push(`${name} (${rel(dir)}: package.json missing or unreadable)`)
     continue
   }
-  let meta = {}
-  try {
-    meta = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
-  } catch {
-    /* ignore */
+  const version = meta.version || 'unknown'
+  deps[name] = version
+  const spdx = normaliseSpdx(meta.license || meta.licenses) || 'UNSTATED'
+  const files = collectLicenceFiles(dir)
+  let body
+  let reconstructed = false
+  if (files.length) {
+    body = files
+      .map((f) => {
+        const text = fs.readFileSync(path.join(dir, f), 'utf8').trim()
+        return files.length > 1 ? `----- ${f} -----\n${text}` : text
+      })
+      .join('\n\n')
+  } else {
+    reconstructed = true
+    body = reconstructNotice(spdx, meta)
   }
-  deps[name] = meta.version || 'unknown'
-  const spdx = meta.license || meta.licenses || 'UNSTATED'
-  let licenceText = ''
-  for (const cand of licenceCandidates) {
-    const p = path.join(pkgDir, cand)
-    if (fs.existsSync(p)) {
-      licenceText = fs.readFileSync(p, 'utf8').trim()
-      break
-    }
-  }
-  const header = `${name}@${meta.version || '?'}  (${spdx})`
-  blocks.push(
-    `${'='.repeat(78)}\n${header}\n${'='.repeat(78)}\n\n` +
-      (licenceText ||
-        `(No licence file is bundled in this package. Its declared SPDX licence is "${spdx}" ` +
-          '(from the package metadata above); no separate NOTICE/COPYING file was published.)'),
-  )
+  notices.push({ name, version, spdx, dir: rel(dir), files, reconstructed })
+  const header = `${name}@${version}  (${spdx})`
+  blocks.push(`${'='.repeat(78)}\n${header}\n${'='.repeat(78)}\n\n${body}`)
 }
 
-// Fail loudly: a package inlined into the bundle whose attribution could not be
-// collected must never be silently dropped from the licence notices.
+// Fail loudly: a package inlined into the bundle whose directory could not be
+// read must never be silently dropped from the licence notices.
 if (unattributed.length) {
   throw new Error(
-    `Unable to resolve licence attribution for inlined package(s): ${unattributed.join(', ')}. ` +
-      'Fix resolvePkgDir() or add an explicit mapping before regenerating the bundle.',
+    `Unable to resolve licence attribution for inlined package(s): ${unattributed.join('; ')}.`,
   )
 }
 
+const reconstructedList = notices.filter((n) => n.reconstructed)
+const attributedFromFiles = notices.length - reconstructedList.length
 const licencesHeader =
   'THIRD-PARTY LICENCE NOTICES\n' +
   'public/parser/worker.mjs is a generated bundle that inlines the packages\n' +
-  'listed below. Their licence texts are reproduced here to satisfy the\n' +
-  'attribution requirements of the licences. This file is generated by\n' +
-  'scripts/build-parser-worker.mjs; do not edit by hand.\n'
+  'listed below. For each package this file reproduces the licence, COPYING and\n' +
+  'NOTICE files found in the exact package directory esbuild inlined (nested and\n' +
+  'duplicated versions are attributed separately). Generated by\n' +
+  'scripts/build-parser-worker.mjs; do not edit by hand.\n\n' +
+  `Packages inlined: ${notices.length}\n` +
+  `Attributed from bundled licence/NOTICE files: ${attributedFromFiles}\n` +
+  `Reconstructed from SPDX + metadata (no upstream licence file published): ${reconstructedList.length}` +
+  (reconstructedList.length
+    ? '\n  ' +
+      reconstructedList.map((n) => `${n.name}@${n.version} (${n.spdx})`).join('\n  ') +
+      '\nThe reconstructed notices above are NOT verbatim upstream texts, so\n' +
+      'attribution is not claimed to be complete or verbatim for those packages.\n'
+    : '\nAll inlined packages are attributed from their bundled licence files.\n')
 const licencesContent = `${licencesHeader}\n${blocks.join('\n\n')}\n`
 fs.writeFileSync(licensesFile, licencesContent)
 
@@ -152,6 +251,18 @@ const manifest = {
     'yarn build:worker; verify with yarn check:worker.',
   esbuildVersion,
   deps,
+  licenceSummary: {
+    packagesInlined: notices.length,
+    attributedFromFiles,
+    reconstructed: reconstructedList.map((n) => `${n.name}@${n.version}`),
+  },
+  notices: notices.map((n) => ({
+    name: n.name,
+    version: n.version,
+    spdx: n.spdx,
+    files: n.files,
+    reconstructed: n.reconstructed,
+  })),
   sources,
   worker: sha256(fs.readFileSync(outfile)),
   licenses: sha256(Buffer.from(licencesContent)),
@@ -159,5 +270,15 @@ const manifest = {
 fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`)
 
 console.log('Bundled parser worker ->', rel(outfile))
-console.log('Licence notices       ->', rel(licensesFile), `(${pkgNames.size} packages)`)
+console.log(
+  'Licence notices       ->',
+  rel(licensesFile),
+  `(${notices.length} packages; ${reconstructedList.length} reconstructed from metadata)`,
+)
+if (reconstructedList.length) {
+  console.log(
+    '  reconstructed (no upstream licence file):',
+    reconstructedList.map((n) => `${n.name}@${n.version}`).join(', '),
+  )
+}
 console.log('Integrity manifest    ->', rel(manifestFile))
