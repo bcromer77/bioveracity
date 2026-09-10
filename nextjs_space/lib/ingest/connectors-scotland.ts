@@ -6,7 +6,7 @@ export type EvidenceInput = {
   event_date: string | null; event_date_precision: 'unknown' | 'day' | 'month' | 'year'; publication_date: null;
   acquisition_permitted: boolean; sections: { locator: string; text: string }[];
 }
-export type RejectionNote = { locator: string | null; reason: string }
+export type RejectionNote = { locator: string | null; reason: RejectionReason }
 export type ConnectorResult = {
   source: string; status: 'ok' | 'partial' | 'error' | 'blocked'; records: EvidenceInput[];
   nextOffset: number | null; rejected: number; rejections?: RejectionNote[]; error?: string; coverage: string;
@@ -69,11 +69,19 @@ export function failure(source: string, coverage: string, error: unknown): Conne
   return { source, coverage, status: 'error', records: [], nextOffset: null, rejected: 0,
     error: error instanceof Error && /^Upstream HTTP \d{3}$/.test(error.message) ? error.message : 'Source unavailable or schema invalid' }
 }
-// Record why one record was skipped, without ever echoing an upstream body or arbitrary text.
-// Only short, developer-authored validation messages pass through; anything else is generic.
-export function safeReason(error: unknown): string {
+// Fixed allowlist of rejection reason codes. A skipped record is only ever tagged with one of
+// these exact, developer-authored reasons; any other error collapses to the generic code, so an
+// upstream body, arbitrary text or PII can never reach the report. Extend this list deliberately
+// when a connector introduces a new validation throw.
+export const REJECTION_REASONS = [
+  'Wrong publisher or county', 'Wrong authority', 'Withheld/generalised source needs separate review',
+  'Missing taxon', 'Missing source identity', 'Invalid source object', 'Source feature too large',
+] as const
+export type RejectionReason = typeof REJECTION_REASONS[number] | 'Rejected by validation'
+const REJECTION_REASON_SET: ReadonlySet<string> = new Set(REJECTION_REASONS)
+export function safeReason(error: unknown): RejectionReason {
   const message = error instanceof Error ? error.message : ''
-  return /^[\w .,'()\/-]{1,120}$/.test(message) ? message : 'Rejected by validation'
+  return (REJECTION_REASON_SET.has(message) ? message : 'Rejected by validation') as RejectionReason
 }
 export async function fetchSEPARiverLevels(options: Options = {}): Promise<ConnectorResult> {
   const source = 'sepa', coverage = 'Bounded page of latest SG river readings; excludes tidal series. Latest can be stale.'

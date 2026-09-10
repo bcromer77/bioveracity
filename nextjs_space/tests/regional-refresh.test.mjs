@@ -4,10 +4,15 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import {nextCursor,refresh,SOURCES} from '../scripts/regional-refresh.mjs'
-test('cursor only advances after confirmed successful writes',()=>{
- const ok={success:true,failedWrites:0,sources:[{status:'ok',rejected:0,nextOffset:5}]}
+test('cursor only advances after an acknowledged write pass with zero failures',()=>{
+ const ok={writesAcknowledged:true,failedWrites:0,sources:[{status:'ok',rejected:0,nextOffset:5}]}
  assert.equal(nextCursor(0,ok,false),5);assert.equal(nextCursor(0,ok,true),0)
+ // No write acknowledgement holds the cursor even when the page looks otherwise clean.
+ assert.equal(nextCursor(0,{...ok,writesAcknowledged:false},false),0)
+ assert.equal(nextCursor(0,{...ok,writesAcknowledged:undefined},false),0)
+ // Any failed write - or a response that omits the count entirely - holds the cursor.
  assert.equal(nextCursor(0,{...ok,failedWrites:1},false),0)
+ assert.equal(nextCursor(0,{...ok,failedWrites:undefined},false),0)
  // A fetch error or a blocked source holds the cursor so nothing is skipped unread.
  assert.equal(nextCursor(0,{...ok,sources:[{status:'error',nextOffset:5}]},false),0)
  assert.equal(nextCursor(0,{...ok,sources:[{status:'blocked',nextOffset:null}]},false),0)
@@ -16,12 +21,14 @@ test('cursor only advances after confirmed successful writes',()=>{
 })
 test('a permanently-rejected record advances the cursor instead of stalling the county',()=>{
  // A rejected record marks the page 'partial' but is permanent, so the cursor must still move past it.
- const partial={success:false,failedWrites:0,sources:[{status:'partial',rejected:1,rejections:[{locator:'123',reason:'Wrong publisher or county'}],nextOffset:20}]}
+ const partial={writesAcknowledged:true,failedWrites:0,sources:[{status:'partial',rejected:1,rejections:[{locator:'123',reason:'Wrong publisher or county'}],nextOffset:20}]}
  assert.equal(nextCursor(0,partial,false),20)
  // End of records on a partial page resets to 0 for the next full sweep.
  assert.equal(nextCursor(20,{...partial,sources:[{...partial.sources[0],nextOffset:null}]},false),0)
  // A failed DB write on the same page is transient: hold the cursor so the page is retried.
  assert.equal(nextCursor(0,{...partial,failedWrites:1},false),0)
+ // A partial page with no acknowledgement holds too - rejections are only trusted on a real write pass.
+ assert.equal(nextCursor(0,{...partial,writesAcknowledged:false},false),0)
  assert.equal(nextCursor(0,partial,true),0)
 })
 test('a rejected record never stalls a county across repeated sweeps',async()=>{
@@ -31,10 +38,10 @@ test('a rejected record never stalls a county across repeated sweeps',async()=>{
   const {source,offset}=JSON.parse(o.body)
   if(source==='nbdc-wexford'){
    seen.push(offset)
-   return Response.json({success:false,failedWrites:0,totalFetched:1,created:1,duplicates:0,catalogueOnly:0,rejected:1,
+   return Response.json({writesAcknowledged:true,failedWrites:0,totalFetched:1,created:1,duplicates:0,catalogueOnly:0,rejected:1,
     sources:[{source,status:'partial',rejected:1,rejections:[{locator:String(offset),reason:'Wrong publisher or county'}],nextOffset:step[offset]}]})
   }
-  return Response.json({success:true,failedWrites:0,totalFetched:0,created:0,duplicates:0,catalogueOnly:0,rejected:0,sources:[{source,status:'ok',rejected:0,nextOffset:null}]})
+  return Response.json({writesAcknowledged:true,failedWrites:0,totalFetched:0,created:0,duplicates:0,catalogueOnly:0,rejected:0,sources:[{source,status:'ok',rejected:0,nextOffset:null}]})
  }
  try{
   for(let i=0;i<4;i++)await refresh({endpoint:'https://example.com/api/ingest/external',secret,stateDir:dir,dryRun:false,fetcher})
@@ -42,12 +49,25 @@ test('a rejected record never stalls a county across repeated sweeps',async()=>{
   assert.deepEqual(seen,[0,10,20,0])
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 })
+test('an unacknowledged write pass holds every cursor across a sweep',async()=>{
+ // A missing write acknowledgement (e.g. a dropped-to-dry-run deploy) must never advance a cursor.
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'regional-noack-'));const secret='d'.repeat(64)
+ try{
+  const report=await refresh({endpoint:'https://example.com/api/ingest/external',secret,stateDir:dir,dryRun:false,fetcher:async(_,o)=>{
+   const {source,offset}=JSON.parse(o.body)
+   return Response.json({writesAcknowledged:false,failedWrites:0,totalFetched:1,created:0,duplicates:0,catalogueOnly:1,rejected:0,sources:[{source,status:'ok',rejected:0,nextOffset:offset+5}]})
+  }})
+  assert.equal(report.length,SOURCES.length)
+  const saved=JSON.parse(await fs.readFile(path.join(dir,'cursors.json'),'utf8'))
+  for(const source of SOURCES)assert.equal(saved[source]??0,0)
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+})
 test('refresh checkpoints source cursors without secrets; bad source does not stop others',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'regional-test-'));const secret='b'.repeat(64)
  try{
  const report=await refresh({endpoint:'https://example.com/api/ingest/external',secret,stateDir:dir,dryRun:false,fetcher:async(_,o)=>{
  const {source}=JSON.parse(o.body);if(source==='sepa')return Response.json({}, {status:503})
- return Response.json({success:true,failedWrites:0,totalFetched:1,created:1,duplicates:0,sources:[{source,status:'ok',nextOffset:5}]})
+ return Response.json({writesAcknowledged:true,success:true,failedWrites:0,totalFetched:1,created:1,duplicates:0,sources:[{source,status:'ok',nextOffset:5}]})
  }})
  assert.equal(report.length,SOURCES.length);assert.equal(report[0].status,'error')
  const saved=await fs.readFile(path.join(dir,'cursors.json'),'utf8');assert.doesNotMatch(saved,new RegExp(secret));assert.equal(JSON.parse(saved)['naturescot-sssi'],5)

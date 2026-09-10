@@ -3,11 +3,14 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 export const SOURCES=['sepa','naturescot-sssi','naturescot-habitats','natural-england-habitats','ea-gauges',...['wexford','waterford','wicklow','carlow','kilkenny'].flatMap(c=>[`nbdc-${c}`,`irish-planning-${c}`]),'epa-wfd','glasgow-planning','east-anglia-comments']
 export function nextCursor(previous,result,dryRun){
- // A rejected record makes a page 'partial' but is permanent, so we still advance past it
- // (skip) to prevent a stalled county. Failed DB writes are transient: they keep the cursor
- // in place so the same page is retried (receive is idempotent). Fetch/error/blocked also hold.
+ // Advance only on an explicit write acknowledgement with exactly zero failed writes. A rejected
+ // record makes a page 'partial' but is permanent, so we still skip past it to prevent a stalled
+ // county; a failed DB write is transient and holds the cursor for an idempotent retry. A missing
+ // acknowledgement, a non-zero (or absent) failedWrites, or a fetch/error/blocked status all hold.
  const s=result.sources?.[0]
- if(dryRun||result.failedWrites||!s||(s.status!=='ok'&&s.status!=='partial'))return previous
+ if(dryRun)return previous
+ if(result.writesAcknowledged!==true||result.failedWrites!==0)return previous
+ if(!s||(s.status!=='ok'&&s.status!=='partial'))return previous
  const n=s.nextOffset
  if(n===null)return 0
  if(!Number.isInteger(n)||n<0||n>100000)throw Error('Invalid source cursor')
@@ -31,7 +34,7 @@ export async function refresh({endpoint,secret,stateDir,dryRun=true,fetcher=fetc
    const result=JSON.parse(text)
    if(result.sources?.length!==1||result.sources[0].source!==source)throw Error('Source mismatch')
    cursors[source]=nextCursor(offset,result,dryRun)
-   report.push({source,status:result.sources[0].status,fetched:result.totalFetched,created:result.created,duplicates:result.duplicates,catalogueOnly:result.catalogueOnly,rejected:result.sources[0].rejected,rejections:result.sources[0].rejections,failedWrites:result.failedWrites,nextOffset:cursors[source],dryRun})
+   report.push({source,status:result.sources[0].status,fetched:result.totalFetched,created:result.created,duplicates:result.duplicates,catalogueOnly:result.catalogueOnly,rejected:result.sources[0].rejected,rejections:result.sources[0].rejections,acknowledged:result.writesAcknowledged,failedWrites:result.failedWrites,nextOffset:cursors[source],dryRun})
   }catch{report.push({source,status:'error',nextOffset:offset,dryRun})}
   // Atomic checkpoints after every source. Never persist records, credentials or response bodies.
   await fs.writeFile(file+'.tmp',JSON.stringify(cursors));await fs.rename(file+'.tmp',file)

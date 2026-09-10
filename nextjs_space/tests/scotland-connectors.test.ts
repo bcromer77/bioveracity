@@ -58,10 +58,12 @@ test('dry run, write gate, partial failure and safe receiver errors',async()=>{
  const receive=async()=>{writes++;return {duplicate:false,status:'PENDING_REVIEW'}}
  const collect=async()=>[source,await fetchScottishPlanningData()]
  const a=await handleScotlandPost(req(),{enabled:'true',secret},receive,collect)
- assert.equal(a.status,207);assert.equal(writes,0)
+ // A dry run never acknowledges writes, so a client must not advance its cursor from it.
+ assert.equal(a.status,207);assert.equal(writes,0);assert.equal((await a.json()).writesAcknowledged,false)
  const b=await handleScotlandPost(req({dryRun:false}),{enabled:'true',secret},receive,collect);assert.equal(b.status,503)
  const c=await handleScotlandPost(req({dryRun:false}),{enabled:'true',secret,writeEnabled:'true'},receive,collect)
- assert.equal((await c.json()).catalogueOnly,1);assert.equal(writes,1)
+ const cj=await c.json();assert.equal(cj.catalogueOnly,1);assert.equal(cj.writesAcknowledged,true);assert.equal(writes,1)
  const d=await handleScotlandPost(req({dryRun:false}),{enabled:'true',secret,writeEnabled:'true'},async()=>{throw Error('database secret')},collect)
- assert.equal((await d.json()).failedWrites,1)
+ // A confirmed write pass still acknowledges even when a record failed to write - the failedWrites count holds the cursor.
+ const dj=await d.json();assert.equal(dj.failedWrites,1);assert.equal(dj.writesAcknowledged,true)
 })
