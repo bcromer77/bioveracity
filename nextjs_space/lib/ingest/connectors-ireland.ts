@@ -4,24 +4,29 @@ import { parseEvidenceDate } from '../evidence-contract'
 export const COUNTIES=['Wexford','Waterford','Wicklow','Carlow','Kilkenny'] as const
 export type County=typeof COUNTIES[number]
 export const NBDC_PUBLISHER='d2b97690-bfd6-11de-b279-d52977ace833'
+// GADM level-1 GIDs resolved and validated against the live GBIF geocode API on 2026-09-10
+// (https://api.gbif.org/v1/geocode/gadm/IRL/subdivisions and .../gadm/{gid}); each confirmed
+// englishType "County" with higherRegion Ireland (IRL). NBDC's GBIF records leave stateProvince
+// null but populate gadm.level1.gid, so county selection uses the validated GADM GID rather than
+// a free-text province string or a single regional bounding box.
+export const NBDC_GADM:Record<County,string>={Carlow:'IRL.1_1',Kilkenny:'IRL.10_1',Waterford:'IRL.23_1',Wexford:'IRL.25_1',Wicklow:'IRL.26_1'}
 export const IRISH_PLANNING='https://services.arcgis.com/NzlPQPKn5QF9v2US/arcgis/rest/services/IrishPlanningApplications/FeatureServer/0'
 export function countyName(value: unknown): string {return typeof value==='string'?value.toLowerCase().trim().replace(/^(county|co\.)\s+/,'').replace(/\s+county$/,''):''}
 function countyCheck(county: County){if(!COUNTIES.includes(county))throw Error('Unsupported county')}
 export async function fetchNBDCEcologySouthEast(county: County, options: Options = {}): Promise<ConnectorResult>{
- const source=`nbdc-${county.toLowerCase()}`,coverage=`NBDC-published GBIF records explicitly attributed to ${county}; county/year projection only, not complete county species coverage.`
+ const source=`nbdc-${county.toLowerCase()}`,coverage=`NBDC-published GBIF records assigned to ${county} by GADM administrative area (level-1 GID ${NBDC_GADM[county]}); county/year projection only, not complete county species coverage.`
  try{
-  countyCheck(county);const {offset,limit}=page(options)
-  const params=new URLSearchParams({publishingOrg:NBDC_PUBLISHER,country:'IE',limit:String(limit),offset:String(offset)})
-  for(const name of [county,`Co. ${county}`,`County ${county}`])params.append('stateProvince',name)
+  countyCheck(county);const {offset,limit}=page(options);const gid=NBDC_GADM[county]
+  const params=new URLSearchParams({publishingOrg:NBDC_PUBLISHER,country:'IE',gadmGid:gid,limit:String(limit),offset:String(offset)})
   const data=object(await json(`https://api.gbif.org/v1/occurrence/search?${params}`,options));if(!Array.isArray(data.results))throw Error('schema')
   const records=[];let rejected=0
   for(const value of data.results.slice(0,limit))try{
-   const a=object(value),key=id(a.key)
-   if(a.publishingOrgKey!==NBDC_PUBLISHER||countyName(a.stateProvince)!==county.toLowerCase()||a.countryCode!=='IE')throw Error('Wrong publisher or county')
+   const a=object(value),key=id(a.key),level1=object(object(a.gadm).level1)
+   if(a.publishingOrgKey!==NBDC_PUBLISHER||a.countryCode!=='IE'||id(level1.gid)!==gid)throw Error('Wrong publisher or county')
    // Flagged records stay out of automated intake, even if coordinates were already generalised.
    if(a.informationWithheld||a.dataGeneralizations)throw Error('Withheld/generalised source needs separate review')
    if(typeof a.scientificName!=='string'||!a.scientificName.trim())throw Error('Missing taxon')
-   const selected=Object.fromEntries(['key','datasetKey','publishingOrgKey','scientificName','taxonKey','basisOfRecord','license','stateProvince','countryCode','year'].map(k=>[k,a[k]??null]))
+   const selected=Object.fromEntries(['key','datasetKey','publishingOrgKey','scientificName','taxonKey','basisOfRecord','license','countryCode','year'].map(k=>[k,a[k]??null]));selected.gadmLevel1Gid=gid;selected.county=county
    const year=Number.isInteger(a.year)&&Number(a.year)>0&&Number(a.year)<=9999?parseEvidenceDate(String(a.year).padStart(4,'0')):{value:null,precision:'unknown' as const}
    const r=record(`https://www.gbif.org/occurrence/${encodeURIComponent(key)}`,`NBDC species record: ${a.scientificName} (${county})`,'National Biodiversity Data Centre via GBIF','ie:nbdc',`gbif:${key}:county-year`,selected,(options.now?.()??new Date()).toISOString());r.jurisdiction='Republic of Ireland';r.event_date=year.value;r.event_date_precision=year.precision;records.push(r)
   }catch{rejected++}

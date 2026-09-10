@@ -1,17 +1,31 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {fetchNBDCEcologySouthEast,fetchSouthEastIrishPlanningData,NBDC_PUBLISHER,COUNTIES,fetchEPARiverDataSouthEast} from '../lib/ingest/connectors-ireland'
+import {fetchNBDCEcologySouthEast,fetchSouthEastIrishPlanningData,NBDC_PUBLISHER,NBDC_GADM,COUNTIES,fetchEPARiverDataSouthEast} from '../lib/ingest/connectors-ireland'
+import type {County} from '../lib/ingest/connectors-ireland'
 import {fetchNaturalEnglandHabitats,fetchEnvironmentAgencyData} from '../lib/ingest/connectors'
 import {handleRegionalPost,REGIONAL_SOURCES} from '../lib/ingest/regional-pipeline'
 const mock=(data:unknown)=>(async()=>Response.json(data)) as typeof fetch
 const now=()=>new Date('2026-09-10T12:00:00Z')
-test('NBDC projection excludes locality, coordinates, people and precise dates',async()=>{
- const value={key:1,datasetKey:'dataset',publishingOrgKey:NBDC_PUBLISHER,countryCode:'IE',stateProvince:'County Wexford',scientificName:'Synthetic species',year:2003,eventDate:'2003-03-04',decimalLatitude:52.3,locality:'private place',recordedBy:'person'}
+const nbdcValue=(county:County)=>({key:1,datasetKey:'dataset',publishingOrgKey:NBDC_PUBLISHER,countryCode:'IE',gadm:{level0:{gid:'IRL',name:'Ireland'},level1:{gid:NBDC_GADM[county],name:county}},scientificName:'Synthetic species',year:2003,eventDate:'2003-03-04',decimalLatitude:52.3,locality:'private place',recordedBy:'person'})
+test('NBDC selection uses the validated GADM level-1 GID and excludes locality, coordinates, people and precise dates',async()=>{
+ const value=nbdcValue('Wexford')
  const r=await fetchNBDCEcologySouthEast('Wexford',{now,fetcher:mock({results:[value],endOfRecords:true})})
  assert.equal(r.records.length,1);assert.equal(r.records[0].event_date,'2003')
- assert.doesNotMatch(r.records[0].sections[0].text,/private place|person|decimalLatitude|2003-03-04/)
- const wrong=await fetchNBDCEcologySouthEast('Carlow',{now,fetcher:mock({results:[value],endOfRecords:true})});assert.equal(wrong.rejected,1)
+ assert.match(r.records[0].sections[0].text,new RegExp(`"gadmLevel1Gid":"${NBDC_GADM.Wexford.replace(/\./g,'\\.')}"`))
+ assert.doesNotMatch(r.records[0].sections[0].text,/private place|person|decimalLatitude|2003-03-04|stateProvince/)
+ // A record whose GADM area is a different county is rejected, not misassigned to the requested county.
+ const wrong=await fetchNBDCEcologySouthEast('Carlow',{now,fetcher:mock({results:[value],endOfRecords:true})});assert.equal(wrong.rejected,1);assert.equal(wrong.records.length,0)
+ // Records without a GADM level-1 area cannot be assigned to any county.
+ const noGadm=await fetchNBDCEcologySouthEast('Wexford',{now,fetcher:mock({results:[{...value,gadm:undefined}],endOfRecords:true})});assert.equal(noGadm.records.length,0);assert.equal(noGadm.rejected,1)
  const withheld=await fetchNBDCEcologySouthEast('Wexford',{now,fetcher:mock({results:[{...value,informationWithheld:'sensitive'}],endOfRecords:true})});assert.equal(withheld.records.length,0)
+})
+test('NBDC assigns every south-east county to its own validated GADM GID',async()=>{
+ for(const county of COUNTIES){
+  const r=await fetchNBDCEcologySouthEast(county,{now,fetcher:mock({results:[nbdcValue(county)],endOfRecords:true})})
+  assert.equal(r.records.length,1,county);assert.equal(r.rejected,0,county)
+  assert.match(r.records[0].sections[0].text,new RegExp(`"county":"${county}"`))
+  assert.match(r.records[0].sections[0].text,new RegExp(`"gadmLevel1Gid":"${NBDC_GADM[county].replace(/\./g,'\\.')}"`))
+ }
 })
 test('Irish planning enforces each authority and excludes applicant data',async()=>{
  for(const county of COUNTIES){
