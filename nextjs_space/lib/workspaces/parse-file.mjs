@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto'
-import { createRequire } from 'node:module'
-const require = createRequire(import.meta.url)
+// Heavy parsers (pdfjs-dist, mammoth, mailparser) are loaded with dynamic
+// import() inside the branch that needs them. This keeps them out of the
+// server module graph (so they are never traced into the main app bundle) and
+// lets the pre-bundler (scripts/build-parser-worker.mjs) inline them into the
+// self-contained forked worker. Do NOT convert these to top-level imports or a
+// createRequire alias: esbuild will not inline a createRequire-based require,
+// which reintroduces the deploy file-tracing dependency.
 export const PARSER_VERSION = 'case-parser/1'
 export const MAX_BYTES = 5 * 1024 * 1024
 
@@ -22,6 +27,11 @@ export async function parseFile(bytes, filename, depth = 0) {
   if (ext === 'pdf' && bytes.subarray(0, 5).toString() === '%PDF-') {
     item.mediaType = 'application/pdf'
     const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    // Import the worker module for its side effect: it registers the in-process
+    // "fake worker" (globalThis.pdfjsWorker) so pdfjs does not try to fetch a
+    // separate pdf.worker.mjs file. The pre-bundler inlines this, which keeps
+    // the forked worker self-contained; un-bundled it resolves from node_modules.
+    await import('pdfjs-dist/legacy/build/pdf.worker.mjs')
     const task = getDocument({ data: new Uint8Array(bytes), isEvalSupported: false, useSystemFonts: false, disableFontFace: true, stopAtErrors: true })
     try {
       const pdf = await task.promise
@@ -38,13 +48,15 @@ export async function parseFile(bytes, filename, depth = 0) {
     item.mediaType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     // The subprocess caps elapsed time and V8 heap, not native allocations.
     // Production must also impose host/container memory and capability limits.
-    const mammoth = require('mammoth')
+    const mammothModule = await import('mammoth')
+    const mammoth = mammothModule.default ?? mammothModule
     const result = await mammoth.extractRawText({ buffer: bytes })
     item.passages = sections(result.value, 'DOCX extracted body (not page numbered)')
     if (result.messages.length) item.warnings.push('Document conversion reported warnings; compare the original.')
   } else if (ext === 'eml' && /^(From|To|Date|Subject|Received|MIME-Version|Return-Path|Message-ID):/im.test(bytes.subarray(0, 16384).toString())) {
     item.mediaType = 'message/rfc822'
-    const { simpleParser } = require('mailparser')
+    const mailparserModule = await import('mailparser')
+    const simpleParser = mailparserModule.simpleParser ?? mailparserModule.default?.simpleParser
     const mail = await simpleParser(bytes, { skipHtmlToText: true, skipTextToHtml: true, skipImageLinks: true, maxHtmlLengthToParse: 0 })
     item.metadata = { subject: mail.subject ?? null, messageId: mail.messageId ?? null, sentHeader: mail.headerLines.find(x => x.key === 'date')?.line ?? null }
     item.passages = sections(mail.text || '', 'Email text/plain body')

@@ -10,7 +10,8 @@
     "test:evidence": "node --import tsx --test tests/evidence-*.test.ts",
     "index:evidence": "node --import tsx scripts/index-evidence.ts",
     "test:workspaces": "tsx --test tests/private-workspaces.test.ts",
-    "test:case-files": "tsx --test tests/case-files.test.ts"
+    "test:case-files": "tsx --test tests/case-files.test.ts",
+    "build:worker": "node scripts/build-parser-worker.mjs"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
