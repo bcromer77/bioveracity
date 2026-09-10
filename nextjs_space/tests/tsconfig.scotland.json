@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ES2022","module":"CommonJS","moduleResolution":"Node","strict":true,"esModuleInterop":true,"skipLibCheck":true,"lib":["ES2022","DOM"],"types":["node"],"outDir":"../../.scotland-test-build"},"include":["../lib/ingest/connectors-scotland.ts","../lib/ingest/scotland-pipeline.ts","../lib/evidence-contract.ts","./scotland-connectors.test.ts"]}
