@@ -102,15 +102,31 @@ export async function reviewEvidence(id: string, input: unknown, reviewer: strin
     // searchable PUBLIC/PERMITTED combination, and only when the record is not
     // catalogue-only, carries no incoming restriction, and is associated with a
     // licensed source register. The retained content is re-screened for precise
-    // localities before the reviewer's requested labels are applied.
-    if (publish && !found.catalogueOnly && found.sourceRegisterId && !found.incomingSensitivity) {
+    // localities before the reviewer's requested labels are applied. When publish
+    // is requested but denied, an explicit machine reason is returned so the
+    // reviewer sees why the record was verified-but-not-searchable rather than a
+    // blanket success message.
+    let publishBlockedReason: string | null = null
+    if (!publish) {
+      publishBlockedReason = 'not-requested'
+    } else if (found.catalogueOnly) {
+      publishBlockedReason = 'catalogue-only'
+    } else if (!found.sourceRegisterId) {
+      publishBlockedReason = 'no-licensed-source-register'
+    } else if (found.incomingSensitivity) {
+      publishBlockedReason = 'incoming-sensitivity'
+    } else {
       const scan = scanForSensitiveContent({ sections: found.sections as { locator?: string; text?: string }[], links: [found.url], text: [found.title] })
       const classification = classifyByReviewer({ requestedSensitivity, requestedReuse, contentSensitive: scan.sensitive })
       data.sensitivity = classification.sensitivity
       data.reusePermission = classification.reusePermission
+      if (!(classification.sensitivity === 'PUBLIC' && classification.reusePermission === 'PERMITTED')) {
+        publishBlockedReason = scan.sensitive ? 'content-screened-sensitive' : 'requested-labels-not-public'
+      }
     }
     await tx.evidenceDocument.update({ where: { id }, data })
-    return { id, status: 'VERIFIED', reviewId: audit.id, published: data.sensitivity === 'PUBLIC' && data.reusePermission === 'PERMITTED' }
+    const published = data.sensitivity === 'PUBLIC' && data.reusePermission === 'PERMITTED'
+    return { id, status: 'VERIFIED', reviewId: audit.id, published, publishRequested: publish, publishBlockedReason: published ? null : publishBlockedReason }
   })
 }
 
