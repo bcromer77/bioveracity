@@ -1,7 +1,11 @@
 import { object, id, json, page, record, failure, safeReason } from './connectors-scotland'
 import type { Options, ConnectorResult, RejectionNote } from './connectors-scotland'
 import { parseEvidenceDate } from '../evidence-contract'
-export const COUNTIES=['Wexford','Waterford','Wicklow','Carlow','Kilkenny'] as const
+// All 26 counties of the Republic of Ireland. Extended from the original five south-east
+// counties on 2026-09-11 to national coverage; each county's GADM level-1 GID and planning
+// authority set below were validated against the live GBIF geocode API and the national ArcGIS
+// planning layer on 2026-09-11 (every county returned non-zero species and planning counts).
+export const COUNTIES=['Carlow','Cavan','Clare','Cork','Donegal','Dublin','Galway','Kerry','Kildare','Kilkenny','Laois','Leitrim','Limerick','Longford','Louth','Mayo','Meath','Monaghan','Offaly','Roscommon','Sligo','Tipperary','Waterford','Westmeath','Wexford','Wicklow'] as const
 export type County=typeof COUNTIES[number]
 export const NBDC_PUBLISHER='d2b97690-bfd6-11de-b279-d52977ace833'
 // GADM level-1 GIDs resolved and validated against the live GBIF geocode API on 2026-09-10
@@ -9,7 +13,24 @@ export const NBDC_PUBLISHER='d2b97690-bfd6-11de-b279-d52977ace833'
 // englishType "County" with higherRegion Ireland (IRL). NBDC's GBIF records leave stateProvince
 // null but populate gadm.level1.gid, so county selection uses the validated GADM GID rather than
 // a free-text province string or a single regional bounding box.
-export const NBDC_GADM:Record<County,string>={Carlow:'IRL.1_1',Kilkenny:'IRL.10_1',Waterford:'IRL.23_1',Wexford:'IRL.25_1',Wicklow:'IRL.26_1'}
+export const NBDC_GADM:Record<County,string>={Carlow:'IRL.1_1',Cavan:'IRL.2_1',Clare:'IRL.3_1',Cork:'IRL.4_1',Donegal:'IRL.5_1',Dublin:'IRL.6_1',Galway:'IRL.7_1',Kerry:'IRL.8_1',Kildare:'IRL.9_1',Kilkenny:'IRL.10_1',Laois:'IRL.11_1',Leitrim:'IRL.12_1',Limerick:'IRL.13_1',Longford:'IRL.14_1',Louth:'IRL.15_1',Mayo:'IRL.16_1',Meath:'IRL.17_1',Monaghan:'IRL.18_1',Offaly:'IRL.19_1',Roscommon:'IRL.20_1',Sligo:'IRL.21_1',Tipperary:'IRL.22_1',Waterford:'IRL.23_1',Westmeath:'IRL.24_1',Wexford:'IRL.25_1',Wicklow:'IRL.26_1'}
+// Exact PlanningAuthority strings as stored in the national ArcGIS planning layer, validated live
+// on 2026-09-11 (a distinct-values query returned 31 authorities). Most counties map to a single
+// authority, but some are served by several: a county is never assumed to equal one council.
+// Cork, Galway and Dublin have multiple authorities; Waterford and Limerick use non-standard labels.
+export const PLANNING_AUTHORITIES:Record<County,string[]>={
+ Carlow:['Carlow County Council'],Cavan:['Cavan County Council'],Clare:['Clare County Council'],
+ Cork:['Cork City Council','Cork County Council'],Donegal:['Donegal County Council'],
+ Dublin:['Dublin City Council','Dun Laoghaire Rathdown County Council','Fingal County Council','South Dublin County Council'],
+ Galway:['Galway City Council','Galway County Council'],Kerry:['Kerry County Council'],
+ Kildare:['Kildare County Council'],Kilkenny:['Kilkenny County Council'],Laois:['Laois County Council'],
+ Leitrim:['Leitrim County Council'],Limerick:['Limerick County Council'],Longford:['Longford County Council'],
+ Louth:['Louth County Council'],Mayo:['Mayo County Council'],Meath:['Meath County Council'],
+ Monaghan:['Monaghan County Council'],Offaly:['Offaly County Council'],Roscommon:['Roscommon County Council'],
+ Sligo:['Sligo County Council'],Tipperary:['Tipperary County Council'],
+ Waterford:['Waterford City and County Council'],Westmeath:['Westmeath County Council'],
+ Wexford:['Wexford County Council'],Wicklow:['Wicklow County Council'],
+}
 export const IRISH_PLANNING='https://services.arcgis.com/NzlPQPKn5QF9v2US/arcgis/rest/services/IrishPlanningApplications/FeatureServer/0'
 export function countyName(value: unknown): string {return typeof value==='string'?value.toLowerCase().trim().replace(/^(county|co\.)\s+/,'').replace(/\s+county$/,''):''}
 function countyCheck(county: County){if(!COUNTIES.includes(county))throw Error('Unsupported county')}
@@ -39,8 +60,10 @@ export async function fetchSouthEastIrishPlanningData(county: County,options: Op
  const source=`irish-planning-${county.toLowerCase()}`,coverage=`${county} application metadata only; no applicant names, addresses, proposals or objections. Authority match is explicit, not a bounding-box guess.`
  try{
   countyCheck(county);const {offset,limit}=page(options)
-  const authorities=county==='Waterford'?['Waterford','Waterford County Council','Waterford City Council','Waterford City and County Council']: [county,`${county} County Council`]
-  const where=`PlanningAuthority IN (${authorities.map(a=>`'${a}'`).join(',')})`
+  // A county may be served by several planning authorities; query all of them explicitly and
+  // reject any record whose authority is not in this validated set (no bounding-box guessing).
+  const authorities=PLANNING_AUTHORITIES[county]
+  const where=`PlanningAuthority IN (${authorities.map(a=>`'${a.replace(/'/g,"''")}'`).join(',')})`
   const fields='OBJECTID,PlanningAuthority,ApplicationNumber,ApplicationStatus,ApplicationType'
   const params=new URLSearchParams({f:'json',where,outFields:fields,returnGeometry:'false',orderByFields:'OBJECTID ASC',resultOffset:String(offset),resultRecordCount:String(limit)})
   const data=object(await json(`${IRISH_PLANNING}/query?${params}`,options));if(!Array.isArray(data.features))throw Error('schema')

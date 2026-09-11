@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {fetchNBDCEcologySouthEast,fetchSouthEastIrishPlanningData,NBDC_PUBLISHER,NBDC_GADM,COUNTIES,fetchEPARiverDataSouthEast} from '../lib/ingest/connectors-ireland'
+import {fetchNBDCEcologySouthEast,fetchSouthEastIrishPlanningData,NBDC_PUBLISHER,NBDC_GADM,COUNTIES,PLANNING_AUTHORITIES,fetchEPARiverDataSouthEast} from '../lib/ingest/connectors-ireland'
 import type {County} from '../lib/ingest/connectors-ireland'
 import {fetchNaturalEnglandHabitats,fetchEnvironmentAgencyData} from '../lib/ingest/connectors'
 import {handleRegionalPost,REGIONAL_SOURCES} from '../lib/ingest/regional-pipeline'
@@ -31,11 +31,38 @@ test('NBDC assigns every south-east county to its own validated GADM GID',async(
   assert.match(r.records[0].sections[0].text,new RegExp(`"gadmLevel1Gid":"${NBDC_GADM[county].replace(/\./g,'\\.')}"`))
  }
 })
-test('Irish planning enforces each authority and excludes applicant data',async()=>{
+test('Irish planning covers all 26 counties, enforces each authority and excludes applicant data',async()=>{
+ assert.equal(COUNTIES.length,26)
  for(const county of COUNTIES){
- const r=await fetchSouthEastIrishPlanningData(county,{now,fetcher:mock({features:[{attributes:{OBJECTID:1,PlanningAuthority:`${county} County Council`,ApplicationNumber:'26/1',ApplicantForename:'Person',DevelopmentAddress:'Private house'}}]})})
- assert.equal(r.records.length,1);assert.doesNotMatch(r.records[0].sections[0].text,/Person|Private house/);assert.equal(r.records[0].event_date,null)
+ // Use a genuine authority for the county (the first in its validated set) so the record is accepted.
+ const authority=PLANNING_AUTHORITIES[county][0]
+ const r=await fetchSouthEastIrishPlanningData(county,{now,fetcher:mock({features:[{attributes:{OBJECTID:1,PlanningAuthority:authority,ApplicationNumber:'26/1',ApplicantForename:'Person',DevelopmentAddress:'Private house'}}]})})
+ assert.equal(r.records.length,1,county);assert.doesNotMatch(r.records[0].sections[0].text,/Person|Private house/);assert.equal(r.records[0].event_date,null)
+ assert.equal(r.source,`irish-planning-${county.toLowerCase()}`)
  }
+})
+test('multi-authority counties query every one of their planning authorities, not one council',async()=>{
+ // A county is never assumed to equal a single council: the WHERE clause must list every authority.
+ const capture:{url:string}={url:''}
+ const capturing=(data:unknown)=>((async(u:unknown)=>{capture.url=String(u);return Response.json(data)}) as unknown as typeof fetch)
+ for(const county of ['Cork','Galway','Dublin','Waterford'] as const){
+  const authorities=PLANNING_AUTHORITIES[county]
+  capture.url=''
+  await fetchSouthEastIrishPlanningData(county,{now,fetcher:capturing({features:[]})})
+  const decoded=decodeURIComponent(capture.url).replace(/\+/g,' ')
+  for(const a of authorities)assert.ok(decoded.includes(`'${a}'`),`${county} where-clause must include ${a}`)
+ }
+ // Dublin is served by four authorities including three that are not '<county> County Council'.
+ assert.deepEqual(PLANNING_AUTHORITIES.Dublin,['Dublin City Council','Dun Laoghaire Rathdown County Council','Fingal County Council','South Dublin County Council'])
+ assert.deepEqual(PLANNING_AUTHORITIES.Cork,['Cork City Council','Cork County Council'])
+ assert.deepEqual(PLANNING_AUTHORITIES.Galway,['Galway City Council','Galway County Council'])
+ assert.deepEqual(PLANNING_AUTHORITIES.Waterford,['Waterford City and County Council'])
+})
+test('a record from an authority outside the county set is rejected, not misassigned',async()=>{
+ // A Cork City record must never be accepted under a Dublin query, and vice versa.
+ const r=await fetchSouthEastIrishPlanningData('Dublin',{now,fetcher:mock({features:[{attributes:{OBJECTID:9,PlanningAuthority:'Cork City Council',ApplicationNumber:'26/9'}}]})})
+ assert.equal(r.records.length,0);assert.equal(r.rejected,1);assert.equal(r.status,'partial')
+ assert.equal(r.rejections?.[0]?.reason,'Wrong authority')
 })
 test('habitat IDs and gauge zero readings retain source values, not default coordinates',async()=>{
  const ne=await fetchNaturalEnglandHabitats({now,fetcher:mock({features:[{attributes:{OBJECTID:1,GlobalID:'stable',MainHabs:'Synthetic habitat'}}],exceededTransferLimit:true})})
@@ -49,7 +76,8 @@ test('regional auth runs before source selection and unknown URLs cannot be fetc
  const req=(source:string,auth=`Bearer ${key}`)=>new Request('https://example.com/api/ingest/external',{method:'POST',headers:{authorization:auth},body:JSON.stringify({source})})
  assert.equal((await handleRegionalPost(req('sepa','bad'),{enabled:'true',secret:key},receive)).status,401)
  assert.equal((await handleRegionalPost(req('https://attacker.example'),{enabled:'true',secret:key},receive)).status,400)
- assert.equal(writes,0);assert.equal(Object.keys(REGIONAL_SOURCES).length,18)
+ // 5 UK sources + 26 counties x 2 Irish sources + epa-wfd + glasgow-planning + east-anglia-comments = 60.
+ assert.equal(writes,0);assert.equal(Object.keys(REGIONAL_SOURCES).length,60)
  assert.equal((await fetchEPARiverDataSouthEast()).status,'blocked')
 })
 test('rejection reasons come only from the fixed allowlist; arbitrary text never leaks',()=>{

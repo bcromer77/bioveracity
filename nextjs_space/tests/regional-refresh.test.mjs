@@ -3,7 +3,32 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import {nextCursor,refresh,SOURCES} from '../scripts/regional-refresh.mjs'
+import {nextCursor,refresh,SOURCES,IRISH_COUNTIES,phaseOf} from '../scripts/regional-refresh.mjs'
+test('SOURCES covers all 26 counties for both species and planning, plus the preserved national feeds',()=>{
+ assert.equal(IRISH_COUNTIES.length,26)
+ for(const c of IRISH_COUNTIES){
+  assert.ok(SOURCES.includes(`nbdc-${c}`),`missing nbdc-${c}`)
+  assert.ok(SOURCES.includes(`irish-planning-${c}`),`missing irish-planning-${c}`)
+ }
+ // National EPA water coverage stays a single national source, never duplicated per county.
+ assert.equal(SOURCES.filter(s=>s==='epa-wfd').length,1)
+ assert.equal(SOURCES.filter(s=>s.startsWith('epa-')).length,1)
+ // 5 UK + 26x2 Irish + epa-wfd + glasgow-planning + east-anglia-comments = 60.
+ assert.equal(SOURCES.length,60)
+})
+test('phase label distinguishes incremental checks from historical backfill honestly',()=>{
+ // Mid-sweep through history: a positive resulting cursor means more historical pages remain.
+ assert.equal(phaseOf(0,20,'ok'),'backfill')
+ assert.equal(phaseOf(20,40,'partial'),'backfill')
+ // A completed historical sweep resets the cursor to 0 after reading a non-zero offset.
+ assert.equal(phaseOf(20,0,'ok'),'sweep-complete')
+ // Began and ended at page 0: a single bounded page covered the source — up to date.
+ assert.equal(phaseOf(0,0,'ok'),'incremental')
+ // Non-ok statuses pass through unchanged, never masked as a healthy phase.
+ assert.equal(phaseOf(0,0,'error'),'error')
+ assert.equal(phaseOf(0,0,'blocked'),'blocked')
+ assert.equal(phaseOf(0,0,'empty'),'empty')
+})
 test('cursor only advances after an acknowledged write pass with zero failures',()=>{
  const ok={writesAcknowledged:true,failedWrites:0,sources:[{status:'ok',rejected:0,nextOffset:5}]}
  assert.equal(nextCursor(0,ok,false),5);assert.equal(nextCursor(0,ok,true),0)

@@ -1,7 +1,22 @@
 // Scheduled HTTP client. No direct database, AI, or arbitrary source endpoints.
 import fs from 'node:fs/promises'
 import path from 'node:path'
-export const SOURCES=['sepa','naturescot-sssi','naturescot-habitats','natural-england-habitats','ea-gauges',...['wexford','waterford','wicklow','carlow','kilkenny'].flatMap(c=>[`nbdc-${c}`,`irish-planning-${c}`]),'epa-wfd','glasgow-planning','east-anglia-comments']
+// The 26 counties of the Republic of Ireland (lowercase source slugs), mirroring COUNTIES in
+// lib/ingest/connectors-ireland.ts. Kept as a literal list because this scheduled client is plain
+// .mjs (run by node with no TypeScript loader) and must not import the connector module.
+export const IRISH_COUNTIES=['carlow','cavan','clare','cork','donegal','dublin','galway','kerry','kildare','kilkenny','laois','leitrim','limerick','longford','louth','mayo','meath','monaghan','offaly','roscommon','sligo','tipperary','waterford','westmeath','wexford','wicklow']
+export const SOURCES=['sepa','naturescot-sssi','naturescot-habitats','natural-england-habitats','ea-gauges',...IRISH_COUNTIES.flatMap(c=>[`nbdc-${c}`,`irish-planning-${c}`]),'epa-wfd','glasgow-planning','east-anglia-comments']
+// Honest phase label derived from the real cursor state, so incremental checks are distinguished
+// from historical backfill in the report (never inferred from a green job alone). 'backfill' means
+// more historical pages remain for this source; 'sweep-complete' means a full historical pass just
+// finished (cursor reset to 0); 'incremental' means the source began and ended at page 0 (a single
+// bounded page covered it — up to date); non-ok statuses pass through unchanged (error/blocked/empty).
+export function phaseOf(offset,cursor,status){
+ if(status!=='ok'&&status!=='partial')return status
+ if(typeof cursor==='number'&&cursor>0)return 'backfill'
+ if(typeof offset==='number'&&offset>0)return 'sweep-complete'
+ return 'incremental'
+}
 export function nextCursor(previous,result,dryRun){
  // Advance only on an explicit write acknowledgement with exactly zero failed writes. A rejected
  // record makes a page 'partial' but is permanent, so we still skip past it to prevent a stalled
@@ -34,8 +49,8 @@ export async function refresh({endpoint,secret,stateDir,dryRun=true,fetcher=fetc
    const result=JSON.parse(text)
    if(result.sources?.length!==1||result.sources[0].source!==source)throw Error('Source mismatch')
    cursors[source]=nextCursor(offset,result,dryRun)
-   report.push({source,status:result.sources[0].status,fetched:result.totalFetched,created:result.created,duplicates:result.duplicates,catalogueOnly:result.catalogueOnly,rejected:result.sources[0].rejected,rejections:result.sources[0].rejections,acknowledged:result.writesAcknowledged,failedWrites:result.failedWrites,nextOffset:cursors[source],dryRun})
-  }catch{report.push({source,status:'error',nextOffset:offset,dryRun})}
+   report.push({source,status:result.sources[0].status,phase:phaseOf(offset,cursors[source],result.sources[0].status),readOffset:offset,fetched:result.totalFetched,created:result.created,duplicates:result.duplicates,catalogueOnly:result.catalogueOnly,rejected:result.sources[0].rejected,rejections:result.sources[0].rejections,acknowledged:result.writesAcknowledged,failedWrites:result.failedWrites,nextOffset:cursors[source],dryRun})
+  }catch{report.push({source,status:'error',phase:'error',readOffset:offset,nextOffset:offset,dryRun})}
   // Atomic checkpoints after every source. Never persist records, credentials or response bodies.
   await fs.writeFile(file+'.tmp',JSON.stringify(cursors));await fs.rename(file+'.tmp',file)
  }
