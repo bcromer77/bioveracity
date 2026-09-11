@@ -937,3 +937,9 @@ model PrivateWorkspaceAudit {
   actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
   @@index([workspaceId, createdAt])
 }
+
+// Monthly scan-usage counter for Cloudmersive free-tier quota tracking.
+model ScanUsage {
+  month String @id
+  count Int    @default(0)
+}

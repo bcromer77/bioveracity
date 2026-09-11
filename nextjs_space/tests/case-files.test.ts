@@ -52,7 +52,7 @@ test('HTTP journey: guards, scanner failure, import, source review and actual PD
   const s=workspaceService(db,'owner'),w=await s.createWorkspace({name:'HTTP fixture'}),c=await s.createCase(w.id,{title:'HTTP case'})
   let actor:string|null='owner',scans=0,scannerPass=true,scannerUnavailable=false
   const env={PRIVATE_WORKSPACES_ENABLED:'true',PRIVATE_EVIDENCE_ENABLED:'true',PRIVATE_EVIDENCE_RUNTIME_APPROVED:'true',PRIVATE_EVIDENCE_KEY:key}
-  const endpoint=createCaseEndpoint({getActor:async()=>actor,db,env,scan:async()=>{scans++;if(scannerUnavailable)throw new WorkspaceError(503,'Security scanner unavailable. Nothing imported.');if(!scannerPass)throw new WorkspaceError(422,'Scanner did not pass')},parse:parseIsolated,render:renderCase})
+  const endpoint=createCaseEndpoint({getActor:async()=>actor,db,env,scan:async()=>{scans++;if(scannerUnavailable)throw new WorkspaceError(503,'Security scanner unavailable. Nothing imported.');if(!scannerPass)throw new WorkspaceError(422,'Scanner did not pass')},parse:parseIsolated,render:renderCase,reserveScan:async()=>{}})
   const context={params:Promise.resolve({workspaceId:w.id,caseId:c.id})},url=`https://fixture.test/api/workspaces/${w.id}/cases/${c.id}/evidence`
   const post=(payload:unknown,origin='https://fixture.test')=>endpoint(new Request(url,{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(payload)}),context,true)
   const get=(query='')=>endpoint(new Request(url+query),context,false)

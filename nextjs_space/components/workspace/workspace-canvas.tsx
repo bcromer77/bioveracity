@@ -322,7 +322,9 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     try {
       if (list.length > 5) throw new Error('Import up to five files per batch.')
       for (const file of list) {
-        if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name}: maximum 5 MiB per file.`)
+        if (file.size > 3_000_000) throw new Error(`${file.name}: maximum 3 MB per file during this evaluation.`)
+        const ext = (file.name.split('.').pop() || '').toLowerCase()
+        if (!['pdf', 'txt', 'csv'].includes(ext)) throw new Error(`${file.name}: only PDF, TXT and CSV files are accepted during this evaluation. DOCX/EML and media files are blocked because the scanner cannot fully verify their embedded contents — convert to PDF and re-upload.`)
         setNotice(`Processing “${file.name}” — scanning and extracting…`)
         const bytes = toBase64(await file.arrayBuffer())
         const result = await (await read(endpoint, { method: 'POST', body: JSON.stringify({ action: 'import', name: file.name, bytes }) })).json()
@@ -526,8 +528,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
           className={`flex flex-col items-center justify-center rounded-md border-2 border-dashed p-4 text-center text-sm transition-colors ${dragging ? 'border-primary bg-secondary' : 'border-border'}`}
         >
           <p className="font-medium">{busy ? 'Importing…' : 'Drop anything to add evidence'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">PDF, DOCX, EML, TXT/CSV notes, PNG/JPEG images, or MP3/WAV audio. Five files per batch, 5 MiB each. Scanned PDFs, images and audio are retained as originals — they are not auto-transcribed, so add a text note with the key quote to place them on the timeline.</p>
-          <input ref={fileInputRef} type="file" className="hidden" multiple accept=".pdf,.docx,.eml,.txt,.csv,.png,.jpg,.jpeg,.mp3,.wav" onChange={e => importFiles(e.target.files)} />
+          <p className="mt-1 text-xs text-muted-foreground">PDF, TXT or CSV only during this evaluation (3 MB each, five per batch). DOCX, EML, images and audio are temporarily blocked because the scanner cannot fully verify their embedded contents. Convert DOCX/EML to PDF before uploading.</p>
+          <input ref={fileInputRef} type="file" className="hidden" multiple accept=".pdf,.txt,.csv" onChange={e => importFiles(e.target.files)} />
           <Button type="button" variant="outline" className="mt-3" disabled={busy} onClick={() => fileInputRef.current?.click()}>{busy ? 'Processing…' : 'Choose files'}</Button>
           <p className="mt-2 text-xs text-muted-foreground">Imported privately to this case. No document content is sent to an AI or external parser.</p>
         </div>

@@ -2,9 +2,10 @@ import { body } from './request-body'
 import { WorkspaceError, type Database } from './service'
 import { caseFiles } from './case-files'
 import { admit } from './admission'
+import { checkFormatAllowed, MAX_EVAL_BYTES } from './parser'
 import type { ParsedFile } from './parser'
 export const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie', 'X-Content-Type-Options': 'nosniff' }
-type Dependencies={getActor:()=>Promise<string|null>;db:Database;env:Record<string,string|undefined>;scan:(bytes:Buffer)=>Promise<void>;parse:(bytes:Buffer,name:string)=>Promise<ParsedFile>;render:(manifest:Record<string,unknown>)=>Promise<Buffer>}
+type Dependencies={getActor:()=>Promise<string|null>;db:Database;env:Record<string,string|undefined>;scan:(bytes:Buffer,apiKey:string)=>Promise<void>;parse:(bytes:Buffer,name:string)=>Promise<ParsedFile>;render:(manifest:Record<string,unknown>)=>Promise<Buffer>;reserveScan:()=>Promise<void>}
 type Context={params:Promise<{workspaceId:string;caseId:string}>}
 export function createCaseEndpoint(deps: Dependencies) {
 return async function handle(request:Request,context:Context,write:boolean) {
@@ -27,8 +28,15 @@ return async function handle(request:Request,context:Context,write:boolean) {
         case 'import': {
           await service.check(w,c,'write')
           if(typeof input.name!=='string'||input.name.length>180||typeof input.bytes!=='string'||! /^[A-Za-z0-9+/]+={0,2}$/.test(input.bytes))throw new WorkspaceError(400,'Invalid file')
-          const bytes=Buffer.from(input.bytes,'base64');if(!bytes.length||bytes.length>5*1024*1024)throw new WorkspaceError(413,'Maximum 5 MiB per file')
-          await deps.scan(bytes)
+          // §4: Enforce evaluation byte cap (3,000,000) on the server.
+          const bytes=Buffer.from(input.bytes,'base64');if(!bytes.length||bytes.length>MAX_EVAL_BYTES)throw new WorkspaceError(413,`Maximum ${(MAX_EVAL_BYTES/1_000_000).toFixed(0)} MB per file during this evaluation.`)
+          // §6: Block formats whose embedded content the scanner cannot fully verify.
+          checkFormatAllowed(input.name)
+          // §4: Reserve a monthly quota slot before calling the scanner.
+          await deps.reserveScan()
+          // §3: Scan before parsing; only a clean verdict proceeds.
+          const apiKey = deps.env.CLOUDMERSIVE_API_KEY ?? ''
+          await deps.scan(bytes, apiKey)
           const parsed=await deps.parse(bytes,input.name)
           result=await service.import(w,c,parsed,{sourceUrl:typeof input.sourceUrl==='string'?input.sourceUrl:undefined,publicationDate:typeof input.publicationDate==='string'?input.publicationDate:undefined,supersedesId:typeof input.supersedesId==='string'?input.supersedesId:undefined});break
         }
@@ -51,4 +59,3 @@ return async function handle(request:Request,context:Context,write:boolean) {
   } catch(error) {return Response.json({error:error instanceof WorkspaceError?error.message:'Private evidence request failed. Reload before retrying.'},{status:error instanceof WorkspaceError?error.status:500,headers:privateHeaders})}
   finally {release?.()}
 }}
-
