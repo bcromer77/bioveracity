@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { HowItWorksAnimation } from './how-it-works-animation'
 
 // Plain-English landing sections. Restrained, professional identity: no bright
 // gradients, excessive cards or decorative complexity. All copy is fixed marketing
@@ -35,18 +36,25 @@ export function LandingSections({ openHref }: { openHref: string }) {
       <section id="how-it-works" className="scroll-mt-20 border-b border-border bg-secondary/40 py-16">
         <div className={container}>
           <SectionHeading>How it works</SectionHeading>
-          <div className="mt-8 grid gap-6 md:grid-cols-3">
-            {[
-              { n: 1, t: 'Open a case', d: 'Choose the decision or place you need to understand. BioVeracity can retrieve relevant public records and keep them separate from your private case evidence.' },
-              { n: 2, t: 'Add and review the evidence', d: 'Upload authorised documents and review the extracted dates, claims and source passages. Nothing becomes an accepted finding until a user reviews it.' },
-              { n: 3, t: 'Build the record', d: 'See the chronology, compare conflicting statements, identify missing evidence and create a reviewed report with links back to the supporting sources.' },
-            ].map(step => (
-              <div key={step.n} className="rounded-lg border border-border bg-card p-6 shadow-sm">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{step.n}</span>
-                <h3 className="mt-4 font-display text-lg font-semibold text-foreground">{step.t}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{step.d}</p>
-              </div>
-            ))}
+          <div className="mt-10 grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            {/* Animated explainer */}
+            <div className="flex items-start justify-center">
+              <HowItWorksAnimation />
+            </div>
+            {/* Step cards */}
+            <div className="space-y-4">
+              {[
+                { n: 1, t: 'Open a case', d: 'Choose the decision or place you need to understand. BioVeracity can retrieve relevant public records and keep them separate from your private case evidence.' },
+                { n: 2, t: 'Add and review the evidence', d: 'Upload authorised documents and review the extracted dates, claims and source passages. Nothing becomes an accepted finding until a user reviews it.' },
+                { n: 3, t: 'Build the record', d: 'See the chronology, compare conflicting statements, identify missing evidence and create a reviewed report with links back to the supporting sources.' },
+              ].map(step => (
+                <div key={step.n} className="rounded-lg border border-border bg-card p-6 shadow-sm">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">{step.n}</span>
+                  <h3 className="mt-4 font-display text-lg font-semibold text-foreground">{step.t}</h3>
+                  <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{step.d}</p>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="mt-8 rounded-lg border border-border bg-card p-4 shadow-sm">
             <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm font-medium text-foreground">
