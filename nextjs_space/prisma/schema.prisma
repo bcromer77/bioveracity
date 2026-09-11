@@ -943,3 +943,10 @@ model ScanUsage {
   month String @id
   count Int    @default(0)
 }
+
+// Cross-instance pacing cursor for the shared Cloudmersive provider key.
+// One row (id = 'global') holds the epoch-ms of the next free 1s scan slot.
+model ScanPacing {
+  id     String @id
+  nextMs BigInt @default(0)
+}

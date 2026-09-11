@@ -325,7 +325,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         if (file.size > 3_000_000) throw new Error(`${file.name}: maximum 3 MB per file during this evaluation.`)
         const ext = (file.name.split('.').pop() || '').toLowerCase()
         if (!['pdf', 'txt', 'csv'].includes(ext)) throw new Error(`${file.name}: only PDF, TXT and CSV files are accepted during this evaluation. DOCX/EML and media files are blocked because the scanner cannot fully verify their embedded contents — convert to PDF and re-upload.`)
-        setNotice(`Processing “${file.name}” — scanning and extracting…`)
+        setNotice(`Scanning and reading “${file.name}” — the file is sent to an external security-scanning provider before any text is read…`)
         const bytes = toBase64(await file.arrayBuffer())
         const result = await (await read(endpoint, { method: 'POST', body: JSON.stringify({ action: 'import', name: file.name, bytes }) })).json()
         imported++
@@ -528,7 +528,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
           className={`flex flex-col items-center justify-center rounded-md border-2 border-dashed p-4 text-center text-sm transition-colors ${dragging ? 'border-primary bg-secondary' : 'border-border'}`}
         >
           <p className="font-medium">{busy ? 'Importing…' : 'Drop anything to add evidence'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">PDF, TXT or CSV only during this evaluation (3 MB each, five per batch). DOCX, EML, images and audio are temporarily blocked because the scanner cannot fully verify their embedded contents. Convert DOCX/EML to PDF before uploading.</p>
+          <p className="mt-1 text-xs text-muted-foreground">PDF, TXT or CSV only during this evaluation (3 MB each, five per batch). DOCX, EML, images and audio are temporarily blocked because the scanner cannot fully verify their embedded contents. Convert DOCX/EML to PDF before uploading. Each file is sent to an external security-scanning provider (Cloudmersive) before any text is read; nothing is stored unless the scan passes.</p>
           <input ref={fileInputRef} type="file" className="hidden" multiple accept=".pdf,.txt,.csv" onChange={e => importFiles(e.target.files)} />
           <Button type="button" variant="outline" className="mt-3" disabled={busy} onClick={() => fileInputRef.current?.click()}>{busy ? 'Processing…' : 'Choose files'}</Button>
           <p className="mt-2 text-xs text-muted-foreground">Imported privately to this case. No document content is sent to an AI or external parser.</p>

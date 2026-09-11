@@ -50,11 +50,15 @@ export async function scanBytes(bytes, apiKey, opts = {}) {
   const footer = Buffer.from(`\r\n--${boundary}--\r\n`)
   const body = Buffer.concat([header, bytes, footer])
 
-  let response
+  // A SINGLE timeout must cover the COMPLETE provider operation — the request
+  // AND reading the response body. The timer is cleared in the `finally` so it
+  // is cleaned up on every path (success, provider error, malformed body,
+  // abort, network failure). ScanErrors thrown inside are re-thrown unchanged.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  let result
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
-    response = await fetchFn('https://api.cloudmersive.com/virus/scan/file/advanced', {
+    const response = await fetchFn('https://api.cloudmersive.com/virus/scan/file/advanced', {
       method: 'POST',
       headers: {
         'Apikey': apiKey,
@@ -69,31 +73,33 @@ export async function scanBytes(bytes, apiKey, opts = {}) {
       body,
       signal: controller.signal,
     })
-    clearTimeout(timer)
+
+    // Non-200 statuses (checked before the body read, but still under the timer).
+    if (response.status === 401 || response.status === 403) {
+      throw new ScanError(503, 'The security-scanner API key is invalid or expired. Nothing imported. Please contact the site operator.')
+    }
+    if (response.status === 429) {
+      throw new ScanError(503, 'The security-scanning service rate limit has been reached. Nothing imported. Please wait a minute and try again.')
+    }
+    if (!response.ok) {
+      throw new ScanError(503, `The security-scanning service returned an error (HTTP ${response.status}). Nothing imported. Please try again shortly.`)
+    }
+
+    // Read the body UNDER the same timeout — a stalled body read now aborts.
+    try {
+      result = await response.json()
+    } catch (bodyError) {
+      if (bodyError?.name === 'AbortError') throw bodyError
+      throw new ScanError(503, 'The security-scanning service returned a malformed response. Nothing imported. The scan result could not be verified.')
+    }
   } catch (error) {
+    if (error instanceof ScanError) throw error
     if (error?.name === 'AbortError') {
       throw new ScanError(503, 'The security scan could not finish in time. Nothing imported. Please try again shortly.')
     }
     throw new ScanError(503, 'The server could not reach the security-scanning service. Nothing imported. Please try again shortly.')
-  }
-
-  // Non-200 statuses.
-  if (response.status === 401 || response.status === 403) {
-    throw new ScanError(503, 'The security-scanner API key is invalid or expired. Nothing imported. Please contact the site operator.')
-  }
-  if (response.status === 429) {
-    throw new ScanError(503, 'The security-scanning service rate limit has been reached. Nothing imported. Please wait a minute and try again.')
-  }
-  if (!response.ok) {
-    throw new ScanError(503, `The security-scanning service returned an error (HTTP ${response.status}). Nothing imported. Please try again shortly.`)
-  }
-
-  // Parse the JSON response.
-  let result
-  try {
-    result = await response.json()
-  } catch {
-    throw new ScanError(503, 'The security-scanning service returned a malformed response. Nothing imported. The scan result could not be verified.')
+  } finally {
+    clearTimeout(timer)
   }
 
   // STRICT verdict: only an explicit CleanResult === true is accepted.

@@ -134,6 +134,30 @@ describe('network and timeout errors', () => {
     )
   })
 
+  test('timeout covers a stalled response-body read (not just the request)', async () => {
+    // Regression test for the brief's §5 requirement: the timeout must cover
+    // the COMPLETE provider operation, including reading the response body.
+    // fetch() resolves quickly with a 200, but json() never settles on its
+    // own — it only rejects once the AbortController signal fires. If the
+    // timeout did not wrap the body read, this would hang forever; instead it
+    // must reject with a 503 "could not finish in time".
+    const stallingFetch = (_url, opts) => Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => new Promise((_resolve, reject) => {
+        opts.signal.addEventListener('abort', () => {
+          const err = new Error('The operation was aborted')
+          err.name = 'AbortError'
+          reject(err)
+        })
+      }),
+    })
+    await assert.rejects(
+      scanBytes(cleanBytes, fakeKey, { fetchFn: stallingFetch, timeoutMs: 50 }),
+      e => e instanceof ScanError && e.status === 503 && /finish in time/.test(e.message)
+    )
+  })
+
   test('rejects on rate limit (429)', async () => {
     await assert.rejects(
       scanBytes(cleanBytes, fakeKey, { fetchFn: mockFetch(429, {}) }),
