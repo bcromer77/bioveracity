@@ -52,6 +52,12 @@ export function validateEvidence(input: unknown) {
   // reference instead of storing the underlying dataset.
   const incomingSensitivity = incomingLabel(r)
   const acquisitionPermitted = r.acquisition_permitted === true
+  // Licence string carried by the connector (e.g. a GBIF licence URL or an
+  // established dataset licence). Preserved for source registration but kept OUT
+  // of `content` so the version hash and document key stay stable across a
+  // licence-metadata change on an otherwise-identical passage.
+  const sourceLicence = typeof r.source_licence === 'string' && r.source_licence.trim() && r.source_licence.length <= 300
+    ? r.source_licence.trim() : null
   const content = {
     url: httpsUrl(r.url), title: string(r.title, 'title', 1000), publisher: string(r.publisher, 'publisher', 300),
     authority_id: string(r.authority_id, 'authority ID', 200), jurisdiction: string(r.jurisdiction, 'jurisdiction', 100),
@@ -61,7 +67,7 @@ export function validateEvidence(input: unknown) {
   }
   return { content, observedAt: new Date(retrievedAt), versionHash: digest(content),
     documentKey: digest([content.url, content.content_kind, content.representation_id]),
-    incomingSensitivity, acquisitionPermitted }
+    incomingSensitivity, acquisitionPermitted, sourceLicence }
 }
 
 function incomingLabel(r: Record<string, unknown>): string | null {
@@ -108,6 +114,17 @@ export function validateReview(input: unknown, sections: { locator: string; text
   if (!sections.some(s => s.locator === locator && s.text.includes(excerpt))) throw new Error('Excerpt must exactly match the retained source section')
   const basis = string(r.basis, 'review explanation', 2000)
   if (!['measurement', 'regulator_finding', 'operator_statement', 'community_observation', 'council_record'].includes(String(r.evidenceType))) throw new Error('Evidence type required')
+  // Optional, explicit publishing decision. Publishing defaults OFF: a review only
+  // makes a record searchable when the reviewer explicitly sets publish=true, which
+  // attests the record faithfully represents a redistributable public source. The
+  // requested labels are still re-screened by classifyByReviewer before they apply.
+  const publish = r.publish === true
+  const requestedSensitivity: Sensitivity = publish
+    ? (['UNKNOWN', 'PUBLIC', 'RESTRICTED'].includes(String(r.publishSensitivity ?? 'PUBLIC')) ? String(r.publishSensitivity ?? 'PUBLIC') as Sensitivity : (() => { throw new Error('Invalid publish sensitivity') })())
+    : 'UNKNOWN'
+  const requestedReuse: ReusePermission = publish
+    ? (['UNKNOWN', 'PERMITTED', 'PROHIBITED', 'CATALOGUE_ONLY'].includes(String(r.publishReuse ?? 'PERMITTED')) ? String(r.publishReuse ?? 'PERMITTED') as ReusePermission : (() => { throw new Error('Invalid publish reuse') })())
+    : 'UNKNOWN'
   // Matching text is necessary, not sufficient: a named authenticated reviewer attests support.
-  return { claim, excerpt, locator, basis, evidenceType: String(r.evidenceType) }
+  return { claim, excerpt, locator, basis, evidenceType: String(r.evidenceType), publish, requestedSensitivity, requestedReuse }
 }

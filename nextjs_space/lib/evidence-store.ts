@@ -1,8 +1,9 @@
 import { evidenceEligibility } from '@/lib/evidence-eligibility'
 import { Prisma } from '@prisma/client'
 import { evidenceDb } from '@/lib/evidence-db'
-import { validateEvidence, validateReview, classifyOnIngest } from '@/lib/evidence-contract'
+import { validateEvidence, validateReview, classifyOnIngest, classifyByReviewer } from '@/lib/evidence-contract'
 import { scanForSensitiveContent } from '@/lib/evidence-sensitivity'
+import { resolveSourceRegister } from '@/lib/ingest/source-register'
 
 export async function receiveEvidence(input: unknown) {
   const record = validateEvidence(input)
@@ -38,6 +39,36 @@ export async function receiveEvidence(input: unknown) {
       inheritedRestricted: Boolean(priorRestricted),
       catalogueOnly,
     })
+
+    // Source registration (idempotent): associate the record with a register row
+    // only when a genuine, redistributable licence is established for its source.
+    // Without a resolved template the record is still retained with full
+    // provenance but has no sourceRegisterId, so it can never reach public search
+    // (licence-unknown material stays out, by design).
+    const template = resolveSourceRegister({
+      authorityId: c.authority_id, publisher: c.publisher, sourceLicence: record.sourceLicence,
+    })
+    let sourceRegisterId: string | null = null
+    if (template) {
+      const reg = await tx.evidenceSourceRegister.upsert({
+        where: { publisher_datasetIdentifier: { publisher: template.publisher, datasetIdentifier: template.datasetIdentifier } },
+        update: {
+          licence: template.licence, licenceVersion: template.licenceVersion ?? null, link: template.link ?? null,
+          requiredAttribution: template.requiredAttribution, permittedUses: template.permittedUses,
+          commercialUseConditions: template.commercialUseConditions ?? null,
+          spatialResolution: template.spatialResolution ?? null, specificPermissions: template.specificPermissions ?? null,
+        },
+        create: {
+          publisher: template.publisher, datasetIdentifier: template.datasetIdentifier,
+          licence: template.licence, licenceVersion: template.licenceVersion ?? null, link: template.link ?? null,
+          requiredAttribution: template.requiredAttribution, permittedUses: template.permittedUses,
+          commercialUseConditions: template.commercialUseConditions ?? null,
+          spatialResolution: template.spatialResolution ?? null, specificPermissions: template.specificPermissions ?? null,
+        },
+        select: { id: true },
+      })
+      sourceRegisterId = reg.id
+    }
     const storedSections = catalogueOnly
       ? [{ locator: 'catalogue-reference', text: `Catalogue reference only. Underlying dataset not retained pending acquisition permission. Source: ${c.url}` }]
       : c.sections
@@ -52,8 +83,9 @@ export async function receiveEvidence(input: unknown) {
       reusePermission: classification.reusePermission,
       incomingSensitivity: record.incomingSensitivity,
       catalogueOnly,
+      sourceRegisterId,
     } })
-    return { id: created.id, duplicate: false, status: created.status, sensitivity: created.sensitivity, catalogueOnly }
+    return { id: created.id, duplicate: false, status: created.status, sensitivity: created.sensitivity, catalogueOnly, registered: Boolean(sourceRegisterId) }
   })
 }
 
@@ -63,10 +95,22 @@ export async function reviewEvidence(id: string, input: unknown, reviewer: strin
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${found.documentKey}))`
     const latest = await tx.evidenceDocument.findFirst({ where: { documentKey: found.documentKey }, orderBy: [{ observedAt: 'desc' }, { id: 'desc' }] })
     if (latest?.id !== id) throw new Error('A newer source version requires review')
-    const review = validateReview(input, found.sections as { locator: string; text: string }[])
-    const audit = await tx.evidenceReview.create({ data: { documentId: id, reviewer, ...review } })
-    await tx.evidenceDocument.update({ where: { id }, data: { status: 'VERIFIED', activeReviewId: audit.id } })
-    return { id, status: 'VERIFIED', reviewId: audit.id }
+    const { publish, requestedSensitivity, requestedReuse, ...reviewFields } = validateReview(input, found.sections as { locator: string; text: string }[])
+    const audit = await tx.evidenceReview.create({ data: { documentId: id, reviewer, ...reviewFields } })
+    const data: { status: string; activeReviewId: string; sensitivity?: string; reusePermission?: string } = { status: 'VERIFIED', activeReviewId: audit.id }
+    // Publishing transition: only an explicit publish decision can set the
+    // searchable PUBLIC/PERMITTED combination, and only when the record is not
+    // catalogue-only, carries no incoming restriction, and is associated with a
+    // licensed source register. The retained content is re-screened for precise
+    // localities before the reviewer's requested labels are applied.
+    if (publish && !found.catalogueOnly && found.sourceRegisterId && !found.incomingSensitivity) {
+      const scan = scanForSensitiveContent({ sections: found.sections as { locator?: string; text?: string }[], links: [found.url], text: [found.title] })
+      const classification = classifyByReviewer({ requestedSensitivity, requestedReuse, contentSensitive: scan.sensitive })
+      data.sensitivity = classification.sensitivity
+      data.reusePermission = classification.reusePermission
+    }
+    await tx.evidenceDocument.update({ where: { id }, data })
+    return { id, status: 'VERIFIED', reviewId: audit.id, published: data.sensitivity === 'PUBLIC' && data.reusePermission === 'PERMITTED' }
   })
 }
 

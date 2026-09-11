@@ -5,6 +5,10 @@ export type EvidenceInput = {
   representation_id: string; content_kind: 'source_text'; retrieved_at: string;
   event_date: string | null; event_date_precision: 'unknown' | 'day' | 'month' | 'year'; publication_date: null;
   acquisition_permitted: boolean; sections: { locator: string; text: string }[];
+  // Optional licence string carried from the source (e.g. a GBIF licence URL or an
+  // established dataset licence). Used only for idempotent source registration; it
+  // is never written into the retained passage content or the version hash.
+  source_licence?: string;
 }
 export type RejectionNote = { locator: string | null; reason: RejectionReason }
 export type ConnectorResult = {

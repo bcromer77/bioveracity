@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import {nextCursor,refresh,SOURCES,IRISH_COUNTIES,phaseOf} from '../scripts/regional-refresh.mjs'
+import {nextCursor,refresh,reconcileHead,SOURCES,IRISH_COUNTIES,phaseOf} from '../scripts/regional-refresh.mjs'
 test('SOURCES covers all 26 counties for both species and planning, plus the preserved national feeds',()=>{
  assert.equal(IRISH_COUNTIES.length,26)
  for(const c of IRISH_COUNTIES){
@@ -97,4 +97,34 @@ test('refresh checkpoints source cursors without secrets; bad source does not st
  assert.equal(report.length,SOURCES.length);assert.equal(report[0].status,'error')
  const saved=await fs.readFile(path.join(dir,'cursors.json'),'utf8');assert.doesNotMatch(saved,new RegExp(secret));assert.equal(JSON.parse(saved)['naturescot-sssi'],5)
  }finally{await fs.rm(dir,{recursive:true,force:true})}
+})
+test('daily reconcileHead reads the head window (offset 0) for every source and never writes a cursor',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'regional-daily-'));const secret='e'.repeat(64)
+ const offsets=[]
+ try{
+  const report=await reconcileHead({endpoint:'https://example.com/api/ingest/external',secret,stateDir:dir,dryRun:false,fetcher:async(_,o)=>{
+   const {source,offset}=JSON.parse(o.body);offsets.push(offset)
+   return Response.json({writesAcknowledged:true,failedWrites:0,totalFetched:1,created:1,duplicates:0,catalogueOnly:0,rejected:0,sources:[{source,status:'ok',rejected:0,nextOffset:5}]})
+  }})
+  assert.equal(report.length,SOURCES.length)
+  // Every source is read at the head window, so the freshest records are covered every run.
+  assert.ok(offsets.every(o=>o===0),'daily track must always read offset 0')
+  assert.equal(offsets.length,SOURCES.length)
+  for(const r of report)assert.equal(r.track,'daily')
+  // The daily track never maintains a backfill cursor - cursors.json must not be created.
+  await assert.rejects(fs.readFile(path.join(dir,'cursors.json'),'utf8'))
+  // It writes only its own report artifact.
+  const daily=JSON.parse(await fs.readFile(path.join(dir,'daily-report.json'),'utf8'))
+  assert.equal(daily.report.length,SOURCES.length)
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+})
+test('daily reconcileHead isolates a failing source without stopping the rest',async()=>{
+ const secret='f'.repeat(64)
+ const report=await reconcileHead({endpoint:'https://example.com/api/ingest/external',secret,dryRun:true,fetcher:async(_,o)=>{
+  const {source}=JSON.parse(o.body);if(source==='sepa')return Response.json({},{status:503})
+  return Response.json({writesAcknowledged:false,failedWrites:0,totalFetched:0,created:0,duplicates:0,catalogueOnly:0,rejected:0,sources:[{source,status:'ok',rejected:0,nextOffset:null}]})
+ }})
+ assert.equal(report.length,SOURCES.length)
+ assert.equal(report[0].source,'sepa');assert.equal(report[0].status,'error')
+ assert.ok(report.slice(1).every(r=>r.status==='ok'))
 })

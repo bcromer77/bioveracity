@@ -32,6 +32,11 @@ export const PLANNING_AUTHORITIES:Record<County,string[]>={
  Wexford:['Wexford County Council'],Wicklow:['Wicklow County Council'],
 }
 export const IRISH_PLANNING='https://services.arcgis.com/NzlPQPKn5QF9v2US/arcgis/rest/services/IrishPlanningApplications/FeatureServer/0'
+// Licence established 2026-09-11: the identical ArcGIS service (org NzlPQPKn5QF9v2US,
+// layer IrishPlanningApplications) is published on data.gov.ie as the national
+// "IrishPlanningApplications" dataset by the Department of Housing, Local Government
+// and Heritage under CC-BY-4.0. Not invented from the ArcGIS metadata (which is empty).
+export const PLANNING_LICENCE='CC-BY-4.0'
 export function countyName(value: unknown): string {return typeof value==='string'?value.toLowerCase().trim().replace(/^(county|co\.)\s+/,'').replace(/\s+county$/,''):''}
 function countyCheck(county: County){if(!COUNTIES.includes(county))throw Error('Unsupported county')}
 export async function fetchNBDCEcologySouthEast(county: County, options: Options = {}): Promise<ConnectorResult>{
@@ -49,7 +54,7 @@ export async function fetchNBDCEcologySouthEast(county: County, options: Options
    if(typeof a.scientificName!=='string'||!a.scientificName.trim())throw Error('Missing taxon')
    const selected=Object.fromEntries(['key','datasetKey','publishingOrgKey','scientificName','taxonKey','basisOfRecord','license','countryCode','year'].map(k=>[k,a[k]??null]));selected.gadmLevel1Gid=gid;selected.county=county
    const year=Number.isInteger(a.year)&&Number(a.year)>0&&Number(a.year)<=9999?parseEvidenceDate(String(a.year).padStart(4,'0')):{value:null,precision:'unknown' as const}
-   const r=record(`https://www.gbif.org/occurrence/${encodeURIComponent(key)}`,`NBDC species record: ${a.scientificName} (${county})`,'National Biodiversity Data Centre via GBIF','ie:nbdc',`gbif:${key}:county-year`,selected,(options.now?.()??new Date()).toISOString());r.jurisdiction='Republic of Ireland';r.event_date=year.value;r.event_date_precision=year.precision;records.push(r)
+   const r=record(`https://www.gbif.org/occurrence/${encodeURIComponent(key)}`,`NBDC species record: ${a.scientificName} (${county})`,'National Biodiversity Data Centre via GBIF','ie:nbdc',`gbif:${key}:county-year`,selected,(options.now?.()??new Date()).toISOString());r.jurisdiction='Republic of Ireland';r.event_date=year.value;r.event_date_precision=year.precision;if(typeof a.license==='string'&&a.license.trim())r.source_licence=a.license;records.push(r)
   }catch(e){let locator:string|null=null;try{locator=id(object(value).key)}catch{}rejections.push({locator,reason:safeReason(e)})}
   // 'partial' flags rejected records for review; the cursor still advances past them (see nextCursor)
   // so a permanently-rejectable record can never stall this county at one offset.
@@ -65,7 +70,12 @@ export async function fetchSouthEastIrishPlanningData(county: County,options: Op
   const authorities=PLANNING_AUTHORITIES[county]
   const where=`PlanningAuthority IN (${authorities.map(a=>`'${a.replace(/'/g,"''")}'`).join(',')})`
   const fields='OBJECTID,PlanningAuthority,ApplicationNumber,ApplicationStatus,ApplicationType'
-  const params=new URLSearchParams({f:'json',where,outFields:fields,returnGeometry:'false',orderByFields:'OBJECTID ASC',resultOffset:String(offset),resultRecordCount:String(limit)})
+  // Newest-first ordering (verified stable live 2026-09-11: no null ReceivedDate, monotonic
+  // descending, non-overlapping pages) so offset 0 is the most recent applications. This is what
+  // makes the scheduler's daily head-window pass a genuine current-updates feed. The bounded
+  // backfill pass walks deeper offsets from the same ordering; because new arrivals shift offsets,
+  // backfill re-reads near the moving head (absorbed by version-hash dedup) rather than skipping.
+  const params=new URLSearchParams({f:'json',where,outFields:fields,returnGeometry:'false',orderByFields:'ReceivedDate DESC, OBJECTID DESC',resultOffset:String(offset),resultRecordCount:String(limit)})
   const data=object(await json(`${IRISH_PLANNING}/query?${params}`,options));if(!Array.isArray(data.features))throw Error('schema')
   const records=[];const rejections:RejectionNote[]=[]
   for(const f of data.features.slice(0,limit))try{
@@ -73,7 +83,7 @@ export async function fetchSouthEastIrishPlanningData(county: County,options: Op
    if(!authorities.includes(String(a.PlanningAuthority)))throw Error('Wrong authority')
    const selected=Object.fromEntries(fields.split(',').map(k=>[k,a[k]??null]))
    const query=new URLSearchParams({f:'json',objectIds:oid,outFields:fields,returnGeometry:'false'})
-   const r=record(`${IRISH_PLANNING}/query?${query}`,`${county} planning application ${ref}`,String(a.PlanningAuthority),`ie:bioveracity:${county.toLowerCase()}-county-council`,`planning:${a.PlanningAuthority}:${ref}`,selected,(options.now?.()??new Date()).toISOString());r.jurisdiction='Republic of Ireland';records.push(r)
+   const r=record(`${IRISH_PLANNING}/query?${query}`,`${county} planning application ${ref}`,String(a.PlanningAuthority),`ie:bioveracity:${county.toLowerCase()}-county-council`,`planning:${a.PlanningAuthority}:${ref}`,selected,(options.now?.()??new Date()).toISOString());r.jurisdiction='Republic of Ireland';r.source_licence=PLANNING_LICENCE;records.push(r)
   }catch(e){let locator:string|null=null;try{locator=id(object(object(f).attributes).OBJECTID)}catch{}rejections.push({locator,reason:safeReason(e)})}
   return {source,coverage,status:rejections.length?'partial':'ok',records,rejected:rejections.length,rejections,nextOffset:data.exceededTransferLimit===true?offset+limit:null}
  }catch(e){return failure(source,coverage,e)}
