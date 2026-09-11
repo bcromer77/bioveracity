@@ -4,6 +4,51 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, MapPin, Loader2 } from 'lucide-react'
 
+const TYPEWRITER_PHRASES = [
+  'River Blackwater water quality',
+  'Poolbeg incinerator emissions',
+  'Derrybrien wind farm planning',
+  'Galway Bay shellfish pollution',
+  'Cork harbour dredging',
+  'Liffey flood defences',
+  'Shannon estuary biodiversity',
+]
+
+function useTypewriter(phrases: string[], speed = 60, pause = 2000) {
+  const [text, setText] = useState('')
+  const idx = useRef(0)
+  const charPos = useRef(0)
+  const deleting = useRef(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    function tick() {
+      const phrase = phrases[idx.current]
+      if (!deleting.current) {
+        charPos.current++
+        setText(phrase.slice(0, charPos.current))
+        if (charPos.current >= phrase.length) {
+          deleting.current = true
+          timer.current = setTimeout(tick, pause)
+          return
+        }
+      } else {
+        charPos.current--
+        setText(phrase.slice(0, charPos.current))
+        if (charPos.current <= 0) {
+          deleting.current = false
+          idx.current = (idx.current + 1) % phrases.length
+        }
+      }
+      timer.current = setTimeout(tick, deleting.current ? speed / 2 : speed)
+    }
+    timer.current = setTimeout(tick, speed)
+    return () => { if (timer.current) clearTimeout(timer.current) }
+  }, [phrases, speed, pause])
+
+  return text
+}
+
 const TYPE_LABELS: Record<string, string> = {
   port: 'Port',
   wastewater: 'Wastewater',
@@ -28,6 +73,8 @@ export function UniversalSearch({
   const [results, setResults] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const typewriterText = useTypewriter(TYPEWRITER_PHRASES)
   const [activeIdx, setActiveIdx] = useState(-1)
   const boxRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<any>(null)
@@ -100,21 +147,34 @@ export function UniversalSearch({
         }`}
       >
         <Search className={`shrink-0 text-muted-foreground ${big ? 'h-5 w-5' : 'h-4 w-4'}`} />
-        <input
-          autoFocus={autoFocus}
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value)
-            setActiveIdx(-1)
-          }}
-          onFocus={() => value.trim().length >= 2 && setOpen(true)}
-          onKeyDown={onKeyDown}
-          placeholder="Search a river, place, facility or issue"
-          aria-label="Search a river, place, facility or environmental issue"
-          className={`flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground ${
-            big ? 'text-[17px] md:text-lg' : 'text-[15px]'
-          }`}
-        />
+        <div className="relative flex-1">
+          <input
+            autoFocus={autoFocus}
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value)
+              setActiveIdx(-1)
+            }}
+            onFocus={() => { setFocused(true); if (value.trim().length >= 2) setOpen(true) }}
+            onBlur={() => setFocused(false)}
+            onKeyDown={onKeyDown}
+            placeholder={focused ? 'Search a river, place, facility or issue' : undefined}
+            aria-label="Search a river, place, facility or environmental issue"
+            className={`w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground ${
+              big ? 'text-[17px] md:text-lg' : 'text-[15px]'
+            }`}
+          />
+          {!focused && !value && (
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute inset-0 flex items-center text-muted-foreground ${
+                big ? 'text-[17px] md:text-lg' : 'text-[15px]'
+              }`}
+            >
+              {typewriterText}<span className="ml-px inline-block h-[1.1em] w-[2px] animate-pulse bg-muted-foreground/60" />
+            </span>
+          )}
+        </div>
         {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         {!showSubmitButton && (
           <button
