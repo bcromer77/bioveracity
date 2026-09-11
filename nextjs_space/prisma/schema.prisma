@@ -790,6 +790,7 @@ model Watch {
 model PrivateWorkspace {
   id String @id
   name String
+  persona String @default("custom")
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   members PrivateWorkspaceMember[]
   cases PrivateCase[]

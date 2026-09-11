@@ -11,7 +11,7 @@ import { geocode, dataFeedsForCounty } from './geocode.mjs'
 import { searchGazetteer } from './ireland-gazetteer.mjs'
 import { expandQuery, rankResults } from './retrieval.mjs'
 import { InvestigationMap, type MapLayers, type MapPoint } from './investigation-map'
-import { pairPlanningNearBats, countImprecise } from './proximity.mjs'
+import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximity.mjs'
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
 
@@ -42,6 +42,12 @@ const card = 'rounded-md border border-border bg-background p-3 text-sm transiti
 const badge = 'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium'
 const message = (error: unknown) => error instanceof Error ? error.message : 'The request could not be completed.'
 
+// Human-readable distance: metres under 1 km, otherwise kilometres to two places.
+function formatMeters(m: number): string { return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(2)} km` }
+
+// The plain-language steps of a case, shown as an at-a-glance journey banner.
+const CASE_STEPS = ['Open case', 'Review the public records returned', 'Add a document or note', 'Review extracted entries', 'Build the chronology', 'Create the evidence report'] as const
+
 // A gold rule to the left of every panel title gives the dense workspace visual rhythm.
 function PanelHeading({ id, children, size = 'text-lg' }: { id?: string; children: ReactNode; size?: string }) {
   return <h2 id={id} className={`flex items-center gap-2 font-display font-semibold ${size}`}><span aria-hidden className="h-5 w-1 shrink-0 rounded-full bg-accent" />{children}</h2>
@@ -62,6 +68,13 @@ function feedTone(status: string): string {
 }
 function feedLabel(status: string): string {
   return status === 'available' ? 'available' : status === 'unverified' ? 'unverified' : 'not wired'
+}
+// Plain-language explanation of what a feed status means for this result, so an
+// unavailable or unverified source is never mistaken for "no relevant record exists".
+function feedStateNote(status: string, note: string): string {
+  if (status === 'unverified') return 'This source has been identified but its queryable data connection has not been verified. No result has been imported.'
+  if (status !== 'available') return 'This source could not be checked. Its coverage is not included in this result.'
+  return note
 }
 // Colour-code the review prompts by urgency without inventing findings.
 function findingAccent(kind: string): string {
@@ -98,11 +111,14 @@ function Failure({ text, signIn = false }: { text: string; signIn?: boolean }) {
   return <div role="alert" className="rounded-md border border-destructive p-3 text-sm"><p>{text}</p>{signIn && <Link className="mt-2 inline-block underline" href="/login?callbackUrl=/workspace">Sign in again</Link>}</div>
 }
 
-export function WorkspaceCanvas({ workspaceId }: { workspaceId: string }) {
+export function WorkspaceCanvas({ workspaceId, initialPersona }: { workspaceId: string; initialPersona?: string | null }) {
   const { data: session, status } = useSession()
   const params = useSearchParams()
-  const persona = getPersona(params.get('persona'))
-  if (status === 'loading') return <p role="status">Checking your session...</p>
+  // The saved workspace type wins. The ?persona= URL param is only a fallback for
+  // records with no reliable stored preset (kept so older shared links still open).
+  const personaKey = initialPersona && initialPersona !== 'custom' ? initialPersona : (params.get('persona') || initialPersona || 'custom')
+  const persona = getPersona(personaKey)
+  if (status === 'loading') return <p role="status">Loading your workspace…</p>
   if (status !== 'authenticated' || !session?.user?.id) return <Failure text="Sign in to open your private workspace." signIn />
   return <CanvasBody key={session.user.id} workspaceId={workspaceId} persona={persona} />
 }
@@ -131,6 +147,7 @@ function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Pe
         <h1 className="font-display text-3xl font-bold tracking-tight">{selectedTitle || persona.title}</h1>
         <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-secondary px-3 py-1 text-xs font-medium">🔒 Private workspace</span>
       </div>
+      <p className="text-sm text-muted-foreground">Workspace type: <span className="font-medium text-foreground">{persona.key === 'custom' ? 'Custom workspace' : persona.title}</span>{selectedTitle ? <> · Current case: <span className="font-medium text-foreground">{selectedTitle}</span></> : ''}</p>
       <div className="rounded-md bg-secondary p-3 text-sm">This is a private evidence workspace — it organises the sources you upload and shows what still needs review. It does not determine compliance, calculate CBAM liability or promise grant eligibility. Everything below is driven by the sources in the case you select; nothing is pre-filled with sample findings.</div>
     </header>
 
@@ -245,6 +262,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   // Export
   const [exportId, setExportId] = useState('')
   const [exportBusy, setExportBusy] = useState(false)
+  // Advanced tools stay collapsed by default so the primary journey reads simply.
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const dragRef = useRef(false)
   const [dragging, setDragging] = useState(false)
@@ -403,7 +422,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   // The header "Generate audit pack" button runs the real export (not just a scroll):
   // it requires an accepted entry, jumps to the audit-pack panel, and produces the PDF.
   async function generateAuditPack() {
-    if (accepted.length === 0) { setError('To generate an audit pack, first accept at least one source-linked entry in Detailed review below. The pack exports only accepted entries.'); reviewRef.current?.scrollIntoView({ behavior: 'smooth' }); return }
+    if (accepted.length === 0) { setError('To generate an audit pack, first accept at least one source-linked entry in Detailed review (under Advanced investigation tools). The pack exports only accepted entries.'); setAdvancedOpen(true); setTimeout(() => reviewRef.current?.scrollIntoView({ behavior: 'smooth' }), 60); return }
     auditRef.current?.scrollIntoView({ behavior: 'smooth' })
     await produceExport()
   }
@@ -428,6 +447,19 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const canCompare = speciesPoints.length > 0 && planningPoints.length > 0
 
   return <div className="space-y-6">
+    {/* Case journey — the six-step sequence, shown prominently at the top of an opened case. */}
+    <section className="rounded-lg border border-border bg-card p-4 shadow-sm" aria-labelledby="journey-heading">
+      <h2 id="journey-heading" className="font-display text-sm font-semibold">Your case in six steps</h2>
+      <ol className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {CASE_STEPS.map((step, i) => (
+          <li key={i} className="flex items-start gap-2 rounded-md border border-border bg-background p-2 text-sm">
+            <span aria-hidden className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-primary bg-secondary text-xs font-semibold">{i + 1}</span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+
     {/* Actions header */}
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -439,22 +471,22 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         <span className={badge + ' bg-secondary text-secondary-foreground'}>{events.length} entr{events.length === 1 ? 'y' : 'ies'}</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" onClick={() => reviewRef.current?.scrollIntoView({ behavior: 'smooth' })}>Detailed review</Button>
+        <Button type="button" variant="outline" onClick={() => { setAdvancedOpen(true); setTimeout(() => reviewRef.current?.scrollIntoView({ behavior: 'smooth' }), 60) }}>Detailed review</Button>
         <Button type="button" disabled={exportBusy} onClick={generateAuditPack}>{exportBusy ? 'Preparing…' : 'Generate audit pack'}</Button>
       </div>
     </div>
 
     {/* Prominent starting action: the flagship public-evidence investigation. It
-        needs no upload — it retrieves REAL bat occurrences and nearby planning
+        needs no upload — it retrieves REAL bat occurrences and planning
         applications around Enniscorthy and plots them on the map. */}
     <section className="rounded-lg border-2 border-accent/60 bg-accent/5 p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-wide text-accent">Start here — no upload needed</p>
           <h2 className="mt-0.5 font-display text-lg font-semibold">🦇 Bats and planning around Enniscorthy</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Retrieve genuine bat occurrence records and nearby planning applications around Enniscorthy, Co. Wexford from public sources, plotted on the map with their source dates and links. These public records stay separate from your private case evidence — they are never accepted or exported.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Retrieve genuine bat occurrence records and planning applications around Enniscorthy, Co. Wexford from public sources, plotted on the map with their source dates and links. These public records stay separate from your private case evidence — they are never accepted or exported.</p>
         </div>
-        <Button type="button" disabled={publicBusy} onClick={() => selectPlace(ENNISCORTHY)}>{publicBusy && place.name === 'Enniscorthy' ? 'Retrieving…' : 'Start investigation'}</Button>
+        <Button type="button" disabled={publicBusy} onClick={() => selectPlace(ENNISCORTHY)}>{publicBusy && place.name === 'Enniscorthy' ? 'Retrieving…' : 'Open case'}</Button>
       </div>
     </section>
 
@@ -462,7 +494,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     {loadError && <Failure text={`Could not refresh evidence: ${loadError}`} />}
     {notice && <p role="status" className="animate-fade-in rounded-md border-l-4 border-l-accent bg-secondary p-3 text-sm">{notice}</p>}
 
-    {/* Search + ingestion bar */}
+    {/* Add evidence: search a place + import sources (PRIMARY) */}
     <section className={panel} aria-label="Find a location and add evidence">
       <div className="grid gap-4 lg:grid-cols-2">
         <form onSubmit={submitPlaceSearch} className="space-y-2">
@@ -551,7 +583,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         </section>
       </div>
 
-      {/* Center: map + citation + feeds */}
+      {/* Center: map + public records + proximity */}
       <div className="space-y-4">
         <section className={panel} aria-labelledby="map-heading">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -593,11 +625,11 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             evidence. Each card cross-highlights its map marker; the whole card
             toggles selection, and the source link opens the provider record. */}
         <section className={panel} aria-labelledby="public-heading">
-          <PanelHeading id="public-heading">Public records near {place.name}</PanelHeading>
-          <p className="mt-1 text-xs text-muted-foreground">Retrieved live from public sources — bat occurrences from GBIF and planning applications from the national planning layer. Shown for context only: they are never added to your private evidence, accepted, or included in an audit pack. Select a card to highlight it on the map.</p>
-          {publicBusy && <p className="mt-3 text-sm text-muted-foreground" role="status">Retrieving public records…</p>}
+          <PanelHeading id="public-heading">Public records returned for the wider search area</PanelHeading>
+          <p className="mt-1 text-xs text-muted-foreground">Retrieved live from public sources — bat occurrences from GBIF and planning applications from the national planning layer — for the wider search area around {place.name}. They may include records some distance away, including in an adjoining county. Shown for context only: they are never added to your private evidence, accepted, or included in an audit pack. Select a card to highlight it on the map.</p>
+          {publicBusy && <p className="mt-3 text-sm text-muted-foreground" role="status">Retrieving public records and preserving their source details…</p>}
           {publicError && <p className="mt-3 rounded-md border border-destructive p-3 text-sm" role="alert">{publicError}</p>}
-          {!publicBusy && !publicError && speciesResult == null && planningResult == null && <p className="mt-3 rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">Run the Enniscorthy investigation above, or search any town, to retrieve bat records and nearby planning applications.</p>}
+          {!publicBusy && !publicError && speciesResult == null && planningResult == null && <p className="mt-3 rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">Open the Enniscorthy case above, or search any town, to retrieve bat records and planning records for the wider search area.</p>}
 
           {(speciesResult || planningResult) && <>
             <div className="mt-4">
@@ -607,7 +639,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
               </div>
               {speciesResult == null ? <p className="mt-2 text-xs text-muted-foreground">Not retrieved.</p>
                 : speciesResult.status === 'error' ? <p className="mt-2 text-xs text-destructive">{speciesResult.error}</p>
-                : speciesResult.status === 'empty' ? <p className="mt-2 text-xs text-muted-foreground">No bat records were returned for this area.</p>
+                : speciesResult.status === 'empty' ? <p className="mt-2 text-xs text-muted-foreground">No matching records were returned from the connected sources. This does not establish that no relevant record exists.</p>
                 : <ul className="mt-2 space-y-2">{speciesPoints.slice(0, 12).map(r => (
                     <li key={r.id}>
                       <button type="button" aria-pressed={selectedRecordId === r.id} onClick={() => setSelectedRecordId(prev => prev === r.id ? null : r.id)} className={`w-full rounded-md border p-2 text-left text-xs transition-colors ${selectedRecordId === r.id ? 'border-primary bg-secondary' : 'border-border hover:border-primary/40'}`}>
@@ -621,20 +653,33 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <div className="mt-4">
               <div className="flex items-center gap-2">
                 <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: '#b7791f' }} />
-                <h3 className="text-sm font-semibold">Planning applications{planningResult?.status === 'ok' ? ` (${planningPoints.length})` : ''}</h3>
+                <h3 className="text-sm font-semibold">Planning records returned for the wider search area{planningResult?.status === 'ok' ? ` (${planningPoints.length})` : ''}</h3>
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">These records were returned for the wider search area and may include applications some distance away — for example in an adjoining county. The distance from the selected centre is shown for each; a record is never described as nearby without a calculated distance.</p>
               {planningResult == null ? <p className="mt-2 text-xs text-muted-foreground">Not retrieved.</p>
                 : planningResult.status === 'error' ? <p className="mt-2 text-xs text-destructive">{planningResult.error}</p>
-                : planningResult.status === 'empty' ? <p className="mt-2 text-xs text-muted-foreground">No planning applications were returned for this area.</p>
-                : <ul className="mt-2 space-y-2">{planningPoints.slice(0, 12).map(r => (
+                : planningResult.status === 'empty' ? <p className="mt-2 text-xs text-muted-foreground">No matching records were returned from the connected sources. This does not establish that no relevant record exists.</p>
+                : <ul className="mt-2 space-y-2">{planningPoints.slice(0, 12).map(r => {
+                    const distance = Number.isFinite(r.lat) && Number.isFinite(r.lng) ? Math.round(haversineMeters({ lat: place.lat, lng: place.lng }, { lat: r.lat, lng: r.lng })) : null
+                    const inside = distance !== null && distance <= PROXIMITY_METERS
+                    const appNumber = r.id.startsWith('planning:') ? r.id.slice('planning:'.length) : r.title
+                    return (
                     <li key={r.id}>
                       <button type="button" aria-pressed={selectedRecordId === r.id} onClick={() => setSelectedRecordId(prev => prev === r.id ? null : r.id)} className={`w-full rounded-md border p-2 text-left text-xs transition-colors ${selectedRecordId === r.id ? 'border-primary bg-secondary' : 'border-border hover:border-primary/40'}`}>
                         <span className="block font-medium break-words">{r.title}</span>
-                        <span className="mt-0.5 block text-muted-foreground">{r.subtitle}{r.status ? ` · ${r.status}` : ''} · {r.eventDate ?? 'date unknown'}</span>
-                        {r.detail && <span className="mt-0.5 block break-words text-muted-foreground">{r.detail}</span>}
+                        <dl className="mt-1 space-y-0.5 text-muted-foreground">
+                          <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Planning authority:</dt><dd className="break-words">{r.subtitle || 'Not stated'}</dd></div>
+                          <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Application number:</dt><dd className="break-words">{appNumber}</dd></div>
+                          <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Received date:</dt><dd>{r.eventDate ?? 'Not stated'}</dd></div>
+                          {r.status && <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Status:</dt><dd className="break-words">{r.status}</dd></div>}
+                          {r.detail && <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Development:</dt><dd className="break-words">{r.detail}</dd></div>}
+                          <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Distance from centre:</dt><dd>{distance !== null ? formatMeters(distance) : 'Distance not calculated'}</dd></div>
+                          <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Comparison distance:</dt><dd>{distance === null ? 'Not calculated' : inside ? `Inside the ${(PROXIMITY_METERS / 1000).toFixed(1)} km comparison distance` : `Outside the ${(PROXIMITY_METERS / 1000).toFixed(1)} km comparison distance`}</dd></div>
+                        </dl>
                         <a href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">View source record</a>
                       </button>
-                    </li>))}</ul>}
+                    </li>)
+                  })}</ul>}
             </div>
           </>}
         </section>
@@ -645,8 +690,9 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         <section className={panel} aria-labelledby="proximity-heading">
           <PanelHeading id="proximity-heading" size="text-base">Which planning applications are near recorded bat observations?</PanelHeading>
           <p className="mt-1 text-xs text-muted-foreground">Compares the retrieved public records geographically, within {(PROXIMITY_METERS / 1000).toFixed(1)} km. Proximity is something to review — not evidence of ecological conflict — and this does not use your private case evidence.</p>
+          <p className="mt-1 text-xs text-muted-foreground">The comparison below tests calculated proximity. The wider record list above is contextual and may include records outside the comparison distance.</p>
           <Button type="button" className="mt-3" disabled={!canCompare} onClick={() => setCompared(true)}>Compare proximity</Button>
-          {!canCompare && <p className="mt-2 text-xs text-muted-foreground">Retrieve both bat records and planning applications (run the investigation or search a town) to enable this comparison.</p>}
+          {!canCompare && <p className="mt-2 text-xs text-muted-foreground">Retrieve both bat records and planning applications (open the case or search a town) to enable this comparison.</p>}
           {compared && canCompare && <div className="mt-3 space-y-2">
             {proximityPairs.length === 0
               ? <p className="text-sm text-muted-foreground">No planning application is within {(PROXIMITY_METERS / 1000).toFixed(1)} km of a precisely-located bat observation.</p>
@@ -654,7 +700,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
                   <p className="text-xs text-muted-foreground">{proximityPairs.length} pair{proximityPairs.length === 1 ? '' : 's'} within {(PROXIMITY_METERS / 1000).toFixed(1)} km, nearest first. Distance is measured only to bat observations with a precise location.</p>
                   {proximityPairs.slice(0, 10).map(pair => (
                     <article key={`${pair.planningId}|${pair.batId}`} className="rounded-md border border-border bg-background p-3 text-sm">
-                      <p className="font-medium">≈ {pair.distanceMeters < 1000 ? `${pair.distanceMeters} m` : `${(pair.distanceMeters / 1000).toFixed(2)} km`} apart — to review</p>
+                      <p className="font-medium">≈ {formatMeters(pair.distanceMeters)} apart — to review</p>
                       <p className="mt-1 text-xs"><span className="font-medium">{pair.planning.title}</span>{pair.planning.status ? ` · ${pair.planning.status}` : ''} · {pair.planning.date ?? 'date unknown'} · <a className="underline" href={pair.planning.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
                       <p className="mt-1 text-xs"><span className="font-medium">{pair.bat.title}</span> · {pair.bat.date ?? 'date unknown'} · <a className="underline" href={pair.bat.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
                     </article>))}
@@ -663,27 +709,12 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <p className="text-xs text-muted-foreground">Proximity is something to review, not evidence of ecological conflict.</p>
           </div>}
         </section>
-
-        <section className={panel} aria-labelledby="feeds-heading">
-          <PanelHeading id="feeds-heading">Local data feeds{feeds.county ? ` — Co. ${feeds.county}` : ''}</PanelHeading>
-          <ul className="mt-3 space-y-2">
-            {feeds.feeds.map(feed => (
-              <li key={feed.id} className={card}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{feed.label} <span className="text-muted-foreground">· {feed.agency}</span></span>
-                  <span className={badge + ' ' + feedTone(feed.status)}>{feedLabel(feed.status)}</span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{feed.note}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
       </div>
 
-      {/* Right: findings + question + prompts */}
+      {/* Right: evidence requiring review (PRIMARY) */}
       <div className="space-y-4">
         <section className={panel} aria-labelledby="findings-heading">
-          <PanelHeading id="findings-heading">Things to review</PanelHeading>
+          <PanelHeading id="findings-heading">Evidence requiring review</PanelHeading>
           <p className="mt-1 text-xs text-muted-foreground">Derived from the sources in this case — never sample analysis.</p>
           <div className="mt-3 space-y-3">
             {findings.map((item, i) => (
@@ -695,63 +726,14 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             ))}
           </div>
         </section>
-        <section className={panel} aria-labelledby="ask-heading">
-          <PanelHeading id="ask-heading">Ask your evidence</PanelHeading>
-          <p className="mt-1 text-xs text-muted-foreground">Keyword + term-expansion retrieval across this case’s source passages — it expands wording (e.g. bats → Pipistrelle, flooding → inundation) to find relevant passages. Not a semantic or AI answer; nothing is sent to an external service.</p>
-          <form className="mt-3 space-y-2" onSubmit={submitQuestion}>
-            <input className={field} style={{ marginTop: 0 }} value={question} maxLength={160} onChange={e => setQuestion(e.target.value)} placeholder="Find a phrase, permit number or name" />
-            <Button type="submit" disabled={asking}>{asking ? 'Searching...' : 'Search evidence'}</Button>
-          </form>
-          {questionHits !== null && <div className="mt-3 space-y-2">
-            {questionHits.ranked.length === 0 ? <div className="text-sm text-muted-foreground"><p>No source passage matches. Missing coverage for this question.</p>{questionHits.unmatchedConcepts.length > 0 && <p className="mt-1">No coverage for: {questionHits.unmatchedConcepts.join(', ')}.</p>}</div>
-              : <>
-                  <p className="text-xs text-muted-foreground">Term-expansion retrieval — {questionHits.ranked.length} passage{questionHits.ranked.length === 1 ? '' : 's'}, ranked by how many query terms each matched.{questionHits.unmatchedConcepts.length > 0 && ` No coverage for: ${questionHits.unmatchedConcepts.join(', ')}.`}</p>
-                  {questionHits.ranked.slice(0, 6).map(h => <article key={h.id} className="rounded-md border border-border bg-background p-3 text-sm"><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs">“{h.text}”</p>{h.matchedTerms.length > 0 && <p className="mt-1 text-xs text-muted-foreground">matched: {h.matchedTerms.slice(0, 4).join(', ')}</p>}</article>)}
-                </>}
-          </div>}
-        </section>
-        <section className={panel} aria-labelledby="prompts-heading">
-          <PanelHeading id="prompts-heading">Suggested prompts</PanelHeading>
-          <ul className="mt-3 space-y-2">
-            {persona.prompts.map((prompt, index) => (
-              <li key={index}><button type="button" onClick={() => { setQuestion(prompt) }} className="w-full rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-secondary">{prompt}</button></li>
-            ))}
-          </ul>
-        </section>
       </div>
     </div>
 
-    {/* Cross-check: internal contradictions vs external records */}
-    <section className={panel} aria-labelledby="crosscheck-heading">
-      <PanelHeading id="crosscheck-heading">Cross-check a claim</PanelHeading>
-      <p className="mt-1 text-xs text-muted-foreground">Enter a claim, figure or date to see every source that mentions it. This distinguishes contradictions <em>between your own uploaded documents</em> from conflicts with <em>external agency records</em>. It surfaces the passages for you to judge — it does not decide which is correct.</p>
-      <form className="mt-3 flex flex-wrap gap-2" onSubmit={submitClaim}>
-        <input className={field} style={{ marginTop: 0, maxWidth: 420 }} value={claim} maxLength={160} onChange={e => setClaim(e.target.value)} placeholder="e.g. a date, permit number or measurement" />
-        <Button type="submit" disabled={checking}>{checking ? 'Checking...' : 'Cross-check'}</Button>
-      </form>
-      {claimHits !== null && <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-semibold">Internal — your own sources</h3>
-          {claimHits.ranked.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No uploaded source mentions this. Missing coverage.</p>
-            : claimDocs.length < 2 ? <div className="mt-2 space-y-2"><p className="text-sm text-muted-foreground">Only one of your sources mentions this — no internal corroboration (missing coverage).</p>{claimHits.ranked.slice(0, 3).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>
-            : <div className="mt-2 space-y-2"><p className="text-sm">{claimDocs.length} of your sources mention this — compare the supporting passages below for agreement or contradiction.</p>{claimHits.ranked.slice(0, 6).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>}
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold">External — agency records</h3>
-          <p className="mt-2 text-sm text-muted-foreground">Automated conflict detection against external records is not available. Cross-check these manually against the wired feeds below.</p>
-          <ul className="mt-2 space-y-2">
-            {feeds.feeds.map(f => <li key={f.id} className={card}><div className="flex items-center justify-between gap-2"><span className="font-medium">{f.label} · <span className="text-muted-foreground">{f.agency}</span></span><span className={badge + ' ' + feedTone(f.status)}>{feedLabel(f.status)}</span></div></li>)}
-          </ul>
-          {externalWired.length === 0 && <p className="mt-2 text-xs text-muted-foreground">No external feed is wired or verified for {feeds.county ? `Co. ${feeds.county}` : 'this location'} — conflicts with external records cannot be auto-detected here. Missing external coverage.</p>}
-        </div>
-      </div>}
-    </section>
-
-    {/* Timeline */}
+    {/* Timeline (PRIMARY: Chronology) */}
     <section className={panel} aria-labelledby="timeline-heading">
-      <PanelHeading id="timeline-heading">Chronological timeline ({timeline.length})</PanelHeading>
+      <PanelHeading id="timeline-heading">Chronology ({timeline.length})</PanelHeading>
       <p className="mt-1 text-xs text-muted-foreground">Ordered by stated event date; unknown dates appear last. Built only from your reviewed and draft entries.</p>
-      {timeline.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No entries yet. Import a source to populate the timeline.</p> : <ol className="mt-4 space-y-3">
+      {timeline.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No entries yet. Import a source to populate the chronology.</p> : <ol className="mt-4 space-y-3">
         {timeline.slice(0, 30).map((event, index) => (
           <li key={`${event.id}/${event.revision}`} className="flex items-start gap-3">
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-primary bg-secondary text-xs font-semibold">{index + 1}</span>
@@ -769,7 +751,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
       </ol>}
     </section>
 
-    {/* Audit pack */}
+    {/* Create report (PRIMARY: audit pack) */}
     <section ref={auditRef} className={panel} aria-labelledby="audit-heading">
       <PanelHeading id="audit-heading">{reportTitle}</PanelHeading>
       <p className="mt-1 text-sm text-muted-foreground">Exports every accepted entry with its source-linked quote, including unknown dates and labelled superseded sources. Draft and rejected entries and originals are excluded. This is not a redaction tool — review personal information before sharing.</p>
@@ -777,18 +759,95 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         <Button type="button" variant="outline" disabled={exportBusy} onClick={enableExport}>Case owner: enable my exports</Button>
         <Button type="button" disabled={exportBusy || accepted.length === 0} onClick={produceExport}>{exportBusy ? 'Preparing…' : 'Create reviewed PDF'}</Button>
       </div>
-      {accepted.length === 0 && <p className="mt-2 text-xs text-muted-foreground">Accept at least one source-linked entry (in Detailed review below) before exporting.</p>}
+      {accepted.length === 0 && <p className="mt-2 text-xs text-muted-foreground">Accept at least one source-linked entry (in Detailed review, under Advanced investigation tools) before exporting.</p>}
       {exportId && <div className="mt-3 flex flex-wrap gap-2">
         <Button type="button" variant="outline" onClick={() => download(`${endpoint}?action=export&id=${encodeURIComponent(exportId)}`, 'audit-pack.pdf')}>Download PDF</Button>
         <Button type="button" variant="outline" onClick={() => download(`${endpoint}?action=export&id=${encodeURIComponent(exportId)}&format=json`, 'source-manifest.json')}>Download source manifest</Button>
       </div>}
     </section>
 
-    {/* Detailed review & amendments (full backend workflow) */}
-    <div ref={reviewRef} className="space-y-3">
-      <div className="rounded-md bg-secondary p-3 text-sm">Detailed review &amp; amendments — accept or reject each extracted entry against its exact source passage, record amendments, and inspect revision history. Changes here update the overview above.</div>
-      <CaseSummary key={caseId} workspaceId={workspaceId} caseId={caseId} onSelectCase={onSelectCase} reportTitle={reportTitle} externalRevision={revision} onChanged={bump} />
-    </div>
+    {/* Advanced investigation tools — collapsed. All existing capabilities remain
+        available; nothing is removed, only tucked away to simplify the primary journey. */}
+    <details open={advancedOpen} onToggle={e => setAdvancedOpen((e.currentTarget as HTMLDetailsElement).open)} className={panel}>
+      <summary className="flex cursor-pointer items-center gap-2 font-display text-lg font-semibold"><span aria-hidden className="h-5 w-1 shrink-0 rounded-full bg-accent" />Advanced investigation tools</summary>
+      <p className="mt-2 text-xs text-muted-foreground">All capabilities remain available here: ask your evidence, suggested prompts, cross-check a claim, feed diagnostics, and detailed review and amendments.</p>
+      <div className="mt-4 space-y-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <section className={panel} aria-labelledby="ask-heading">
+            <PanelHeading id="ask-heading">Ask your evidence</PanelHeading>
+            <p className="mt-1 text-xs text-muted-foreground">Keyword + term-expansion retrieval across this case’s source passages — it expands wording (e.g. bats → Pipistrelle, flooding → inundation) to find relevant passages. Not a semantic or AI answer; nothing is sent to an external service.</p>
+            <form className="mt-3 space-y-2" onSubmit={submitQuestion}>
+              <input className={field} style={{ marginTop: 0 }} value={question} maxLength={160} onChange={e => setQuestion(e.target.value)} placeholder="Find a phrase, permit number or name" />
+              <Button type="submit" disabled={asking}>{asking ? 'Searching...' : 'Search evidence'}</Button>
+            </form>
+            {questionHits !== null && <div className="mt-3 space-y-2">
+              {questionHits.ranked.length === 0 ? <div className="text-sm text-muted-foreground"><p>No source passage matches. Missing coverage for this question.</p>{questionHits.unmatchedConcepts.length > 0 && <p className="mt-1">No coverage for: {questionHits.unmatchedConcepts.join(', ')}.</p>}</div>
+                : <>
+                    <p className="text-xs text-muted-foreground">Term-expansion retrieval — {questionHits.ranked.length} passage{questionHits.ranked.length === 1 ? '' : 's'}, ranked by how many query terms each matched.{questionHits.unmatchedConcepts.length > 0 && ` No coverage for: ${questionHits.unmatchedConcepts.join(', ')}.`}</p>
+                    {questionHits.ranked.slice(0, 6).map(h => <article key={h.id} className="rounded-md border border-border bg-background p-3 text-sm"><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs">“{h.text}”</p>{h.matchedTerms.length > 0 && <p className="mt-1 text-xs text-muted-foreground">matched: {h.matchedTerms.slice(0, 4).join(', ')}</p>}</article>)}
+                  </>}
+            </div>}
+          </section>
+          <section className={panel} aria-labelledby="prompts-heading">
+            <PanelHeading id="prompts-heading">Suggested prompts</PanelHeading>
+            <ul className="mt-3 space-y-2">
+              {persona.prompts.map((prompt, index) => (
+                <li key={index}><button type="button" onClick={() => { setQuestion(prompt) }} className="w-full rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-secondary">{prompt}</button></li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        {/* Cross-check: internal contradictions vs external records */}
+        <section className={panel} aria-labelledby="crosscheck-heading">
+          <PanelHeading id="crosscheck-heading">Cross-check a claim</PanelHeading>
+          <p className="mt-1 text-xs text-muted-foreground">Enter a claim, figure or date to see every source that mentions it. This distinguishes contradictions <em>between your own uploaded documents</em> from conflicts with <em>external agency records</em>. It surfaces the passages for you to judge — it does not decide which is correct.</p>
+          <form className="mt-3 flex flex-wrap gap-2" onSubmit={submitClaim}>
+            <input className={field} style={{ marginTop: 0, maxWidth: 420 }} value={claim} maxLength={160} onChange={e => setClaim(e.target.value)} placeholder="e.g. a date, permit number or measurement" />
+            <Button type="submit" disabled={checking}>{checking ? 'Checking...' : 'Cross-check'}</Button>
+          </form>
+          {claimHits !== null && <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-semibold">Internal — your own sources</h3>
+              {claimHits.ranked.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No uploaded source mentions this. Missing coverage.</p>
+                : claimDocs.length < 2 ? <div className="mt-2 space-y-2"><p className="text-sm text-muted-foreground">Only one of your sources mentions this — no internal corroboration (missing coverage).</p>{claimHits.ranked.slice(0, 3).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>
+                : <div className="mt-2 space-y-2"><p className="text-sm">{claimDocs.length} of your sources mention this — compare the supporting passages below for agreement or contradiction.</p>{claimHits.ranked.slice(0, 6).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">External — agency records</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Automated conflict detection against external records is not available. Cross-check these manually against the wired feeds below.</p>
+              <ul className="mt-2 space-y-2">
+                {feeds.feeds.map(f => <li key={f.id} className={card}><div className="flex items-center justify-between gap-2"><span className="font-medium">{f.label} · <span className="text-muted-foreground">{f.agency}</span></span><span className={badge + ' ' + feedTone(f.status)}>{feedLabel(f.status)}</span></div></li>)}
+              </ul>
+              {externalWired.length === 0 && <p className="mt-2 text-xs text-muted-foreground">No external feed is wired or verified for {feeds.county ? `Co. ${feeds.county}` : 'this location'} — conflicts with external records cannot be auto-detected here. Missing external coverage.</p>}
+            </div>
+          </div>}
+        </section>
+
+        {/* Feed diagnostics */}
+        <section className={panel} aria-labelledby="feeds-heading">
+          <PanelHeading id="feeds-heading">Feed diagnostics{feeds.county ? ` — Co. ${feeds.county}` : ''}</PanelHeading>
+          <p className="mt-1 text-xs text-muted-foreground">Which local data sources are wired and verified for this location. A source shown as unverified or not wired has not returned data and nothing has been imported from it.</p>
+          <ul className="mt-3 space-y-2">
+            {feeds.feeds.map(feed => (
+              <li key={feed.id} className={card}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{feed.label} <span className="text-muted-foreground">· {feed.agency}</span></span>
+                  <span className={badge + ' ' + feedTone(feed.status)}>{feedLabel(feed.status)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{feedStateNote(feed.status, feed.note)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Detailed review & amendments (full backend workflow) */}
+        <div ref={reviewRef} className="space-y-3">
+          <div className="rounded-md bg-secondary p-3 text-sm">Detailed review &amp; amendments — accept or reject each extracted entry against its exact source passage, record amendments, and inspect revision history. Changes here update the overview above.</div>
+          <CaseSummary key={caseId} workspaceId={workspaceId} caseId={caseId} onSelectCase={onSelectCase} reportTitle={reportTitle} externalRevision={revision} onChanged={bump} />
+        </div>
+      </div>
+    </details>
   </div>
 }
 

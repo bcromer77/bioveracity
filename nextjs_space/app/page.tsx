@@ -1,24 +1,23 @@
-import { prisma } from '@/lib/prisma'
+import { auth } from '@/auth'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
-import { SearchHero } from '@/components/home/search-hero'
-import { RecentlyChanged } from '@/components/home/recently-changed'
+import { LandingHero } from '@/components/home/landing-hero'
+import { LandingSections } from '@/components/home/landing-sections'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const recentEvents = await prisma.event.findMany({
-    take: 8,
-    orderBy: { date: 'desc' },
-    include: { asset: { select: { name: true, slug: true, type: true } } },
-  })
+  const session = await auth()
+  // Signed-in visitors go straight to their workspace; signed-out visitors are
+  // sent to sign-in / account creation.
+  const openHref = session?.user?.id ? '/workspace' : '/login?callbackUrl=/workspace'
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="flex-1">
-        <SearchHero />
-        <RecentlyChanged events={recentEvents ?? []} />
+        <LandingHero openHref={openHref} />
+        <LandingSections openHref={openHref} />
       </main>
       <SiteFooter />
     </div>

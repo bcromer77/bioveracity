@@ -7,7 +7,10 @@ import { ChevronDown, LogOut } from 'lucide-react'
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { data: session } = useSession() || {}
+  const { data: session, status } = useSession() || {}
+  // While the session is still resolving, show a neutral header instead of
+  // flashing a signed-out “Sign in” control on an authenticated page.
+  const resolving = status === 'loading'
 
   return (
     <header className="w-full border-b border-border bg-white">
@@ -19,7 +22,9 @@ export function SiteHeader() {
           <span className="font-display text-[17px] font-bold text-foreground">BioVeracity</span>
         </Link>
 
-        {session?.user ? (
+        {resolving ? (
+          <span className="h-9 w-24 rounded-md bg-secondary/60" aria-hidden />
+        ) : session?.user ? (
           <div className="relative">
             <button
               onClick={() => setMenuOpen((o) => !o)}

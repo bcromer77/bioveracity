@@ -47,7 +47,7 @@ test('HTTP journey: guards, scanner failure, import, source review and actual PD
  const pg=new PGlite()
  try{
   await pg.exec('CREATE TABLE "User" (id TEXT PRIMARY KEY); INSERT INTO "User" VALUES (\'owner\'),(\'outsider\');')
-  for(const m of ['20260909_private_workspace_foundation','20260909_private_case_files'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${m}/migration.sql`,import.meta.url),'utf8'))
+  for(const m of ['20260909_private_workspace_foundation','20260909_private_case_files','20260911_workspace_persona'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${m}/migration.sql`,import.meta.url),'utf8'))
   const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(text:string,values:unknown[])=>(await client.query<T>(text,values)).rows});const db:Database={...sql(pg),transaction:f=>pg.transaction(tx=>f(sql(tx)))}
   const s=workspaceService(db,'owner'),w=await s.createWorkspace({name:'HTTP fixture'}),c=await s.createCase(w.id,{title:'HTTP case'})
   let actor:string|null='owner',scans=0,scannerPass=true,scannerUnavailable=false
@@ -77,7 +77,7 @@ test('complete isolated case: import, review, prior-case search, amended source,
  const pg=new PGlite()
  try{
   await pg.exec('CREATE TABLE "User" (id TEXT PRIMARY KEY); INSERT INTO "User" VALUES (\'alice\'),(\'bob\'),(\'reader\');')
-  for(const path of ['20260909_private_workspace_foundation','20260909_private_case_files'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${path}/migration.sql`,import.meta.url),'utf8'))
+  for(const path of ['20260909_private_workspace_foundation','20260909_private_case_files','20260911_workspace_persona'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${path}/migration.sql`,import.meta.url),'utf8'))
   const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(text:string,values:unknown[])=>(await client.query<T>(text,values)).rows})
   const db:Database={...sql(pg),transaction:f=>pg.transaction(tx=>f(sql(tx)))}
   const a=workspaceService(db,'alice'),b=workspaceService(db,'bob'),wa=await a.createWorkspace({name:'Council'}),wb=await b.createWorkspace({name:'Broker'})

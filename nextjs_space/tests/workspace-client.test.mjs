@@ -99,11 +99,13 @@ test('investigation repairs: URL-persisted case, stale-response guards, real aud
   assert.match(ui, /async function generateAuditPack/);
   assert.match(ui, /onClick=\{generateAuditPack\}/);
   assert.match(ui, /generateAuditPack[\s\S]*?produceExport\(\)/);
-  // A4 — map draws a real metre buffer; species/water are honestly not plotted; no fake "boundary" layer.
+  // A4 — map draws a real metre buffer; public records are plotted honestly (only after a source returns
+  // them, generalised locations as an uncertainty area); no fake surveyed "boundary" layer.
   assert.match(ui, /buffer: true/);
   assert.match(ui, /bufferMeters=\{BUFFER_METERS\}/);
   assert.match(ui, /Search buffer/);
-  assert.match(ui, /not plotted/);
+  assert.match(ui, /plotted only after each public source returns records/);
+  assert.match(ui, /stated uncertainty area, not a precise pin/);
   assert.doesNotMatch(ui, /boundary: true|'boundary'|Site boundary/);
   // A5 — term-expansion retrieval reuses the existing permissioned search endpoint.
   assert.match(ui, /expandQuery, rankResults/);

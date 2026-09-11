@@ -25,6 +25,7 @@ test('isolated PostgreSQL: scope, revocation, composite FKs, audit and rollback'
   try {
     await pg.exec('CREATE TABLE "User" (id TEXT PRIMARY KEY); INSERT INTO "User" VALUES (\'alice\'),(\'bob\'),(\'viewer\');')
     await pg.exec(readFileSync(new URL('../prisma/migrations/20260909_private_workspace_foundation/migration.sql', import.meta.url), 'utf8'))
+    await pg.exec(readFileSync(new URL('../prisma/migrations/20260911_workspace_persona/migration.sql', import.meta.url), 'utf8'))
     const sql = (client: Pick<PGlite, 'query'>): Sql => ({ query: async <T>(text: string, values: unknown[]) => (await client.query<T>(text, values)).rows })
     const db: Database = { ...sql(pg), transaction: operation => pg.transaction(tx => operation(sql(tx))) }
     const alice = workspaceService(db, 'alice'), bob = workspaceService(db, 'bob')

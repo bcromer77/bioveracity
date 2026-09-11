@@ -49,8 +49,17 @@ export function caseInput(value: unknown) {
   })
   return { title, template: template as Template, sites }
 }
-export function workspaceInput(value: unknown) { return { name: text(object(value).name, 120) } }
-export type Workspace = { id: string; name: string; createdAt: Date }
+// Recognised workspace presets. Anything else is stored/displayed as "custom".
+export const PERSONA_KEYS = ['custom', 'ecology', 'planning', 'architecture', 'maritime'] as const
+export function normalisePersona(value: unknown): string {
+  return (PERSONA_KEYS as readonly string[]).includes(String(value)) ? String(value) : 'custom'
+}
+export function workspaceInput(value: unknown) {
+  const input = object(value)
+  return { name: text(input.name, 120), persona: normalisePersona(input.persona ?? 'custom') }
+}
+export type Workspace = { id: string; name: string; persona: string; createdAt: Date }
+export type WorkspaceSummary = Workspace & { caseCount: number; lastUpdated: Date; recentCaseTitle: string | null }
 export type Case = { id: string; workspaceId: string; title: string; template: Template; createdAt: Date }
 export type Site = { id: string; name: string; latitude: number | null; longitude: number | null }
 
@@ -74,16 +83,41 @@ export function workspaceService(db: Database, userId: string) {
   }
   return {
     async listWorkspaces() {
-      return db.query<Workspace>('SELECT w.id,w.name,w."createdAt" FROM "PrivateWorkspace" w JOIN "PrivateWorkspaceMember" m ON m."workspaceId"=w.id WHERE m."userId"=$1 AND m."revokedAt" IS NULL AND m.role IN (\'OWNER\',\'CONTRIBUTOR\',\'REVIEWER\',\'VIEWER\') ORDER BY w."createdAt" DESC LIMIT 100', [userId])
+      // Each row carries the persona plus counts and the most recent case the caller
+      // can access, so repeated workspaces are distinguishable in the list.
+      return db.query<WorkspaceSummary>(
+        'SELECT w.id,w.name,w.persona,w."createdAt",' +
+        ' (SELECT COUNT(*)::int FROM "PrivateCase" c JOIN "PrivateCaseMember" cm ON cm."workspaceId"=c."workspaceId" AND cm."caseId"=c.id WHERE c."workspaceId"=w.id AND cm."userId"=$1 AND cm."revokedAt" IS NULL) AS "caseCount",' +
+        ' GREATEST(w."createdAt", COALESCE((SELECT MAX(c."createdAt") FROM "PrivateCase" c JOIN "PrivateCaseMember" cm ON cm."workspaceId"=c."workspaceId" AND cm."caseId"=c.id WHERE c."workspaceId"=w.id AND cm."userId"=$1 AND cm."revokedAt" IS NULL), w."createdAt")) AS "lastUpdated",' +
+        ' (SELECT c.title FROM "PrivateCase" c JOIN "PrivateCaseMember" cm ON cm."workspaceId"=c."workspaceId" AND cm."caseId"=c.id WHERE c."workspaceId"=w.id AND cm."userId"=$1 AND cm."revokedAt" IS NULL ORDER BY c."createdAt" DESC LIMIT 1) AS "recentCaseTitle"' +
+        ' FROM "PrivateWorkspace" w JOIN "PrivateWorkspaceMember" m ON m."workspaceId"=w.id WHERE m."userId"=$1 AND m."revokedAt" IS NULL AND m.role IN (\'OWNER\',\'CONTRIBUTOR\',\'REVIEWER\',\'VIEWER\') ORDER BY "lastUpdated" DESC LIMIT 100', [userId])
+    },
+    async getWorkspace(workspaceId: string) {
+      return db.transaction(async tx => {
+        await workspaceAccess(tx, workspaceId)
+        const [result] = await tx.query<Workspace>('SELECT id,name,persona,"createdAt" FROM "PrivateWorkspace" WHERE id=$1', [workspaceId])
+        if (!result) throw missing()
+        return result
+      })
     },
     async createWorkspace(value: unknown) {
-      const { name } = workspaceInput(value)
+      const { name, persona } = workspaceInput(value)
       return db.transaction(async tx => {
         const id = randomUUID()
-        const [workspace] = await tx.query<Workspace>('INSERT INTO "PrivateWorkspace" (id,name) VALUES ($1,$2) RETURNING id,name,"createdAt"', [id, name])
+        const [workspace] = await tx.query<Workspace>('INSERT INTO "PrivateWorkspace" (id,name,persona) VALUES ($1,$2,$3) RETURNING id,name,persona,"createdAt"', [id, name, persona])
         await tx.query('INSERT INTO "PrivateWorkspaceMember" ("workspaceId","userId",role) VALUES ($1,$2,$3)', [id, userId, 'OWNER'])
         await audit(tx, id, null, 'WORKSPACE_CREATED')
         return workspace
+      })
+    },
+    async renameWorkspace(workspaceId: string, value: unknown) {
+      const name = text(object(value).name, 120)
+      return db.transaction(async tx => {
+        await workspaceAccess(tx, workspaceId, true)
+        const [updated] = await tx.query<Workspace>('UPDATE "PrivateWorkspace" SET name=$1 WHERE id=$2 RETURNING id,name,persona,"createdAt"', [name, workspaceId])
+        if (!updated) throw missing()
+        await audit(tx, workspaceId, null, 'WORKSPACE_RENAMED')
+        return updated
       })
     },
     async listCases(workspaceId: string) {
