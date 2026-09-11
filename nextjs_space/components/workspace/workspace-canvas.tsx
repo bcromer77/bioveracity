@@ -803,7 +803,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         {/* Cross-check: internal contradictions vs external records */}
         <section className={panel} aria-labelledby="crosscheck-heading">
           <PanelHeading id="crosscheck-heading">Cross-check a claim</PanelHeading>
-          <p className="mt-1 text-xs text-muted-foreground">Enter a claim, figure or date to see every source that mentions it. This distinguishes contradictions <em>between your own uploaded documents</em> from conflicts with <em>external agency records</em>. It surfaces the passages for you to judge — it does not decide which is correct.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Enter a claim, figure or date to see every source that mentions it, grouped by whether it comes from <em>your own uploaded documents</em> or from <em>external agency records</em>. It surfaces the relevant passages for you to review and compare — it does not detect contradictions or decide which source is correct.</p>
           <form className="mt-3 flex flex-wrap gap-2" onSubmit={submitClaim}>
             <input className={field} style={{ marginTop: 0, maxWidth: 420 }} value={claim} maxLength={160} onChange={e => setClaim(e.target.value)} placeholder="e.g. a date, permit number or measurement" />
             <Button type="submit" disabled={checking}>{checking ? 'Checking...' : 'Cross-check'}</Button>
