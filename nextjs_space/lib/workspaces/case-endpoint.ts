@@ -49,6 +49,7 @@ return async function handle(request:Request,context:Context,write:boolean) {
       switch(query.get('action')) {
         case 'passage':result=await service.passage(w,c,query.get('id')??'');break
         case 'history':result={revisions:await service.history(w,c,query.get('id')??'')};break
+        case 'exports':{const limit=Math.min(Math.max(parseInt(query.get('limit')??'20',10)||20,1),50);const offset=Math.max(parseInt(query.get('offset')??'0',10)||0,0);result=await service.listExports(w,c,limit,offset);break}
         case 'search':result={results:await service.search(w,c,query.get('q')??'',query.get('earlier')==='true'),mode:'Exact text search; authorised cases only'};break
         case 'original':{const x=await service.original(w,c,query.get('id')??'');return new Response(new Uint8Array(x.bytes),{headers:{...privateHeaders,'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename="original-${(query.get('id')??'').replace(/[^a-z0-9-]/gi,'')}.bin"`,'Content-Security-Policy':"sandbox; default-src 'none'"}})}
         case 'export':{const manifest=query.get('format')==='json';const x=await service.downloadExport(w,c,query.get('id')??'',manifest);return new Response(new Uint8Array(x.bytes),{headers:{...privateHeaders,'Content-Type':manifest?'application/json':'application/pdf','Content-Disposition':`attachment; filename="case-timeline.${manifest?'json':'pdf'}"`}})}

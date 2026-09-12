@@ -14,6 +14,7 @@ import { InvestigationMap, type MapLayers, type MapPoint } from './investigation
 import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximity.mjs'
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
+import { ReportsPanel } from './reports-panel'
 
 // Metre-scale proximity buffer drawn on the map (a search buffer, not a boundary).
 const BUFFER_METERS = 500
@@ -262,6 +263,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   // Export
   const [exportId, setExportId] = useState('')
   const [exportBusy, setExportBusy] = useState(false)
+  // Bumped after each successful export so the saved-reports list refreshes.
+  const [reportsRefresh, setReportsRefresh] = useState(0)
   // Advanced tools stay collapsed by default so the primary journey reads simply.
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
@@ -417,7 +420,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
 
   async function produceExport() {
     setExportBusy(true); setError('')
-    try { const result = await (await read(endpoint, { method: 'POST', body: JSON.stringify({ action: 'export', reportTitle }) })).json(); setExportId(result.id); setNotice('Reviewed audit pack created from accepted entries. Download it below.') }
+    try { const result = await (await read(endpoint, { method: 'POST', body: JSON.stringify({ action: 'export', reportTitle }) })).json(); setExportId(result.id); setReportsRefresh(x => x + 1); setNotice('Reviewed audit pack created from accepted entries. Download it below.') }
     catch (e) { setError(message(e)) } finally { setExportBusy(false) }
   }
 
@@ -766,6 +769,9 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
         <Button type="button" variant="outline" onClick={() => download(`${endpoint}?action=export&id=${encodeURIComponent(exportId)}`, 'audit-pack.pdf')}>Download PDF</Button>
         <Button type="button" variant="outline" onClick={() => download(`${endpoint}?action=export&id=${encodeURIComponent(exportId)}&format=json`, 'source-manifest.json')}>Download source manifest</Button>
       </div>}
+      <div className="mt-4 border-t pt-4">
+        <ReportsPanel workspaceId={workspaceId} caseId={caseId} refreshToken={reportsRefresh} />
+      </div>
     </section>
 
     {/* Advanced investigation tools — collapsed. All existing capabilities remain

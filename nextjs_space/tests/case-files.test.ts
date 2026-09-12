@@ -70,7 +70,8 @@ test('HTTP journey: guards, scanner failure, import, source review and actual PD
   assert.equal((await post({action:'exportPermission',enabled:true})).status,200)
   const issued=await (await post({action:'export'})).json();const pdf=await get(`?action=export&id=${issued.id}`);assert.equal(pdf.status,200);assert.equal(pdf.headers.get('Content-Type'),'application/pdf');assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-')
   assert.equal((await (await get(`?action=history&id=${e.id}`)).json()).revisions.length,2)
-  actor='outsider';assert.equal((await get(`?action=export&id=${issued.id}`)).status,404);assert.equal((await get(`?action=passage&id=${e.passageId}`)).status,404)
+  const listed=await (await get('?action=exports')).json();assert.equal(listed.total,1);assert.equal(listed.exports.length,1);assert.equal(listed.exports[0].id,issued.id);assert.equal(listed.exports[0].hash,issued.hash);assert.equal(listed.exports[0].acceptedCount,1);assert.equal(listed.exports[0].title,'HTTP case');assert.equal(listed.retentionCap,20);assert.equal(listed.exports[0].encryptedBytes,undefined)
+  actor='outsider';assert.equal((await get(`?action=export&id=${issued.id}`)).status,404);assert.equal((await get(`?action=passage&id=${e.passageId}`)).status,404);assert.equal((await get('?action=exports')).status,404)
  }finally{await pg.close()}
 })
 test('complete isolated case: import, review, prior-case search, amended source, PDF and revoked permissions',async()=>{
@@ -98,6 +99,7 @@ test('complete isolated case: import, review, prior-case search, amended source,
   const amendment=await af.import(wa.id,ca.id,await parseFile(Buffer.from('2026-09-04 Corrected visit note: the earlier report was amended.'),'inspection-v2.txt'),{supersedesId:imported.documentId})
   assert.equal((await af.list(wa.id,ca.id)).events.find(x=>x.id===e.id)?.superseded,true)
   assert.notEqual(amendment.documentId,imported.documentId)
+  assert.deepEqual({total:(await af.listExports(wa.id,ca.id)).total,cap:(await af.listExports(wa.id,ca.id)).retentionCap},{total:0,cap:20})
   await deny(af.export(wa.id,ca.id,renderCase))
   await af.setExport(wa.id,ca.id,true)
   const issued=await af.export(wa.id,ca.id,renderCase),download=await af.downloadExport(wa.id,ca.id,issued.id)
@@ -105,10 +107,12 @@ test('complete isolated case: import, review, prior-case search, amended source,
   const rendered=await parseFile(download.bytes,'reviewed.pdf');assert.match(rendered.passages.map(p=>p.text).join(' '),/Visit recorded/)
   const manifest=JSON.parse((await af.downloadExport(wa.id,ca.id,issued.id,true)).bytes.toString());assert.equal(manifest.events.length,1);assert.equal(manifest.events[0].revision,2);assert.equal(manifest.events[0].precision,'MONTH');assert.equal(manifest.artifactSha256,issued.hash)
   await deny(bf.downloadExport(wa.id,ca.id,issued.id))
+  const history=await af.listExports(wa.id,ca.id);assert.equal(history.total,1);assert.equal(history.exports.length,1);assert.equal(history.exports[0].id,issued.id);assert.equal(history.exports[0].hash,issued.hash);assert.equal(history.exports[0].acceptedCount,1);assert.equal((history.exports[0] as Record<string,unknown>).encryptedBytes,undefined)
+  await deny(bf.listExports(wa.id,ca.id))
   await pg.query('INSERT INTO "PrivateWorkspaceMember" ("workspaceId","userId",role) VALUES ($1,\'reader\',\'VIEWER\')',[wa.id]);await pg.query('INSERT INTO "PrivateCaseMember" ("workspaceId","caseId","userId",role) VALUES ($1,$2,\'reader\',\'VIEWER\')',[wa.id,ca.id])
   assert.equal((await reader.search(wa.id,ca.id,'culvert',true)).length,0)
   await deny(reader.review(wa.id,ca.id,e.id,{...review,revision:2}));await deny(reader.setExport(wa.id,ca.id,true))
   await pg.query('UPDATE "PrivateCaseMember" SET "revokedAt"=now() WHERE "workspaceId"=$1 AND "caseId"=$2 AND "userId"=\'alice\'',[wa.id,ca.id])
-  await deny(af.downloadExport(wa.id,ca.id,issued.id));await deny(af.original(wa.id,ca.id,imported.documentId));await deny(af.search(wa.id,ca.id,'visit',true))
+  await deny(af.downloadExport(wa.id,ca.id,issued.id));await deny(af.original(wa.id,ca.id,imported.documentId));await deny(af.search(wa.id,ca.id,'visit',true));await deny(af.listExports(wa.id,ca.id))
  }finally{await pg.close()}
 })

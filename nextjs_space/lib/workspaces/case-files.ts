@@ -104,5 +104,24 @@ export function caseFiles(db: Database, actor: string, keyHex: string) {
     async downloadExport(w:string,c:string,id:string,manifestOnly=false) {return db.transaction(async tx=>{
       await access(tx,w,c,'export');const [x]=await tx.query<{encryptedBytes:Uint8Array;hash:string;manifest:Record<string,unknown>}>('SELECT "encryptedBytes",hash,manifest FROM "PrivateCaseExport" WHERE id=$1 AND "workspaceId"=$2 AND "caseId"=$3 AND "requestedBy"=$4',[id,w,c,actor]);if(!x)throw missing();const bytes=vault.decrypt(x.encryptedBytes,`export/${w}/${c}/${id}`);if(createHash('sha256').update(bytes).digest('hex')!==x.hash)throw new Error('Integrity');return {bytes:manifestOnly?Buffer.from(JSON.stringify({...x.manifest,artifactSha256:x.hash},null,2)):bytes}
     })},
+    // Persistent report history. Requester-only (requestedBy=actor, same restriction as
+    // downloadExport) and gated on 'read': listing metadata about your own already-created reports
+    // does not generate anything, so it must not require the export-generation toggle (which would
+    // make the panel error with a 404 before the owner enables exports). Reopening the actual report
+    // bytes stays gated on 'export' via downloadExport. Never selects encryptedBytes; metadata is
+    // derived from the stored manifest.
+    async listExports(w:string,c:string,limit=20,offset=0) {return db.transaction(async tx=>{
+      await access(tx,w,c,'read')
+      const [{count}]=await tx.query<{count:number}>('SELECT count(*)::int AS count FROM "PrivateCaseExport" WHERE "workspaceId"=$1 AND "caseId"=$2 AND "requestedBy"=$3',[w,c,actor])
+      const exports=await tx.query<{id:string;hash:string;createdAt:Date;requestedBy:string;title:string;acceptedCount:number;version:string;rendererVersion:string}>(
+        `SELECT id,hash,"createdAt","requestedBy",
+          COALESCE(NULLIF(manifest->>'reportTitle',''), manifest->'case'->>'title', 'Reviewed report') AS title,
+          COALESCE(jsonb_array_length(manifest->'events'),0) AS "acceptedCount",
+          COALESCE(manifest->>'version','1') AS version,
+          COALESCE(manifest->>'rendererVersion','') AS "rendererVersion"
+         FROM "PrivateCaseExport" WHERE "workspaceId"=$1 AND "caseId"=$2 AND "requestedBy"=$3
+         ORDER BY "createdAt" DESC LIMIT $4 OFFSET $5`,[w,c,actor,limit,offset])
+      return {exports,total:count,limit,offset,retentionCap:20}
+    })},
   }
 }
