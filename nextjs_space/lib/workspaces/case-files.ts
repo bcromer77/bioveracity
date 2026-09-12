@@ -78,6 +78,21 @@ export function caseFiles(db: Database, actor: string, keyHex: string) {
     async list(w:string,c:string) { return db.transaction(async tx=>{await access(tx,w,c,'read'); return {documents:await tx.query('SELECT id,name,hash,"mediaType",status,warnings,metadata,"parentId","supersedesId","sourceUrl","publicationDate","importedAt","parserVersion" FROM "PrivateCaseDocument" WHERE "workspaceId"=$1 AND "caseId"=$2 ORDER BY "importedAt",id',[w,c]),events:await tx.query<EventRow>(eventQuery,[w,c])} }) },
     async passage(w:string,c:string,id:string) {return db.transaction(async tx=>{await access(tx,w,c,'read');const [p]=await tx.query('SELECT id,"documentId",locator,text FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3',[w,c,id]);if(!p)throw missing();return p})},
     async history(w:string,c:string,id:string) {return db.transaction(async tx=>{await access(tx,w,c,'read');if(!(await tx.query('SELECT id FROM "PrivateCaseEvent" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3',[w,c,id])).length)throw missing();return tx.query('SELECT revision,title,quote,"eventDate",precision,status,"evidenceType",note,"reviewedBy","createdAt" FROM "PrivateCaseEventRevision" WHERE "eventId"=$1 ORDER BY revision DESC',[id])})},
+    // Stable citation route: reopen the exact cited passage in its surrounding context.
+    // Given a passage id it returns that passage plus its ordinal-adjacent neighbours from
+    // the SAME document (radius each side), the document metadata, and a stable citation
+    // string (document name + locator). Requester-scoped 'read'; never returns bytes.
+    async context(w:string,c:string,id:string,radius=3) {return db.transaction(async tx=>{
+      await access(tx,w,c,'read')
+      const r=Math.min(Math.max(Math.trunc(Number.isFinite(radius)?radius:3),0),5)
+      const [target]=await tx.query<{id:string;documentId:string;ordinal:number;locator:string;text:string}>('SELECT id,"documentId",ordinal,locator,text FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3',[w,c,id])
+      if(!target)throw missing()
+      const [doc]=await tx.query<{id:string;name:string;sourceUrl:string|null;publicationDate:string|null;parserVersion:string}>('SELECT id,name,"sourceUrl","publicationDate","parserVersion" FROM "PrivateCaseDocument" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3',[w,c,target.documentId])
+      const [{count:passageCount}]=await tx.query<{count:number}>('SELECT count(*)::int AS count FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 AND "documentId"=$3',[w,c,target.documentId])
+      const neighbours=await tx.query<{id:string;ordinal:number;locator:string;text:string}>('SELECT id,ordinal,locator,text FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 AND "documentId"=$3 AND ordinal BETWEEN $4 AND $5 ORDER BY ordinal',[w,c,target.documentId,target.ordinal-r,target.ordinal+r])
+      await audit(tx,w,c,'PASSAGE_CONTEXT_VIEWED')
+      return {document:{id:doc.id,name:doc.name,sourceUrl:doc.sourceUrl,publicationDate:doc.publicationDate,parserVersion:doc.parserVersion,passageCount},target:{id:target.id,ordinal:target.ordinal,locator:target.locator},citation:`${doc.name} — ${target.locator}`,radius:r,passages:neighbours.map(p=>({id:p.id,ordinal:p.ordinal,locator:p.locator,text:p.text,isTarget:p.id===target.id}))}
+    })},
     async original(w:string,c:string,id:string) {return db.transaction(async tx=>{await access(tx,w,c,'read');const [d]=await tx.query<{encryptedBytes:Uint8Array;name:string;hash:string}>('SELECT "encryptedBytes",name,hash FROM "PrivateCaseDocument" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3',[w,c,id]);if(!d)throw missing();const bytes=vault.decrypt(d.encryptedBytes,`${w}/${c}/${id}`);if(createHash('sha256').update(bytes).digest('hex')!==d.hash)throw new Error('Integrity');await audit(tx,w,c,'ORIGINAL_DOWNLOADED');return {bytes,name:d.name}})},
     async review(w:string,c:string,id:string,input:Record<string,unknown>) {return db.transaction(async tx=>{
       await access(tx,w,c,'review')

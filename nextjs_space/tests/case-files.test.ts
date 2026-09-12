@@ -116,3 +116,39 @@ test('complete isolated case: import, review, prior-case search, amended source,
   await deny(af.downloadExport(wa.id,ca.id,issued.id));await deny(af.original(wa.id,ca.id,imported.documentId));await deny(af.search(wa.id,ca.id,'visit',true));await deny(af.listExports(wa.id,ca.id))
  }finally{await pg.close()}
 })
+test('Slice 2: stable citation context reopens the cited passage with ordered neighbours, scoped to requester and document',async()=>{
+ const pg=new PGlite()
+ try{
+  await pg.exec('CREATE TABLE "User" (id TEXT PRIMARY KEY); INSERT INTO "User" VALUES (\'alice\'),(\'bob\');')
+  for(const path of ['20260909_private_workspace_foundation','20260909_private_case_files','20260911_workspace_persona'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${path}/migration.sql`,import.meta.url),'utf8'))
+  const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(text:string,values:unknown[])=>(await client.query<T>(text,values)).rows})
+  const db:Database={...sql(pg),transaction:f=>pg.transaction(tx=>f(sql(tx)))}
+  const a=workspaceService(db,'alice'),wa=await a.createWorkspace({name:'Council'}),ca=await a.createCase(wa.id,{title:'Context case'})
+  const af=caseFiles(db,'alice',key),bf=caseFiles(db,'bob',key)
+  const deny=(p:Promise<unknown>)=>assert.rejects(p,(e:unknown)=>e instanceof WorkspaceError&&e.status===404)
+  const longText=Array.from({length:7},(_,i)=>`Segment ${i} `.padEnd(2400,'x')).join('')
+  const doc1=await af.import(wa.id,ca.id,await parseFile(Buffer.from(longText),'long.txt'),{sourceUrl:'https://example.test/rec',publicationDate:'2026-09-02'})
+  const doc2=await af.import(wa.id,ca.id,await parseFile(Buffer.from('Other document passage.'),'other.txt'))
+  const p1=(await pg.query<{id:string;ordinal:number;locator:string}>('SELECT id,ordinal,locator FROM "PrivateCasePassage" WHERE "documentId"=$1 ORDER BY ordinal',[doc1.documentId])).rows
+  assert.equal(p1.length,7)
+  const target=p1[3]
+  const ctx=await af.context(wa.id,ca.id,target.id,2)
+  assert.deepEqual(ctx.passages.map(p=>p.ordinal),[target.ordinal-2,target.ordinal-1,target.ordinal,target.ordinal+1,target.ordinal+2])
+  assert.equal(ctx.passages.filter(p=>p.isTarget).length,1)
+  assert.equal(ctx.passages.find(p=>p.isTarget)?.id,target.id)
+  assert.equal(ctx.target.id,target.id)
+  assert.equal(ctx.document.passageCount,7)
+  assert.equal(ctx.document.name,'long.txt')
+  assert.equal(ctx.document.sourceUrl,'https://example.test/rec')
+  assert.equal(ctx.citation,`long.txt \u2014 ${target.locator}`)
+  assert.equal(ctx.radius,2)
+  assert.equal((await af.context(wa.id,ca.id,target.id,99)).radius,5)
+  const zero=await af.context(wa.id,ca.id,target.id,-5);assert.equal(zero.radius,0);assert.equal(zero.passages.length,1);assert.equal(zero.passages[0].id,target.id)
+  assert.equal((await af.context(wa.id,ca.id,target.id)).radius,3)
+  const first=await af.context(wa.id,ca.id,p1[0].id,3);assert.deepEqual(first.passages.map(p=>p.ordinal),[0,1,2,3])
+  const dc2=(await pg.query<{id:string}>('SELECT id FROM "PrivateCasePassage" WHERE "documentId"=$1',[doc2.documentId])).rows
+  assert.equal((await af.context(wa.id,ca.id,p1[6].id,5)).passages.every(p=>p.id!==dc2[0].id),true)
+  await deny(bf.context(wa.id,ca.id,target.id))
+  await deny(af.context(wa.id,ca.id,'nonexistent-passage-id'))
+ }finally{await pg.close()}
+})

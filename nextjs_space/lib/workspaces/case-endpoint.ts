@@ -48,6 +48,7 @@ return async function handle(request:Request,context:Context,write:boolean) {
     } else {
       switch(query.get('action')) {
         case 'passage':result=await service.passage(w,c,query.get('id')??'');break
+        case 'context':{const radius=Math.min(Math.max(parseInt(query.get('radius')??'3',10)||3,0),5);result=await service.context(w,c,query.get('id')??'',radius);break}
         case 'history':result={revisions:await service.history(w,c,query.get('id')??'')};break
         case 'exports':{const limit=Math.min(Math.max(parseInt(query.get('limit')??'20',10)||20,1),50);const offset=Math.max(parseInt(query.get('offset')??'0',10)||0,0);result=await service.listExports(w,c,limit,offset);break}
         case 'search':result={results:await service.search(w,c,query.get('q')??'',query.get('earlier')==='true'),mode:'Exact text search; authorised cases only'};break

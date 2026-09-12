@@ -30,6 +30,10 @@ type Hit = { id: string; caseId: string; documentId: string; name: string; caseT
 // A hit enriched by term-expansion retrieval: which query terms it matched and a score.
 type RankedHit = Hit & { matchedTerms: string[]; score: number }
 type Retrieval = { ranked: RankedHit[]; matchedConcepts: string[]; unmatchedConcepts: string[] }
+// Source-context view: the cited passage reopened alongside its ordinal-adjacent
+// neighbours from the same document, with the document metadata and a stable citation.
+type ContextPassage = { id: string; ordinal: number; locator: string; text: string; isTarget: boolean }
+type SourceContext = { document: { id: string; name: string; sourceUrl: string | null; publicationDate: string | null; parserVersion: string; passageCount: number }; target: { id: string; ordinal: number; locator: string }; citation: string; radius: number; passages: ContextPassage[] }
 
 // The gazetteer/feeds modules are authored in .mjs, so rows type-infer loosely as
 // string | number. Coerce to strict shapes for the typed UI.
@@ -268,6 +272,12 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   // Advanced tools stay collapsed by default so the primary journey reads simply.
   const [advancedOpen, setAdvancedOpen] = useState(false)
 
+  // Source-context viewer: opens the cited passage in context from any citation
+  // (chronology entry, search hit, cross-check, place hit or reviewed citation).
+  const [sourceContext, setSourceContext] = useState<SourceContext | null>(null)
+  const [contextBusy, setContextBusy] = useState(false)
+  const [contextError, setContextError] = useState('')
+
   const dragRef = useRef(false)
   const [dragging, setDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -438,6 +448,16 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     catch (e) { setError(message(e)) }
   }
 
+  // Open the stable source-context viewer for a cited passage id. Reliably reopens
+  // the exact cited location with its surrounding passages from the same document.
+  async function openContext(passageId: string) {
+    if (!passageId) return
+    setContextBusy(true); setContextError(''); setSourceContext(null)
+    try { const data = await (await read(`${endpoint}?action=context&id=${encodeURIComponent(passageId)}`)).json(); setSourceContext(data as SourceContext) }
+    catch (e) { setContextError(message(e)) }
+    finally { setContextBusy(false) }
+  }
+
   const claimDocs = claimHits ? Array.from(new Set(claimHits.ranked.map(h => h.documentId))) : []
   const externalWired = feeds.feeds.filter(f => f.status === 'available')
 
@@ -452,6 +472,41 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const canCompare = speciesPoints.length > 0 && planningPoints.length > 0
 
   return <div className="space-y-6">
+    {/* Source-context viewer overlay. Opened from any citation; reopens the exact cited
+        passage highlighted, in the context of its neighbouring passages, with a stable
+        citation reference and a link to the original document. */}
+    {(sourceContext || contextBusy || contextError) && (
+      <div role="dialog" aria-modal="true" aria-labelledby="source-context-title" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:p-8" onClick={() => { setSourceContext(null); setContextError('') }}>
+        <div className="w-full max-w-3xl rounded-lg border border-border bg-card p-5 shadow-lg" onClick={e => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-4">
+            <h2 id="source-context-title" className="font-display text-base font-semibold">Source in context</h2>
+            <Button variant="outline" onClick={() => { setSourceContext(null); setContextError('') }}>Close</Button>
+          </div>
+          {contextBusy && <p className="mt-4 text-sm text-muted-foreground" role="status">Reopening the cited source location…</p>}
+          {contextError && <p className="mt-4 rounded-md border border-destructive p-3 text-sm" role="alert">{contextError}</p>}
+          {sourceContext && (<>
+            <div className="mt-3 rounded-md border border-border bg-background p-3">
+              <p className="text-sm font-semibold break-words">{sourceContext.document.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground break-words">Citation: {sourceContext.citation}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Passage {sourceContext.target.ordinal + 1} of {sourceContext.document.passageCount} in this document{sourceContext.document.publicationDate ? ` · published ${sourceContext.document.publicationDate}` : ''}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => download(`${endpoint}?action=original&id=${encodeURIComponent(sourceContext.document.id)}`, sourceContext.document.name)}>Download original document</Button>
+                {sourceContext.document.sourceUrl && <a href={sourceContext.document.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm underline">Open provider source record</a>}
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">The cited passage is highlighted. Surrounding passages from the same document are shown for context; extracted text only — download the original above to see the full formatting.</p>
+            <div className="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
+              {sourceContext.passages.map(p => (
+                <div key={p.id} className={`rounded-md border p-3 ${p.isTarget ? 'border-primary bg-secondary' : 'border-border bg-background'}`}>
+                  <p className="text-xs font-medium text-muted-foreground break-words">{p.locator}{p.isTarget ? ' · cited here' : ''}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm">{p.text}</p>
+                </div>
+              ))}
+            </div>
+          </>)}
+        </div>
+      </div>
+    )}
     {/* Case journey — the six-step sequence, shown prominently at the top of an opened case. */}
     <section className="rounded-lg border border-border bg-card p-4 shadow-sm" aria-labelledby="journey-heading">
       <h2 id="journey-heading" className="font-display text-sm font-semibold">Your case in six steps</h2>
@@ -616,13 +671,14 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Records mentioning {place.name}</p>
             {placeHits === null ? <p className="mt-1 text-muted-foreground">Select a town or county to retrieve source passages that mention it.</p>
               : placeHits.length === 0 ? <p className="mt-1 text-muted-foreground">No uploaded source in this case mentions “{place.name}”. Missing coverage.</p>
-              : <ul className="mt-2 space-y-2">{placeHits.slice(0, 5).map(h => <li key={h.id}><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="whitespace-pre-wrap break-words text-xs">“{h.text}”</p></li>)}</ul>}
+              : <ul className="mt-2 space-y-2">{placeHits.slice(0, 5).map(h => <li key={h.id}><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="whitespace-pre-wrap break-words text-xs">“{h.text}”</p><button type="button" onClick={() => openContext(h.id)} className="mt-1 text-xs font-medium text-primary underline">View source in context</button></li>)}</ul>}
           </div>
           {/* Latest reviewed citation */}
           {latestReviewed && <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Latest {latestReviewed.status === 'ACCEPTED' ? 'reviewed' : 'draft'} citation</p>
             <p className="mt-1 whitespace-pre-wrap break-words">“{latestReviewed.quote}”</p>
             <p className="mt-1 text-xs text-muted-foreground">{latestReviewed.name} · {latestReviewed.locator}</p>
+            <button type="button" onClick={() => openContext(latestReviewed.passageId)} className="mt-1 text-xs font-medium text-primary underline">View source in context</button>
           </div>}
         </section>
 
@@ -750,6 +806,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
               <p className="mt-1 text-sm font-semibold break-words">{event.title}</p>
               <p className="mt-1 whitespace-pre-wrap break-words text-xs">“{event.quote}”</p>
               <p className="mt-1 text-xs text-muted-foreground">{event.name} · {event.locator}{event.superseded ? ' · superseded' : ''}</p>
+              <button type="button" onClick={() => openContext(event.passageId)} className="mt-1 text-xs font-medium text-primary underline">View source in context</button>
             </div>
           </li>
         ))}
@@ -792,7 +849,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
               {questionHits.ranked.length === 0 ? <div className="text-sm text-muted-foreground"><p>No source passage matches. Missing coverage for this question.</p>{questionHits.unmatchedConcepts.length > 0 && <p className="mt-1">No coverage for: {questionHits.unmatchedConcepts.join(', ')}.</p>}</div>
                 : <>
                     <p className="text-xs text-muted-foreground">Term-expansion retrieval — {questionHits.ranked.length} passage{questionHits.ranked.length === 1 ? '' : 's'}, ranked by how many query terms each matched.{questionHits.unmatchedConcepts.length > 0 && ` No coverage for: ${questionHits.unmatchedConcepts.join(', ')}.`}</p>
-                    {questionHits.ranked.slice(0, 6).map(h => <article key={h.id} className="rounded-md border border-border bg-background p-3 text-sm"><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs">“{h.text}”</p>{h.matchedTerms.length > 0 && <p className="mt-1 text-xs text-muted-foreground">matched: {h.matchedTerms.slice(0, 4).join(', ')}</p>}</article>)}
+                    {questionHits.ranked.slice(0, 6).map(h => <article key={h.id} className="rounded-md border border-border bg-background p-3 text-sm"><p className="font-medium break-words">{h.name} · <span className="text-muted-foreground">{h.locator}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs">“{h.text}”</p>{h.matchedTerms.length > 0 && <p className="mt-1 text-xs text-muted-foreground">matched: {h.matchedTerms.slice(0, 4).join(', ')}</p>}<button type="button" onClick={() => openContext(h.id)} className="mt-1 text-xs font-medium text-primary underline">View source in context</button></article>)}
                   </>}
             </div>}
           </section>
@@ -818,8 +875,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <div>
               <h3 className="text-sm font-semibold">Internal — your own sources</h3>
               {claimHits.ranked.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No uploaded source mentions this. Missing coverage.</p>
-                : claimDocs.length < 2 ? <div className="mt-2 space-y-2"><p className="text-sm text-muted-foreground">Only one of your sources mentions this — no internal corroboration (missing coverage).</p>{claimHits.ranked.slice(0, 3).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>
-                : <div className="mt-2 space-y-2"><p className="text-sm">{claimDocs.length} of your sources mention this — compare the supporting passages below for agreement or contradiction.</p>{claimHits.ranked.slice(0, 6).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p></blockquote>)}</div>}
+                : claimDocs.length < 2 ? <div className="mt-2 space-y-2"><p className="text-sm text-muted-foreground">Only one of your sources mentions this — no internal corroboration (missing coverage).</p>{claimHits.ranked.slice(0, 3).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p><button type="button" onClick={() => openContext(h.id)} className="mt-1 text-xs font-medium text-primary underline not-italic">View source in context</button></blockquote>)}</div>
+                : <div className="mt-2 space-y-2"><p className="text-sm">{claimDocs.length} of your sources mention this — compare the supporting passages below for agreement or contradiction.</p>{claimHits.ranked.slice(0, 6).map(h => <blockquote key={h.id} className="rounded-md border-l-4 border-primary/50 bg-background p-3 text-sm"><p className="text-xs font-medium text-muted-foreground">{h.name} · {h.locator}</p><p className="mt-1 whitespace-pre-wrap break-words">“{h.text}”</p><button type="button" onClick={() => openContext(h.id)} className="mt-1 text-xs font-medium text-primary underline not-italic">View source in context</button></blockquote>)}</div>}
             </div>
             <div>
               <h3 className="text-sm font-semibold">External — agency records</h3>
