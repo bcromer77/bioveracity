@@ -42,7 +42,7 @@ return async function handle(request:Request,context:Context,write:boolean) {
         }
         case 'review':result=await service.review(w,c,String(input.eventId),input);break
         case 'exportPermission':if(typeof input.enabled!=='boolean')throw new WorkspaceError(400,'Invalid permission');result=await service.setExport(w,c,input.enabled);break
-        case 'export':{const rt=typeof input.reportTitle==='string'&&input.reportTitle.trim()?input.reportTitle.trim().slice(0,160):undefined;result=await service.export(w,c,deps.render,rt);break}
+        case 'export':{const rt=typeof input.reportTitle==='string'&&input.reportTitle.trim()?input.reportTitle.trim().slice(0,160):undefined;const appOrigin=typeof deps.env.NEXTAUTH_URL==='string'&&deps.env.NEXTAUTH_URL.trim()?deps.env.NEXTAUTH_URL.trim().replace(/\/+$/,''):undefined;result=await service.export(w,c,deps.render,rt,appOrigin);break}
         default:throw new WorkspaceError(400,'Unsupported operation')
       }
     } else {

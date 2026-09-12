@@ -15,6 +15,8 @@ import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximi
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
 import { ReportsPanel } from './reports-panel'
+import { SourceViewer } from './source-viewer'
+import { citationUrl } from '@/lib/workspaces/citation'
 
 // Metre-scale proximity buffer drawn on the map (a search buffer, not a boundary).
 const BUFFER_METERS = 500
@@ -159,7 +161,7 @@ function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Pe
     <CaseBoard key={workspaceId} workspaceId={workspaceId} defaultTemplate={persona.template} selected={selected} onSelect={selectCase} onResolved={(_id, title) => setSelectedTitle(title)} />
 
     {selected
-      ? <Investigation key={selected} workspaceId={workspaceId} caseId={selected} persona={persona} onSelectCase={setSelectedId} reportTitle={persona.exportTitle} />
+      ? <Investigation key={selected} workspaceId={workspaceId} caseId={selected} persona={persona} onSelectCase={setSelectedId} reportTitle={persona.exportTitle} initialCite={params.get('cite') || ''} initialDoc={params.get('doc') || ''} />
       : <section className={panel} aria-label="Getting started">
           <h2 className="font-display text-lg font-semibold">Select or create a case to open the investigation</h2>
           <p className="mt-2 text-sm text-muted-foreground">Choose a case above (or create one) to load its real evidence, search its source passages, cross-check claims across your own uploads, and build a reviewed audit pack. This workspace never shows sample findings as if they were your analysis.</p>
@@ -217,7 +219,7 @@ function CaseBoard({ workspaceId, defaultTemplate, selected, onSelect, onResolve
   </div>
 }
 
-function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle }: { workspaceId: string; caseId: string; persona: Persona; onSelectCase: (id: string) => void; reportTitle: string }) {
+function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle, initialCite = '', initialDoc = '' }: { workspaceId: string; caseId: string; persona: Persona; onSelectCase: (id: string) => void; reportTitle: string; initialCite?: string; initialDoc?: string }) {
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/evidence`
   const publicEndpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/public-records`
   const [revision, setRevision] = useState(0)
@@ -277,6 +279,11 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const [sourceContext, setSourceContext] = useState<SourceContext | null>(null)
   const [contextBusy, setContextBusy] = useState(false)
   const [contextError, setContextError] = useState('')
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [citeHref, setCiteHref] = useState('')
+  // Guards against stale context responses reopening a dismissed viewer or
+  // replacing a newer selection (rapid citation clicks / case switching).
+  const contextSeq = useRef(0)
 
   const dragRef = useRef(false)
   const [dragging, setDragging] = useState(false)
@@ -450,13 +457,34 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
 
   // Open the stable source-context viewer for a cited passage id. Reliably reopens
   // the exact cited location with its surrounding passages from the same document.
-  async function openContext(passageId: string) {
+  // documentId (when known at the call site) yields an instant canonical citation
+  // link; otherwise the link is resolved from the context response's document id.
+  const openContext = useCallback(async (passageId: string, documentId?: string) => {
     if (!passageId) return
-    setContextBusy(true); setContextError(''); setSourceContext(null)
-    try { const data = await (await read(`${endpoint}?action=context&id=${encodeURIComponent(passageId)}`)).json(); setSourceContext(data as SourceContext) }
-    catch (e) { setContextError(message(e)) }
-    finally { setContextBusy(false) }
-  }
+    const seq = ++contextSeq.current
+    setViewerOpen(true); setContextBusy(true); setContextError(''); setSourceContext(null)
+    setCiteHref(documentId ? citationUrl('', workspaceId, caseId, documentId, passageId) : '')
+    try {
+      const data = await (await read(`${endpoint}?action=context&id=${encodeURIComponent(passageId)}`)).json() as SourceContext
+      if (seq !== contextSeq.current) return
+      setSourceContext(data)
+      if (!documentId) setCiteHref(citationUrl('', workspaceId, caseId, data.document.id, data.target.id))
+    } catch (e) {
+      if (seq !== contextSeq.current) return
+      setContextError(message(e))
+    } finally {
+      if (seq === contextSeq.current) setContextBusy(false)
+    }
+  }, [endpoint, workspaceId, caseId])
+
+  // Deep-link auto-open: when the page loads with ?cite=&doc= (a shared citation
+  // link), reopen that exact cited passage once access is confirmed server-side.
+  const deepLinkRef = useRef(false)
+  useEffect(() => {
+    if (deepLinkRef.current || !initialCite) return
+    deepLinkRef.current = true
+    openContext(initialCite, initialDoc || undefined)
+  }, [initialCite, initialDoc, openContext])
 
   const claimDocs = claimHits ? Array.from(new Set(claimHits.ranked.map(h => h.documentId))) : []
   const externalWired = feeds.feeds.filter(f => f.status === 'available')
@@ -472,41 +500,10 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
   const canCompare = speciesPoints.length > 0 && planningPoints.length > 0
 
   return <div className="space-y-6">
-    {/* Source-context viewer overlay. Opened from any citation; reopens the exact cited
-        passage highlighted, in the context of its neighbouring passages, with a stable
-        citation reference and a link to the original document. */}
-    {(sourceContext || contextBusy || contextError) && (
-      <div role="dialog" aria-modal="true" aria-labelledby="source-context-title" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:p-8" onClick={() => { setSourceContext(null); setContextError('') }}>
-        <div className="w-full max-w-3xl rounded-lg border border-border bg-card p-5 shadow-lg" onClick={e => e.stopPropagation()}>
-          <div className="flex items-start justify-between gap-4">
-            <h2 id="source-context-title" className="font-display text-base font-semibold">Source in context</h2>
-            <Button variant="outline" onClick={() => { setSourceContext(null); setContextError('') }}>Close</Button>
-          </div>
-          {contextBusy && <p className="mt-4 text-sm text-muted-foreground" role="status">Reopening the cited source location…</p>}
-          {contextError && <p className="mt-4 rounded-md border border-destructive p-3 text-sm" role="alert">{contextError}</p>}
-          {sourceContext && (<>
-            <div className="mt-3 rounded-md border border-border bg-background p-3">
-              <p className="text-sm font-semibold break-words">{sourceContext.document.name}</p>
-              <p className="mt-1 text-xs text-muted-foreground break-words">Citation: {sourceContext.citation}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Passage {sourceContext.target.ordinal + 1} of {sourceContext.document.passageCount} in this document{sourceContext.document.publicationDate ? ` · published ${sourceContext.document.publicationDate}` : ''}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => download(`${endpoint}?action=original&id=${encodeURIComponent(sourceContext.document.id)}`, sourceContext.document.name)}>Download original document</Button>
-                {sourceContext.document.sourceUrl && <a href={sourceContext.document.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm underline">Open provider source record</a>}
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">The cited passage is highlighted. Surrounding passages from the same document are shown for context; extracted text only — download the original above to see the full formatting.</p>
-            <div className="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
-              {sourceContext.passages.map(p => (
-                <div key={p.id} className={`rounded-md border p-3 ${p.isTarget ? 'border-primary bg-secondary' : 'border-border bg-background'}`}>
-                  <p className="text-xs font-medium text-muted-foreground break-words">{p.locator}{p.isTarget ? ' · cited here' : ''}</p>
-                  <p className="mt-1 whitespace-pre-wrap break-words text-sm">{p.text}</p>
-                </div>
-              ))}
-            </div>
-          </>)}
-        </div>
-      </div>
-    )}
+    {/* Source-context viewer: an accessible dialog (Escape closes; focus trapped and
+        returned to trigger). Reopens the exact cited passage, renders the correct
+        original PDF page where available, and offers a copyable canonical citation link. */}
+    <SourceViewer open={viewerOpen} onOpenChange={o => { setViewerOpen(o); if (!o) { contextSeq.current++; setSourceContext(null); setContextError(''); setContextBusy(false) } }} context={sourceContext} busy={contextBusy} error={contextError} endpoint={endpoint} citationHref={citeHref} />
     {/* Case journey — the six-step sequence, shown prominently at the top of an opened case. */}
     <section className="rounded-lg border border-border bg-card p-4 shadow-sm" aria-labelledby="journey-heading">
       <h2 id="journey-heading" className="font-display text-sm font-semibold">Your case in six steps</h2>

@@ -10,10 +10,19 @@ import { WorkspaceCanvas } from '@/components/workspace/workspace-canvas'
 
 export const dynamic = 'force-dynamic'
 
-export default async function WorkspaceCanvasPage({ params }: { params: Promise<{ workspaceId: string }> }) {
+export default async function WorkspaceCanvasPage({ params, searchParams }: { params: Promise<{ workspaceId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { workspaceId } = await params
+  const sp = await searchParams
   const session = await auth()
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/workspace/${encodeURIComponent(workspaceId)}`)
+  if (!session?.user?.id) {
+    // Preserve any deep-link query (?case=&doc=&cite=) so a shared citation link
+    // reopens the exact cited passage after the viewer signs in.
+    const qs = new URLSearchParams()
+    for (const key of ['case', 'doc', 'cite']) { const v = sp[key]; if (typeof v === 'string' && v) qs.set(key, v) }
+    const query = qs.toString()
+    const target = `/workspace/${encodeURIComponent(workspaceId)}${query ? `?${query}` : ''}`
+    redirect(`/login?callbackUrl=${encodeURIComponent(target)}`)
+  }
   // Read the persisted workspace type so the canvas opens with the saved preset
   // (not whatever the URL happens to carry). Failure falls back to the URL param.
   let initialPersona: string | null = null
