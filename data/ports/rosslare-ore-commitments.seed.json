@@ -1,0 +1,436 @@
+{
+  "schema_version": 1,
+  "seed_id": "rosslare-ore-commitments-2026-09-13",
+  "status": "PREPARED_NOT_LIVE",
+  "source_scope": "Ten short quotation anchors and analyst review proposals; no full PDF retained.",
+  "records": [
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C01",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-01-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+          "text": "turbidity monitoring"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C02",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-02-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+          "text": "halting dredging"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C03",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-03-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+          "text": "coastal topography"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C04",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-04-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 15, PDF page 19",
+          "text": "Water Quality"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C05",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-05-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+          "text": "controlled manner"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C06",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-06-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+          "text": "piling risk"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C07",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-07-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+          "text": "Dredging Management"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C08",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-08-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+          "text": "bunded washout"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C09",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-09-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+          "text": "spill kits"
+        }
+      ]
+    },
+    {
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+      "title": "Rosslare ORE Hub applicant commitment RORE-C10",
+      "publisher": "Iarnród Éireann (applicant); EIAR by NOD/GDG and specialists",
+      "authority_id": "project:ie:rosslare:OA26.323952",
+      "jurisdiction": "Ireland",
+      "representation_id": "rosslare-ore-commitment-10-anchor-v1",
+      "content_kind": "source_excerpt",
+      "event_date": null,
+      "event_date_precision": "unknown",
+      "publication_date": null,
+      "retrieved_at": "2026-09-13T16:20:38.010430+00:00",
+      "acquisition_permitted": true,
+      "sections": [
+        {
+          "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+          "text": "drainage points"
+        }
+      ]
+    }
+  ],
+  "review_candidates": [
+    {
+      "representation_id": "rosslare-ore-commitment-01-anchor-v1",
+      "claim": "Applicant proposes: Real-time turbidity checks during construction. Implementation unverified.",
+      "excerpt": "turbidity monitoring",
+      "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-02-anchor-v1",
+      "claim": "Applicant proposes: Threshold exceedances trigger corrective action, potentially stopping dredging. Implementation unverified.",
+      "excerpt": "halting dredging",
+      "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-03-anchor-v1",
+      "claim": "Applicant proposes: Operational seabed and coastal surveys inform management. Implementation unverified.",
+      "excerpt": "coastal topography",
+      "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-04-anchor-v1",
+      "claim": "Applicant proposes: Contractor prepares and implements a water-management plan before construction. Implementation unverified.",
+      "excerpt": "Water Quality",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 15, PDF page 19",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-05-anchor-v1",
+      "claim": "Applicant proposes: Controlled reclamation placement limits sediment dispersion. Implementation unverified.",
+      "excerpt": "controlled manner",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-06-anchor-v1",
+      "claim": "Applicant proposes: Piling uses risk assessment, method statements and erosion controls. Implementation unverified.",
+      "excerpt": "piling risk",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-07-anchor-v1",
+      "claim": "Applicant proposes: Contractor prepares and implements a dredging plan before construction. Implementation unverified.",
+      "excerpt": "Dredging Management",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-08-anchor-v1",
+      "claim": "Applicant proposes: Concrete handling includes contained washout and separation from water. Implementation unverified.",
+      "excerpt": "bunded washout",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-09-anchor-v1",
+      "claim": "Applicant proposes: Fuel and chemical spill controls include containment and response equipment. Implementation unverified.",
+      "excerpt": "spill kits",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    },
+    {
+      "representation_id": "rosslare-ore-commitment-10-anchor-v1",
+      "claim": "Applicant proposes: Wastewater controls include mapped drainage and contained facilities. Implementation unverified.",
+      "excerpt": "drainage points",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "basis": "Research proposal only. Read the complete cited paragraph and preserve its conditions before authenticating a review. The retained text is a short identifying anchor, not the whole supporting passage.",
+      "evidenceType": "operator_statement"
+    }
+  ],
+  "commitments": [
+    {
+      "id": "RORE-C01",
+      "representation_id": "rosslare-ore-commitment-01-anchor-v1",
+      "domain": "water",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Which dated readings, calibration records and site positions support this commitment?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=18",
+      "related_conclusion": "RORE-COASTAL-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C02",
+      "representation_id": "rosslare-ore-commitment-02-anchor-v1",
+      "domain": "sediment",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Which threshold, exceedance record and response log can be matched?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=18",
+      "related_conclusion": "RORE-COASTAL-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C03",
+      "representation_id": "rosslare-ore-commitment-03-anchor-v1",
+      "domain": "coastal",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Are repeat surveys comparable in extent, datum and timing?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=18",
+      "related_conclusion": "RORE-COASTAL-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C04",
+      "representation_id": "rosslare-ore-commitment-04-anchor-v1",
+      "domain": "water",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Where is the dated plan and its implementation evidence?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=19",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C05",
+      "representation_id": "rosslare-ore-commitment-05-anchor-v1",
+      "domain": "sediment",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Can placement logs be compared with contemporaneous monitoring?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C06",
+      "representation_id": "rosslare-ore-commitment-06-anchor-v1",
+      "domain": "construction",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Which approved method and field records apply to each work period?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C07",
+      "representation_id": "rosslare-ore-commitment-07-anchor-v1",
+      "domain": "sediment",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Which plan revision governed the observed work?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C08",
+      "representation_id": "rosslare-ore-commitment-08-anchor-v1",
+      "domain": "water",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Do inspections document controls at the relevant locations?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C09",
+      "representation_id": "rosslare-ore-commitment-09-anchor-v1",
+      "domain": "pollution",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Can inspections and incident responses be matched to storage locations?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    },
+    {
+      "id": "RORE-C10",
+      "representation_id": "rosslare-ore-commitment-10-anchor-v1",
+      "domain": "water",
+      "state": "APPLICANT_COMMITMENT_IMPLEMENTATION_UNVERIFIED",
+      "review_question": "Which drainage plan and inspections demonstrate implementation?",
+      "needed_comparison_state": "NOT_COLLECTED",
+      "source_url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20",
+      "related_conclusion": "RORE-WATER-CONDITIONAL",
+      "relationship_type": "analyst_link_to_applicant_mitigation_context"
+    }
+  ],
+  "source_registration_draft": {
+    "publisher": "Iarnród Éireann (applicant)",
+    "datasetIdentifier": "OA26.323952/EIAR-NTS/short-anchors",
+    "link": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf",
+    "licence": "UNRESOLVED: do not treat a public download as a blanket reuse licence",
+    "requiredAttribution": "Rosslare ORE Hub EIAR Non-Technical Summary; Iarnród Éireann; NOD/GDG and associated specialists; hosted by An Coimisiún Pleanála.",
+    "permittedUses": "",
+    "specificPermissions": "Acquisition flag covers only the limited quotation anchors retained here. No full-document, search-display, external-embedding or export permission is asserted."
+  },
+  "coverage": {
+    "source_checked_on": "2026-09-13",
+    "full_pdf_retained": false,
+    "external_environmental_records_retrieved": false,
+    "implementation_evidence_retrieved": false,
+    "publication_date_basis": "Unknown; case lodgement is not PDF publication.",
+    "event_date_basis": "Proposed commitments have no established implementation date.",
+    "relationship_scope": "Source-backed proposed measures linked to a conditional conclusion. No geographical intersection, causal conclusion or completed mitigation is asserted."
+  },
+  "conclusions": [
+    {
+      "id": "RORE-WATER-CONDITIONAL",
+      "kind": "CONDITIONAL_APPLICANT_ASSESSMENT",
+      "text": "Predicted residual water effects rely on mitigation being implemented; outcomes remain unverified.",
+      "locator": "EIAR Non-Technical Summary, section 4.3.3, printed page 16, PDF page 20",
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=20"
+    },
+    {
+      "id": "RORE-COASTAL-CONDITIONAL",
+      "kind": "CONDITIONAL_APPLICANT_ASSESSMENT",
+      "text": "Predicted coastal residual effects depend on effective monitoring and management; outcomes remain unverified.",
+      "locator": "EIAR Non-Technical Summary, section 4.2.3, printed page 14, PDF page 18",
+      "url": "https://www.pleanala.ie/publicaccess/Case%20Documentation/323952/Applicant%20Documents/Application%20Docs/05.%20EIAR/Vol%201%20-%20Non-Technical%20Summary/Non-Technical%20Summary.pdf#page=18"
+    }
+  ]
+}
