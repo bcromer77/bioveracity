@@ -1,0 +1,109 @@
+{
+  "schema_version": "bioveracity.review-bundle.v1",
+  "bundle_id": "signal-watch-2026-09-13-waterford-anglian",
+  "prepared_date": "2026-09-13",
+  "prepared_date_precision": "day",
+  "production_ingest_authorised": false,
+  "records": [
+    {
+      "record_id": "MARA-LIC230013MA",
+      "record_type": "REGULATORY_APPLICATION_CANDIDATE",
+      "review_status": "PRIMARY_SOURCE_READ",
+      "publication_date": null,
+      "publication_date_precision": "not_displayed",
+      "event_date": "2026-09-09",
+      "event_date_precision": "day",
+      "supporting_document_date": "2026-09-08",
+      "supporting_document_date_precision": "day",
+      "place": {
+        "name": "River Suir at Port of Waterford, Belview",
+        "counties": ["Kilkenny", "Waterford"],
+        "coordinates": null
+      },
+      "publisher": "Maritime Area Regulatory Authority",
+      "applicant": "Port of Waterford Company",
+      "identifier": "LIC230013MA",
+      "parent_identifier": "LIC230013",
+      "status_claim": {
+        "claim": "MARA records a material-amendment application received on 9 September 2026. It has not yet been assessed, and a statutory public consultation may be required.",
+        "claimant": "Maritime Area Regulatory Authority",
+        "evidence_type": "official regulator application register"
+      },
+      "amendment_claim": {
+        "claim": "The applicant seeks to remove Specific Condition 28 so licensed marine site-investigation surveys may take place between 1 November and 31 January.",
+        "claimant": "Port of Waterford Company",
+        "evidence_type": "applicant request published by regulator"
+      },
+      "existing_condition": {
+        "claim": "Specific Condition 28 prohibits the permitted maritime usage between 1 November and 31 January annually to reduce disturbance to known fish spawning along the survey route.",
+        "claimant": "Maritime Area Regulatory Authority",
+        "evidence_type": "existing licence condition"
+      },
+      "evidence_divergence": {
+        "regulator_position": "MARA previously retained the condition under the precautionary principle because site-specific inshore fisheries evidence was limited and absence of records should not be treated as absence of fish.",
+        "applicant_position": "The applicant's newly submitted fisheries assessment argues that the works fall outside relevant spawning areas and would not materially affect habitat, fish movement, underwater noise or water quality.",
+        "resolution_status": "UNRESOLVED_PENDING_REGULATORY_ASSESSMENT",
+        "causation_established": false
+      },
+      "sources": [
+        {
+          "url": "https://www.maritimeregulator.ie/application/lic230013ma/",
+          "document_identifier": "LIC230013MA",
+          "support": "Application type, received date, applicant, place, requested amendment, current applied status and warning that assessment and consultation may follow."
+        },
+        {
+          "url": "https://www.maritimeregulator.ie/wp-content/uploads/2026/09/Details-of-Material-Amendment.pdf",
+          "document_identifier": "MOR Environmental E2068 attachment 2.2",
+          "support": "Applicant's detailed request, existing condition, account of MARA's earlier reasoning and applicant's new assessment."
+        },
+        {
+          "url": "https://www.maritimeregulator.ie/application/lic230013/",
+          "document_identifier": "LIC230013",
+          "support": "Parent licence, original activity, location and determination date."
+        }
+      ],
+      "commercial_signal": {
+        "separate_from_factual_record": true,
+        "possible_buyer": "Port of Waterford Company",
+        "possible_partner": "Port environmental or fisheries adviser",
+        "confirmed_bioveracity_customer": false,
+        "published_budget": null,
+        "opportunity": "A bounded, version-controlled amendment chronology linking the original licence, submissions, conditions, new evidence, consultation and determination.",
+        "next_action": "Prepare a two-page prototype chronology and consider a fixed-fee amendment-tracking pilot after MARA opens consultation or publishes its assessment."
+      }
+    },
+    {
+      "record_id": "SOURCE-FAILURE-ANGLIAN-WATER-NEWS-2026-09-13",
+      "record_type": "SOURCE_ACCESS_FAILURE",
+      "review_status": "RETRY_REQUIRED",
+      "publication_date": null,
+      "publication_date_precision": "not_applicable",
+      "event_date": "2026-09-13",
+      "event_date_precision": "day",
+      "place": {
+        "name": "Anglian Water service region",
+        "areas_of_interest": ["Peterborough", "East Anglia"],
+        "coordinates": null
+      },
+      "publisher": "Anglian Water",
+      "source_url": "https://www.anglianwater.co.uk/news/",
+      "retrieval_result": {
+        "http_status_observed": 403,
+        "claim": "Direct review of the Anglian Water news source was prevented by an access restriction.",
+        "evidence_type": "source retrieval failure",
+        "environmental_event_inferred": false,
+        "no_change_inferred": false,
+        "search_index_no_result_is_proof_of_absence": false
+      },
+      "coverage_implication": "Treat Anglian Water as unchecked for this review period. Retry through an accessible official feed or sitemap; do not create environmental-event records from secondary reporting alone.",
+      "commercial_signal": {
+        "separate_from_factual_record": true,
+        "possible_buyer": null,
+        "confirmed_bioveracity_customer": false,
+        "published_budget": null,
+        "opportunity": "Source-health monitoring that distinguishes retrieval failure from a verified no-change result.",
+        "next_action": "Retain an unresolved source-health alert until an official source can be reviewed."
+      }
+    }
+  ]
+}
