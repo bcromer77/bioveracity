@@ -52,19 +52,19 @@ export function SeasonalLanding() {
       <section className="bv-hero bv-season-hero">
         <div>
           <p className="bv-eyebrow">
-            For hotels, guesthouses, restaurants & places to visit
+            For every place that shares its landscape
           </p>
           <h1>
-            Give guests a reason
+            The nature around you
             <br />
-            to explore.
+            is changing.
             <br />
-            <em>In every season.</em>
+            <em>Help people notice.</em>
           </h1>
           <p className="bv-intro">
-            Turn your photographs and the nature around you into your own
-            ecology hub: a beautiful guest guide, a seasonal content plan and
-            one QR code that brings it together.
+            Turn what is actually happening around your place into something
+            guests can see, understand and remember — sourced, seasonal,
+            and yours to share.
           </p>
           <div className="bv-actions">
             <Link className="bv-button" href="/wild/studio">
@@ -75,8 +75,8 @@ export function SeasonalLanding() {
             </EvidenceLink>
           </div>
           <p className="bv-small">
-            Your venue story and seasonal experiences stay at the centre. You approve what
-            guests see.
+            Your place, your photographs, your story. You approve everything
+            before anyone sees it.
           </p>
         </div>
         <aside className="bv-hub-preview" aria-label="Illustrative ecology hub">
