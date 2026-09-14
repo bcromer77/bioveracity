@@ -19,11 +19,11 @@ await build({
   plugins: [{ name: 'visual-stubs', setup(builder) {
     builder.onResolve({ filter: /^react(?:\/|$)/ }, ({ path }) => ({ path, external: true }))
     builder.onLoad({ filter: /workspace-canvas\.tsx$/ }, async ({ path }) => ({ contents: (await readFile(path, 'utf8')).replace('function Investigation(', 'export function Investigation('), loader: 'tsx' }))
-    builder.onResolve({ filter: /^(next\/|next-auth\/|@\/components\/ui\/)|^\.\/investigation-map$/ }, ({ path }) => ({ path, namespace: 'visual' }))
+    builder.onResolve({ filter: /^(next\/|next-auth\/|@\/components\/ui\/)|^\.\/investigation-map$|^\.\/honeycomb-panel$/ }, ({ path }) => ({ path, namespace: 'visual' }))
     builder.onLoad({ filter: /.*/, namespace: 'visual' }, ({ path }) => ({ loader: 'js', contents:
       path === 'next/navigation' ? 'export const usePathname=()=>"/workspace/w", useRouter=()=>({replace(){}}), useSearchParams=()=>new URLSearchParams();' :
       path === 'next-auth/react' ? 'export const useSession=()=>({status:"authenticated",data:{user:{id:"owner"}}});' :
-      'import React from "react"; const Box=p=>React.createElement("div",p,p.children); export default p=>React.createElement("a",p,p.children); export const Button=p=>React.createElement("button",p,p.children), Slider=Box, Tabs=Box, TabsList=Box, TabsTrigger=Box, TabsContent=Box, InvestigationMap=Box, Dialog=Box, DialogContent=Box, DialogHeader=Box, DialogTitle=Box;'
+      'import React from "react"; const Box=p=>React.createElement("div",p,p.children); export default p=>React.createElement("a",p,p.children); export const Button=p=>React.createElement("button",p,p.children), Slider=Box, Tabs=Box, TabsList=Box, TabsTrigger=Box, TabsContent=Box, InvestigationMap=Box, HoneycombPanel=Box, Dialog=Box, DialogContent=Box, DialogHeader=Box, DialogTitle=Box;'
     }))
   } }],
 })

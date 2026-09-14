@@ -64,6 +64,12 @@ test('season control changes the guest campaign and hub preview together', async
   assert.equal(
     r.root.findAllByType('a').filter((a) => a.props.href === '/wild/studio')
       .length,
+    0,
+  )
+  assert.equal(
+    r.root
+      .findAllByType('a')
+      .filter((a) => a.props.href === '/wild/partners#enquire').length,
     2,
   )
   await act(() => r.unmount())
