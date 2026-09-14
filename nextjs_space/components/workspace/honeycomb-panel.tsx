@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import dynamic from 'next/dynamic'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
@@ -371,14 +373,14 @@ function SearchArea({
                 <p className="mt-1 text-xs text-muted-foreground">
                   {hit.publisher} · Licence: {hit.licence || 'Not stated'}
                 </p>
-                <a
+                <EvidenceLink
                   className="mt-2 inline-block font-medium text-primary underline"
                   href={hit.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Read source record
-                </a>
+                  Source attribution
+                </EvidenceLink>
               </li>
             ))}
           </ul>

@@ -1,6 +1,6 @@
 'use client'
 
-import { MapContainer, TileLayer, Polygon, Tooltip, CircleMarker, Circle, Popup } from 'react-leaflet'
+import { AttributionControl, MapContainer, TileLayer, Polygon, Tooltip, CircleMarker, Circle, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { Cell } from '@/lib/honeycomb/geometry'
 import type { HoneycombHit } from './honeycomb-panel'
@@ -18,14 +18,14 @@ export default function HoneycombMapInner({
 }) {
   const bounds = cells.flatMap((cell) => cell.ring.map((point) => [point.lat, point.lng] as [number, number]))
   return (
-    <MapContainer
+    <MapContainer attributionControl={false}
       bounds={bounds}
       scrollWheelZoom={false}
       style={{ height: '100%', width: '100%' }}
       className="z-0"
     >
       <TileLayer
-        attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a>'
+        attribution='Tiles &copy; <a href="/attribution">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
         maxZoom={16}
       />
@@ -80,6 +80,7 @@ export default function HoneycombMapInner({
             </Popup>
           </CircleMarker>
         ))}
+    <AttributionControl prefix={false} />
     </MapContainer>
   )
 }

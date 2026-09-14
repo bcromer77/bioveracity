@@ -24,7 +24,7 @@ const sourceId = (v: unknown) =>
   (typeof v === 'string' || typeof v === 'number') && /^[\w.-]{1,100}$/.test(String(v)) ? String(v) : ''
 
 // Read-only, fixed upstream hosts, bounded response sizes and one total search deadline.
-async function fetchJson(url: string, options: ProviderOptions): Promise<Page> {
+export async function fetchJson(url: string, options: ProviderOptions): Promise<Page> {
   const signal = options.signal
     ? AbortSignal.any([options.signal, AbortSignal.timeout(8000)])
     : AbortSignal.timeout(8000)
@@ -79,7 +79,7 @@ async function pool<T, R>(items: T[], limit: number, operation: (item: T) => Pro
   )
   return output
 }
-function sourceDate(raw: unknown): Pick<HoneycombHit, 'eventDate' | 'datePrecision'> {
+export function sourceDate(raw: unknown): Pick<HoneycombHit, 'eventDate' | 'datePrecision'> {
   const value = text(raw, 80)
   if (/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value) && validDay(value.slice(0, 10)))
     return { eventDate: value.slice(0, 10), datePrecision: 'day' }

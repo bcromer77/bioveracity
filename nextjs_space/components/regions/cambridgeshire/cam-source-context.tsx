@@ -1,3 +1,4 @@
+import { EvidenceLink } from '@/components/evidence-link'
 import Link from 'next/link'
 import { CAM_CLASSIFICATION, CAM_SOURCE } from '@/lib/river-cam-baseline'
 
@@ -10,7 +11,7 @@ export function CamSourceContext() {
       <Link href="/asset/river-cam">Place and timeline</Link>
       <Link href="/regions/cambridgeshire-peterborough/live">Explore the map</Link>
       <Link href="/evidence?q=River%20Cam">Search reviewed sources</Link>
-      <a href={CAM_SOURCE} target="_blank" rel="noreferrer">Environment Agency classifications</a>
+      <EvidenceLink href={CAM_SOURCE} target="_blank" rel="noreferrer">Environment Agency classifications</EvidenceLink>
     </nav>
   </section>
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet'
+import { AttributionControl, MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -31,7 +31,7 @@ export default function PlaceMapInner({
   indicative?: boolean
 }) {
   return (
-    <MapContainer
+    <MapContainer attributionControl={false}
       center={[lat, lng]}
       zoom={indicative ? 11 : 12}
       scrollWheelZoom={false}
@@ -41,7 +41,7 @@ export default function PlaceMapInner({
       {/* Esri light-grey basemap + place labels. Keyless and reliable from
           server environments (OpenStreetMap and CARTO block/require-key here). */}
       <TileLayer
-        attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a>'
+        attribution='Tiles &copy; <a href="/attribution">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
         maxZoom={16}
       />
@@ -77,6 +77,7 @@ export default function PlaceMapInner({
           </Marker>
         </>
       )}
+    <AttributionControl prefix={false} />
     </MapContainer>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
+import { AttributionControl, MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useRouter } from 'next/navigation'
@@ -204,7 +204,7 @@ export default function RegionalMapInner({
     : [52.4, 0.05]
 
   return (
-    <MapContainer
+    <MapContainer attributionControl={false}
       center={center}
       zoom={10}
       scrollWheelZoom={false}
@@ -216,7 +216,7 @@ export default function RegionalMapInner({
       {/* Low-noise Esri light-grey basemap + place labels. Keyless and reliable
           from server environments. */}
       <TileLayer
-        attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a>'
+        attribution='Tiles &copy; <a href="/attribution">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
         maxZoom={16}
       />
@@ -311,6 +311,7 @@ export default function RegionalMapInner({
           </Marker>
         )
       })}
+    <AttributionControl prefix={false} />
     </MapContainer>
   )
 }

@@ -1,3 +1,4 @@
+import { EvidenceLink } from '@/components/evidence-link'
 import Image from 'next/image'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
@@ -251,14 +252,14 @@ export default async function IrishPortsPage() {
                     <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">{corkProject.description}</p>
                   )}
                   {corkProject.sourceUrl && (
-                    <a
+                    <EvidenceLink
                       href={corkProject.sourceUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-accent hover:underline"
                     >
                       <FileSearch className="h-3.5 w-3.5" /> View source
-                    </a>
+                    </EvidenceLink>
                   )}
                 </div>
               )}
@@ -280,9 +281,9 @@ export default async function IrishPortsPage() {
                             (<SafeDate date={e.date.toISOString()} options={{ year: 'numeric' }} />)
                           </p>
                           {e.sourceUrl ? (
-                            <a href={e.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
+                            <EvidenceLink href={e.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
                               <FileSearch className="h-3 w-3" /> Source
-                            </a>
+                            </EvidenceLink>
                           ) : e.sourceDomain ? (
                             <span className="mt-1 block text-[12px] text-muted-foreground">Source: {e.sourceDomain}</span>
                           ) : null}
@@ -307,9 +308,9 @@ export default async function IrishPortsPage() {
                         <div key={cp.id}>
                           <p>{cp.name}{cp.value ? ` (${cp.value})` : ''}</p>
                           {cp.sourceUrl && (
-                            <a href={cp.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
+                            <EvidenceLink href={cp.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
                               <FileSearch className="h-3 w-3" /> Source
-                            </a>
+                            </EvidenceLink>
                           )}
                         </div>
                       ))
@@ -334,9 +335,9 @@ export default async function IrishPortsPage() {
                           (<SafeDate date={corkOperation.date.toISOString()} options={{ day: 'numeric', month: 'long', year: 'numeric' }} />)
                         </p>
                         {corkOperation.sourceUrl && (
-                          <a href={corkOperation.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
+                          <EvidenceLink href={corkOperation.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-accent hover:underline">
                             <FileSearch className="h-3 w-3" /> Source
-                          </a>
+                          </EvidenceLink>
                         )}
                       </div>
                     ) : (

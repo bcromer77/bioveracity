@@ -1,5 +1,7 @@
 # Honeycomb search: implementation and handover
 
+> Integration amendment: see ONSITE_API_INTEGRATION.md. PR #47 now incorporates the seasonal work, keeps references on-site and replaces Wild webpage cards with a bounded county biodiversity API feed. Earlier test passes below describe the earlier individual feature head, not the combined amendment. Check the new CI result before release.
+
 14 September 2026. Base: `clarity/usability-release`, full SHA `c9c542f4f5c217006e4ee509d1bf9551e01f61e9`. Branch: `feat/honeycomb-search`. This is separate from seasonal ecology hubs PR #46. No production writes, migrations, merge or deployment.
 
 ## Working user journey

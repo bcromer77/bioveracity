@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -383,9 +385,9 @@ function SourceRow({ classCode, title, desc, meta, url, note, details }: {
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             {metaItems.map((m, i) => <span key={i} className="text-[13px] text-muted-foreground">{m}</span>)}
             {url && (
-              <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">
+              <EvidenceLink href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">
                 Source <ExternalLink className="h-3 w-3" />
-              </a>
+              </EvidenceLink>
             )}
             {detailItems.length > 0 && (
               <button
@@ -415,7 +417,7 @@ function SourceRow({ classCode, title, desc, meta, url, note, details }: {
                 <div className="contents">
                   <dt className="text-muted-foreground">Source URL</dt>
                   <dd className="min-w-0 break-all">
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">{url}</a>
+                    <EvidenceLink href={url} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">{url}</EvidenceLink>
                   </dd>
                 </div>
               )}
@@ -508,9 +510,9 @@ function PlaceDoctrine({ asset, onReplay }: { asset: any; onReplay: () => void }
                       <span className="font-medium">{p.name}</span>
                       {p.value ? <span className="text-muted-foreground"> · {p.value}</span> : null}
                       {p.sourceUrl && (
-                        <a href={p.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2">
+                        <EvidenceLink href={p.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2">
                           Source <ExternalLink className="h-3 w-3" />
-                        </a>
+                        </EvidenceLink>
                       )}
                     </li>
                   ))}
@@ -527,9 +529,9 @@ function PlaceDoctrine({ asset, onReplay }: { asset: any; onReplay: () => void }
                       {a.permitRef ? <span className="text-muted-foreground"> · {a.permitRef}</span> : null}
                       {a.authority ? <span className="text-muted-foreground"> · {a.authority}</span> : null}
                       {a.sourceUrl && (
-                        <a href={a.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2">
+                        <EvidenceLink href={a.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2">
                           Source <ExternalLink className="h-3 w-3" />
-                        </a>
+                        </EvidenceLink>
                       )}
                     </li>
                   ))}

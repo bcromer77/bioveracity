@@ -1,3 +1,4 @@
+import { EvidenceLink } from '@/components/evidence-link'
 import type { EvidenceHit } from '@/lib/evidence-store'
 
 export function EvidenceResults({ hits }: { hits: EvidenceHit[] }) {
@@ -7,7 +8,7 @@ export function EvidenceResults({ hits }: { hits: EvidenceHit[] }) {
     <h2 className="mt-2 text-xl font-semibold">{hit.claim}</h2>
     <p className="mt-2 text-sm text-muted-foreground">{hit.publisher} · {hit.jurisdiction}</p>
     <blockquote className="my-4 border-l-2 pl-4 text-sm">{hit.excerpt}</blockquote>
-    <a href={hit.url} target="_blank" rel="noreferrer" className="text-sm underline">{hit.title} · {hit.locator}</a>
+    <EvidenceLink href={hit.url} target="_blank" rel="noreferrer" className="text-sm underline">{hit.title} · {hit.locator}</EvidenceLink>
     <p className="mt-3 text-xs text-muted-foreground">{hit.attribution} · Licence: {hit.licence}</p>
     <dl className="mt-4 flex flex-wrap gap-5 text-xs text-muted-foreground">
       <div><dt>Event date</dt><dd>{hit.eventDate ?? 'Not established'}{hit.eventPrecision === 'month' || hit.eventPrecision === 'year' ? ` (${hit.eventPrecision} only)` : ''}</dd></div>

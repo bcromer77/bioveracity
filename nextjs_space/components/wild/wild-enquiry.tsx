@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 import { useRef, useState } from 'react'
 
 export function WildEnquiry() {
@@ -26,7 +28,7 @@ export function WildEnquiry() {
     <label htmlFor="wild-website">Website <span>Optional</span></label><input id="wild-website" name="website" type="url" maxLength={500} autoComplete="url" placeholder="https://" />
     <label htmlFor="wild-message">Anything you’d like us to know? <span>Optional</span></label><textarea id="wild-message" name="message" rows={3} maxLength={2000} />
     <div className="bv-honeypot" aria-hidden="true"><label htmlFor="wild-company">Leave this empty</label><input id="wild-company" name="company" tabIndex={-1} autoComplete="off" /></div>
-    <p className="bv-small">We use these details to respond to your enquiry. <a href="/privacy">Privacy information</a>.</p>
+    <p className="bv-small">We use these details to respond to your enquiry. <EvidenceLink href="/privacy">Privacy information</EvidenceLink>.</p>
     {error&&<p role="alert" className="bv-error">{error}</p>}
     <button className="bv-button bv-green" disabled={busy}>{busy?'Saving your enquiry…':'Contact us for pricing'}</button>
   </form>
