@@ -22,6 +22,7 @@ type Hub = {
   trend: Trend | null
   revision: number
   published: Snapshot | null
+  review?: { id: string; status: string; reason: string; photoIds: string[] } | null
   photos: { id: string; caption: string; credit: string }[]
 }
 const empty: Profile = {
@@ -88,7 +89,7 @@ export function HubStudio() {
     setProfile(next.profile)
     setPlan(next.plan)
     setMonth((next.plan?.suggestedLeadMonth || 1) - 1)
-    setSelectedPhotos(next.published?.photoIds || [])
+    setSelectedPhotos((next.review?.photoIds || next.published?.photoIds || []).filter(id => next.photos.some(p => p.id === id)))
     setDirty(false)
     setApproved(false)
     setAuthorised(false)
@@ -153,7 +154,7 @@ export function HubStudio() {
       <h1>Your ecology hubs</h1>
       <p>
         Build a guest guide and twelve months of content. Drafts are private.
-        Publishing requires your explicit review; it does not purchase signage
+        Publishing requires your approval and a BioVeracity editorial review; it does not purchase signage
         or start a paid membership.
       </p>
       <div aria-live="polite">
@@ -655,7 +656,8 @@ export function HubStudio() {
                 </section>
               )}
               <section className="bv-form">
-                <h2>5. Approve your ecology hub</h2>
+                <h2>5. Submit your ecology hub for review</h2>
+                {hub.review && <p role="status">Editorial status: {hub.review.status}{hub.review.reason ? ' · ' + hub.review.reason : ''}. Saving changes requires a new submission.</p>}
                 <h3>{profile.name}</h3>
                 <p className="bv-preserve">{profile.story}</p>
                 <p>Website: {profile.website || 'Not added'}</p>
@@ -735,16 +737,16 @@ export function HubStudio() {
                   onClick={() =>
                     action(
                       {
-                        action: 'publish',
+                        action: 'submit',
                         photoIds: selectedPhotos,
                         approved,
                         authorised,
                       },
-                      'Approved version published. Your QR address is ready.',
+                      'Version submitted for editorial review. Your public hub stays unchanged until approval.',
                     )
                   }
                 >
-                  Approve and publish
+                  Submit for editorial review
                 </button>
                 {hub.published && (
                   <div className="bv-published">

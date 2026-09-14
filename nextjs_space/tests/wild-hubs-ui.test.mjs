@@ -140,19 +140,13 @@ test('self-service retry preserves creation identity; saved draft, edits and app
           plan: { ...hub.plan, campaigns: data.campaigns },
           revision: hub.revision + 1,
         }
-      if (data.action === 'publish') {
+      if (data.action === 'submit') {
         assert.equal(data.approved, true)
         assert.equal(data.authorised, true)
         hub = {
           ...hub,
           revision: hub.revision + 1,
-          published: {
-            profile: hub.profile,
-            plan: hub.plan,
-            photoIds: [],
-            version: hub.revision + 1,
-            approvedAt: new Date().toISOString(),
-          },
+          review: {id:'test-review',status:'PENDING',reason:'',photoIds:[]},
         }
       }
       return Response.json({ hub })
@@ -186,14 +180,14 @@ test('self-service retry preserves creation identity; saved draft, edits and app
   await submit()
   assert.equal(requests[0].requestId, requests[1].requestId)
   await act(() => button(r, 'Generate seasonal plan').props.onClick())
-  assert.equal(button(r, 'Approve and publish').props.disabled, true)
+  assert.equal(button(r, 'Submit for editorial review').props.disabled, true)
   await change('campaign-title', 'An edited autumn invitation')
   assert.equal(
     r.root.findByProps({ id: 'hub-name' }).parent.props.disabled,
     true,
     'profile editing is locked while plan edits are unsaved',
   )
-  assert.equal(button(r, 'Approve and publish').props.disabled, true)
+  assert.equal(button(r, 'Submit for editorial review').props.disabled, true)
   await act(() => button(r, 'Save plan edits').props.onClick())
   assert.equal(
     r.root.findByProps({ id: 'hub-name' }).parent.props.disabled,
@@ -207,12 +201,13 @@ test('self-service retry preserves creation identity; saved draft, edits and app
     approvals[0].props.onChange({ target: { checked: true } })
     approvals[1].props.onChange({ target: { checked: true } })
   })
-  assert.equal(button(r, 'Approve and publish').props.disabled, false)
-  await act(() => button(r, 'Approve and publish').props.onClick())
-  assert.ok(hub.published)
-  assert.match(text(r), /Open public ecology hub/)
+  assert.equal(button(r, 'Submit for editorial review').props.disabled, false)
+  await act(() => button(r, 'Submit for editorial review').props.onClick())
+  assert.equal(hub.published, null)
+  assert.match(text(r), /PENDING/)
+  assert.doesNotMatch(text(r), /Open public ecology hub/)
   assert.equal(
-    button(r, 'Approve and publish').props.disabled,
+    button(r, 'Submit for editorial review').props.disabled,
     true,
     'approval resets after publishing',
   )

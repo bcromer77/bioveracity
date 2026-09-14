@@ -1,4 +1,9 @@
 import assert from 'node:assert/strict'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import sharp from 'sharp'
 import { randomUUID } from 'node:crypto'
 import { parseWildEnquiry, wildLeadData } from '../lib/wild-counties/enquiry'
 import { getWildVenue, publicWildOrigin } from '../lib/wild-counties/venues'
@@ -19,7 +24,17 @@ const jump=await redirect(new Request('https://untrusted.example'),{params:Promi
 assert.equal(jump.headers.get('location'),'/wild/places/example-woodland-venue')
 assert.equal((await redirect(new Request('https://example.com'),{params:Promise.resolve({id:'unknown'})})).status,404)
 const code=await qr(new Request('https://evil.example?download=1'),{params:Promise.resolve({id:'example-woodland-venue'})})
-assert.equal(code.status,200);assert.match(code.headers.get('content-disposition')!,/concept-qr.svg/);assert.match(await code.text(),/<svg/)
+assert.equal(code.status,200);assert.match(code.headers.get('content-disposition')!,/concept-qr.svg/);const svg = await code.text();assert.match(svg,/<svg/)
+if (process.env.WILD_QR_DECODE_TEST === 'true') {
+ const dir=mkdtempSync(join(tmpdir(),'wild-qr-'))
+ try {
+  const file=join(dir,'download.png')
+  writeFileSync(file,await sharp(Buffer.from(svg)).png().toBuffer())
+  const decoded=execFileSync('zbarimg',['--quiet','--raw',file],{encoding:'utf8'}).trim()
+  assert.equal(decoded,'https://wild-preview.example/wild/q/example-woodland-venue')
+  console.log('PASS: actual download SVG rasterised and decoded to the configured QR target.')
+ } finally {rmSync(dir,{recursive:true,force:true})}
+} else console.log('QR binary decode not requested; run with WILD_QR_DECODE_TEST=true and zbarimg installed.')
 // Isolated persistence double: no real database or notification is contacted.
 const rows=new Map<string,ReturnType<typeof wildLeadData>>()
 let notifications=0,offline=false

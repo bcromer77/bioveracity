@@ -1,4 +1,4 @@
-import { randomUUID, createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import type { Database, Sql } from '../workspaces/service'
 import {
   HubError,
@@ -50,7 +50,13 @@ export function hubService(db: Database, ownerId: string) {
     )
   }
   async function result(sql: Sql, hub: HubRow) {
-    return { ...hub, photos: await photos(sql, hub.id) }
+    const [review] = await sql.query<{ id: string; status: string; revision: number; reason: string; snapshot: Snapshot }>(
+      'SELECT "id","status","revision","reason","snapshot" FROM "WildHubReview" WHERE "hubId"=$1 ORDER BY "revision" DESC LIMIT 1', [hub.id],
+    )
+    return { ...hub, photos: await photos(sql, hub.id), review: review ? {
+      id: review.id, status: review.status === 'PENDING' && review.revision !== hub.revision ? 'SUPERSEDED' : review.status,
+      reason: review.reason, photoIds: review.snapshot.photoIds,
+    } : null }
   }
   return {
     async list() {
@@ -139,11 +145,13 @@ export function hubService(db: Database, ownerId: string) {
               throw new HubError(409, 'Generate the seasonal plan first.')
             plan = editCampaigns(plan, input.campaigns)
             break
-          case 'publish': {
+          case 'publish':
+            throw new HubError(409, 'Submit this version for editorial review before publication.')
+          case 'submit': {
             if (input.approved !== true || input.authorised !== true)
               throw new HubError(
                 400,
-                'Confirm your authority and review the content before publishing.',
+                'Confirm your authority and review the content before submitting.',
               )
             if (!plan)
               throw new HubError(
@@ -164,25 +172,13 @@ export function hubService(db: Database, ownerId: string) {
               input.photoIds.some((v) => !available.some((p) => p.id === v))
             )
               throw new HubError(400, 'Select only photos from this hub.')
-            published = {
-              profile,
-              plan,
-              photoIds: input.photoIds as string[],
-              approvedAt: new Date().toISOString(),
-              version: hub.revision + 1,
+            const snapshot: Snapshot = {
+              profile, plan, photoIds: input.photoIds as string[],
+              approvedAt: new Date().toISOString(), version: hub.revision + 1,
             }
             await sql.query(
-              'INSERT INTO "WildHubPublication" ("id","hubId","actorId","action","snapshot","hash") VALUES ($1,$2,$3,$4,$5::jsonb,$6)',
-              [
-                randomUUID(),
-                id,
-                ownerId,
-                'PUBLISH',
-                JSON.stringify(published),
-                createHash('sha256')
-                  .update(JSON.stringify(published))
-                  .digest('hex'),
-              ],
+              'INSERT INTO "WildHubReview" ("id","hubId","submittedBy","revision","snapshot") VALUES ($1,$2,$3,$4,$5::jsonb)',
+              [randomUUID(), id, ownerId, hub.revision + 1, JSON.stringify(snapshot)],
             )
             break
           }

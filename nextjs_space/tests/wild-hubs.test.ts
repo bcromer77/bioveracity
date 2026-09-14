@@ -13,6 +13,7 @@ import {
   editCampaigns,
   HubError,
 } from '../lib/wild-hubs/domain'
+import { reviewService } from '../lib/wild-hubs/review'
 import { hubService, publicHub, readablePhoto } from '../lib/wild-hubs/service'
 import { photoInput, preparePhoto } from '../lib/wild-hubs/photos'
 import { assertSameOrigin } from '../lib/workspaces/request-body'
@@ -177,7 +178,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
   const pg = new PGlite()
   try {
     await pg.exec(
-      'CREATE TABLE "User" (id TEXT PRIMARY KEY); INSERT INTO "User" VALUES (\'alice\'),(\'bob\');',
+      'CREATE TABLE "User" (id TEXT PRIMARY KEY, role TEXT DEFAULT \'user\', "accessState" TEXT DEFAULT \'REGISTERED\'); INSERT INTO "User" (id) VALUES (\'alice\'),(\'bob\'),(\'reviewer\'); UPDATE "User" SET role=\'admin\' WHERE id=\'reviewer\';',
     )
     await pg.exec(
       readFileSync(
@@ -188,6 +189,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
         'utf8',
       ),
     )
+    await pg.exec(readFileSync(new URL('../prisma/migrations/20260914_wild_editorial_review/migration.sql', import.meta.url), 'utf8'))
     const sql = (client: Pick<PGlite, 'query'>): Sql => ({
       query: async <T>(statement: string, values: unknown[]) =>
         (await client.query<T>(statement, values)).rows,
@@ -217,7 +219,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
     await denied(bob.get(hub.id))
     await denied(
       bob.change(hub.id, {
-        action: 'publish',
+        action: 'submit',
         revision: 1,
         approved: true,
         authorised: true,
@@ -228,7 +230,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
     assert.equal(await publicHub(db, hub.id), null)
     await assert.rejects(
       alice.change(hub.id, {
-        action: 'publish',
+        action: 'submit',
         revision: 1,
         approved: true,
         authorised: true,
@@ -268,7 +270,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
     const otherPhoto = await bob.addPhoto(other.id, { ...data, hash: 'bob' })
     await assert.rejects(
       alice.change(hub.id, {
-        action: 'publish',
+        action: 'submit',
         revision: hub.revision,
         approved: true,
         authorised: true,
@@ -278,7 +280,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
     )
     await assert.rejects(
       alice.change(hub.id, {
-        action: 'publish',
+        action: 'submit',
         revision: hub.revision,
         approved: false,
         authorised: true,
@@ -287,12 +289,24 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       /Confirm/,
     )
     hub = await alice.change(hub.id, {
-      action: 'publish',
+      action: 'submit',
       revision: hub.revision,
       approved: true,
       authorised: true,
       photoIds: [photoId],
     })
+    assert.equal(await publicHub(db, hub.id), null, 'owner approval cannot publish')
+    await assert.rejects(alice.change(hub.id, {action:'publish',revision:hub.revision}), /editorial review/)
+    const reviewer = reviewService(db, 'reviewer')
+    await assert.rejects(reviewService(db, 'bob').list(), /Administrator/)
+    const pending = (await reviewer.list()).reviews[0]
+    assert.equal(pending.snapshot.photoIds[0], photoId)
+    assert.equal((await reviewer.photo(pending.id, photoId)).caption, data.caption)
+    await assert.rejects(reviewer.photo(pending.id, otherPhoto.photos[0].id), /Photo not found/)
+    await assert.rejects(reviewer.decide(pending.id,{action:'approve',revision:hub.revision,confirmed:false,reason:'Test review'}), /confirm/)
+    await reviewer.decide(pending.id,{action:'approve',revision:hub.revision,confirmed:true,reason:'Synthetic fixture: reviewed every entry and selected image.'})
+    hub = await alice.get(hub.id)
+    await assert.rejects(reviewer.decide(pending.id,{action:'approve',revision:hub.revision,confirmed:true,reason:'Duplicate'}), /already reviewed/)
     const published = await publicHub(db, hub.id)
     assert.equal(published?.profile.name, profile.name)
     assert.equal(
@@ -303,6 +317,16 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       alice.removePhoto(hub.id, photoId, hub.revision),
       /Publish a version/,
     )
+    // Rejecting and superseding submissions leave the approved public edition intact.
+    hub = await alice.change(hub.id,{action:'submit',revision:hub.revision,approved:true,authorised:true,photoIds:[photoId]})
+    let next = (await reviewer.list()).reviews[0]
+    await reviewer.decide(next.id,{action:'reject',revision:hub.revision,confirmed:true,reason:'Please clarify the venue story.'})
+    hub = await alice.get(hub.id)
+    assert.equal(hub.review?.status,'REJECTED')
+    assert.equal(hub.review?.reason,'Please clarify the venue story.')
+    assert.equal((await publicHub(db, hub.id))?.version,published?.version)
+    hub = await alice.change(hub.id,{action:'submit',revision:hub.revision,approved:true,authorised:true,photoIds:[photoId]})
+    next = (await reviewer.list()).reviews[0]
     const oldRevision = hub.revision
     hub = await alice.change(hub.id, {
       action: 'save',
@@ -310,6 +334,10 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       profile: { ...profile, name: 'Draft only' },
     })
     assert.equal(hub.plan, null)
+    assert.equal(hub.review?.status,'SUPERSEDED')
+    assert.equal((await reviewer.list()).reviews.length,0)
+    await assert.rejects(reviewer.decide(next.id,{action:'approve',revision:next.revision,confirmed:true,reason:'Stale'}), /changed/)
+    await assert.rejects(reviewer.photo(next.id,photoId), /changed/)
     assert.equal((await publicHub(db, hub.id))?.profile.name, profile.name)
     await assert.rejects(
       alice.change(hub.id, { action: 'save', revision: oldRevision, profile }),
@@ -317,7 +345,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
     )
     await assert.rejects(
       alice.change(hub.id, {
-        action: 'publish',
+        action: 'submit',
         revision: hub.revision,
         approved: true,
         authorised: true,
@@ -341,6 +369,14 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       alice.create({ ...profile, requestId: randomUUID() }),
       /Three hubs/,
     )
+    // Current database role controls review access, not a remembered session role.
+    await pg.exec('UPDATE "User" SET role=\'user\' WHERE id=\'reviewer\'')
+    await assert.rejects(reviewer.list(), /Administrator/)
+    await pg.exec('UPDATE "User" SET role=\'admin\' WHERE id=\'alice\'')
+    hub = await alice.change(hub.id,{action:'generate',revision:hub.revision,year:new Date().getUTCFullYear()})
+    hub = await alice.change(hub.id,{action:'submit',revision:hub.revision,approved:true,authorised:true,photoIds:[]})
+    assert.equal((await reviewService(db,'alice').list()).reviews.length,0)
+    await assert.rejects(reviewService(db,'alice').decide(hub.review!.id,{action:'approve',revision:hub.revision,confirmed:true,reason:'Self approval'}), /Another administrator/)
     const audit = await pg.query<{ action: string; hash: string | null }>(
       'SELECT "action","hash" FROM "WildHubPublication" ORDER BY "createdAt"',
     )

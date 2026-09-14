@@ -108,6 +108,8 @@ model User {
   image         String?
   password      String?
   role          String      @default("user")
+  wildSubmissions WildHubReview[] @relation("WildSubmitter")
+  wildReviews WildHubReview[] @relation("WildReviewer")
   wildHubs WildHub[]
   wildPublications WildHubPublication[]
   privateMemberships PrivateWorkspaceMember[]
@@ -968,6 +970,7 @@ model WildHub {
   updatedAt DateTime @default(now())
   photos WildHubPhoto[]
   publications WildHubPublication[]
+  reviews WildHubReview[]
   @@index([ownerId])
 }
 model WildHubPhoto {
@@ -993,4 +996,22 @@ model WildHubPublication {
   hash String?
   createdAt DateTime @default(now())
   @@index([hubId])
+}
+
+model WildHubReview {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  submittedBy String
+  submitter User @relation("WildSubmitter", fields: [submittedBy], references: [id], onDelete: Restrict)
+  revision Int
+  snapshot Json
+  status String @default("PENDING")
+  reviewedBy String?
+  reviewer User? @relation("WildReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  reason String @default("")
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+  @@unique([hubId, revision])
+  @@index([status, createdAt])
 }

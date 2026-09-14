@@ -53,6 +53,10 @@ jobs:
           rm ci-schema.prisma
       - name: Full TypeScript check
         run: yarn typecheck
+      - name: Install independent QR decoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends zbar-tools
       - name: Isolated source and application tests
         run: |
           yarn test:honeycomb
@@ -60,6 +64,6 @@ jobs:
           yarn test:onsite
           node --import tsx --test tests/private-workspaces.test.ts
           node --import tsx scripts/test-wild-counties.ts
-          yarn test:wild-community
+          WILD_QR_DECODE_TEST=true yarn test:wild-community
       - name: Production build
         run: yarn build
