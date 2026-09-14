@@ -14,7 +14,9 @@
     "test:uploads": "node --test tests/upload-feedback.test.mjs tests/upload-scanner.test.mjs",
     "check:uploads": "node scripts/check-upload-runtime.mjs",
     "build:worker": "node scripts/build-parser-worker.mjs",
-    "check:worker": "node scripts/check-parser-worker.mjs"
+    "check:worker": "node scripts/check-parser-worker.mjs",
+    "test:wild-counties": "tsx scripts/test-wild-counties.ts",
+    "test:wild-community": "node --import tsx scripts/test-wild-community.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
@@ -28,6 +30,7 @@
     "@types/leaflet": "^1.9.22",
     "@types/node": "22.0.0",
     "@types/plotly.js": "2.35.5",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@types/react-plotly.js": "2.6.3",
@@ -117,6 +120,7 @@
     "pdf-lib": "1.17.1",
     "pdfjs-dist": "6.3.289",
     "plotly.js": "2.35.3",
+    "qrcode": "1.5.4",
     "react": "19.2.8",
     "react-chartjs-2": "5.3.0",
     "react-datepicker": "6.1.0",

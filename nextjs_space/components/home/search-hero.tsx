@@ -14,9 +14,14 @@ export function SearchHero() {
     <section className="border-b border-border">
       <div className="mx-auto max-w-[760px] px-4 py-16 text-center md:py-24">
         <h1 className="mb-8 font-display text-3xl font-bold tracking-tight text-foreground md:text-5xl">
-          What happened here?
+          Understand a site. Discover a place.
         </h1>
 
+        <p className="mx-auto mb-8 max-w-xl text-lg">BioVeracity brings together the evidence and stories that help people understand a place.</p>
+        <div className="mb-10 flex flex-wrap justify-center gap-3">
+          <Link href="/professionals" className="rounded bg-[#173d35] px-5 py-3 text-white">For professionals</Link>
+          <Link href="/wild" className="rounded bg-[#dfc27a] px-5 py-3 text-[#173d35]">Explore Wild Counties</Link>
+        </div>
         <div className="mx-auto max-w-2xl">
           <UniversalSearch size="large" showSubmitButton />
         </div>
