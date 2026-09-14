@@ -16,7 +16,8 @@
     "build:worker": "node scripts/build-parser-worker.mjs",
     "check:worker": "node scripts/check-parser-worker.mjs",
     "test:wild-counties": "tsx scripts/test-wild-counties.ts",
-    "test:wild-community": "node --import tsx scripts/test-wild-community.ts"
+    "test:wild-community": "node --import tsx scripts/test-wild-community.ts",
+    "test:wild-hubs": "node --import tsx --test tests/wild-hubs.test.ts && node --test tests/wild-hubs-ui.test.mjs"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
@@ -137,6 +138,7 @@
     "react-test-renderer": "19.2.8",
     "react-use": "17.6.0",
     "recharts": "2.15.3",
+    "sharp": "^0.34.5",
     "sonner": "1.5.0",
     "swr": "2.2.4",
     "tailwind-scrollbar-hide": "1.1.7",
