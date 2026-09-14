@@ -4,13 +4,14 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { createHash } from 'node:crypto'
 import { PGlite } from '@electric-sql/pglite'
-import { PDFDocument, StandardFonts } from 'pdf-lib'
+import { PDFDocument, StandardFonts, PDFName, PDFArray, PDFDict, PDFString, PDFHexString } from 'pdf-lib'
 import { parseFile, proposedDate } from '../lib/workspaces/parse-file.mjs'
 import { parseIsolated } from '../lib/workspaces/parser'
 import { caseFiles, cipher, reviewedDate } from '../lib/workspaces/case-files'
 import { workspaceService, WorkspaceError, type Sql, type Database } from '../lib/workspaces/service'
 import { renderCase } from '../lib/workspaces/render-case'
 import { createCaseEndpoint } from '../lib/workspaces/case-endpoint'
+import { citationUrl } from '../lib/workspaces/citation'
 import { admit } from '../lib/workspaces/admission'
 const key='ab'.repeat(32)
 const require=createRequire(import.meta.url)
@@ -151,4 +152,35 @@ test('Slice 2: stable citation context reopens the cited passage with ordered ne
   await deny(bf.context(wa.id,ca.id,target.id))
   await deny(af.context(wa.id,ca.id,'nonexistent-passage-id'))
  }finally{await pg.close()}
+})
+test('Slice 2B: canonical citation URL encoding + renderer embeds clickable citation link with app origin',async()=>{
+ // citationUrl encodes every path/query part, strips trailing slashes, root-relative on empty origin
+ assert.equal(citationUrl('','w s','c/1','d&2','p?3'),'/workspace/w%20s?case=c%2F1&doc=d%262&cite=p%3F3')
+ assert.equal(citationUrl('https://bioveracity.com//','ws','c1','d1','p1'),'https://bioveracity.com/workspace/ws?case=c1&doc=d1&cite=p1')
+ assert.equal(citationUrl(null,'ws','c1','d1','p1'),'/workspace/ws?case=c1&doc=d1&cite=p1')
+ // renderer: valid PDF, readable Unicode (accents + scientific units), visible 'revision N', and a clickable
+ // link annotation carrying the canonical citation URL built from the manifest app origin + exact passage id
+ const baseEvent={eventDate:'2026-09-08',precision:'DAY',title:'Discharge recorded by Sinéad Ó Braonáin (12 µg/L, 3.5 m³/s)',evidenceType:'SOURCE_STATEMENT',revision:3,reviewedBy:'reviewer',superseded:false,name:'inspection.pdf',locator:'PDF page 2',documentId:'doc-1',hash:'a'.repeat(64),sourceUrl:'https://example.test/rec',publicationDate:'2026-09-02',importedAt:'2026-09-08T00:00:00.000Z',passageId:'passage-1',quote:'Observed discharge at 12 µg/L.',note:'Observation only'}
+ const manifest={reportTitle:'Reviewed case timeline',case:{title:'Citation link case'},createdAt:'2026-09-12T00:00:00.000Z',exportId:'exp-1',notice:'Reviewed evidence pack.',appOrigin:'https://bioveracity.com',workspaceId:'ws-1',caseId:'case-1',events:[baseEvent]}
+ // Extract every clickable link-annotation URI from a rendered PDF (pdf-lib decompresses object streams on load).
+ async function linkUris(buf:Buffer):Promise<string[]>{
+  const doc=await PDFDocument.load(buf);const uris:string[]=[]
+  for(const p of doc.getPages()){
+   const annots=p.node.lookup(PDFName.of('Annots'),PDFArray);if(!annots)continue
+   for(let i=0;i<annots.size();i++){
+    const annot=annots.lookup(i,PDFDict);const action=annot.lookup(PDFName.of('A'),PDFDict);if(!action)continue
+    const uri=action.lookup(PDFName.of('URI'));if(uri instanceof PDFString||uri instanceof PDFHexString)uris.push(uri.decodeText())
+   }
+  }
+  return uris
+ }
+ const bytes=await renderCase(manifest)
+ assert.equal(bytes.subarray(0,5).toString(),'%PDF-')
+ assert.ok((await linkUris(bytes)).includes(citationUrl('https://bioveracity.com','ws-1','case-1','doc-1','passage-1')),'clickable annotation URL uses app origin and exact passage')
+ const rendered=await parseFile(bytes,'report.pdf');const allText=rendered.passages.map(p=>p.text).join(' ')
+ assert.match(allText,/Sinéad Ó Braonáin/);assert.match(allText,/12 [µμ]g\/L/);assert.match(allText,/revision 3/)
+ // empty app origin → root-relative link that still resolves in a browser
+ assert.ok((await linkUris(await renderCase({...manifest,appOrigin:''}))).includes('/workspace/ws-1?case=case-1&doc=doc-1&cite=passage-1'))
+ // no clickable link is drawn when passage/document identity is absent (nothing to reopen)
+ assert.equal((await linkUris(await renderCase({...manifest,events:[{...baseEvent,passageId:'',documentId:''}]}))).length,0)
 })

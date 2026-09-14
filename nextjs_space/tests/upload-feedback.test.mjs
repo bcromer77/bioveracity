@@ -23,7 +23,7 @@ await build({
     builder.onLoad({ filter: /.*/, namespace: 'visual' }, ({ path }) => ({ loader: 'js', contents:
       path === 'next/navigation' ? 'export const usePathname=()=>"/workspace/w", useRouter=()=>({replace(){}}), useSearchParams=()=>new URLSearchParams();' :
       path === 'next-auth/react' ? 'export const useSession=()=>({status:"authenticated",data:{user:{id:"owner"}}});' :
-      'import React from "react"; const Box=p=>React.createElement("div",p,p.children); export default p=>React.createElement("a",p,p.children); export const Button=p=>React.createElement("button",p,p.children), Slider=Box, Tabs=Box, TabsList=Box, TabsTrigger=Box, TabsContent=Box, InvestigationMap=Box;'
+      'import React from "react"; const Box=p=>React.createElement("div",p,p.children); export default p=>React.createElement("a",p,p.children); export const Button=p=>React.createElement("button",p,p.children), Slider=Box, Tabs=Box, TabsList=Box, TabsTrigger=Box, TabsContent=Box, InvestigationMap=Box, Dialog=Box, DialogContent=Box, DialogHeader=Box, DialogTitle=Box;'
     }))
   } }],
 })
