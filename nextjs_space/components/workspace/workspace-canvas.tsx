@@ -14,6 +14,7 @@ import { InvestigationMap, type MapLayers, type MapPoint } from './investigation
 import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximity.mjs'
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
+import { HoneycombPanel } from './honeycomb-panel'
 import { ReportsPanel } from './reports-panel'
 import { SourceViewer } from './source-viewer'
 import { citationUrl } from '@/lib/workspaces/citation'
@@ -678,6 +679,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
             <button type="button" onClick={() => openContext(latestReviewed.passageId)} className="mt-1 text-xs font-medium text-primary underline">View source in context</button>
           </div>}
         </section>
+
+        <HoneycombPanel workspaceId={workspaceId} caseId={caseId} lat={place.lat} lng={place.lng} />
 
         {/* Public records retrieved for the map — STRICTLY SEPARATE from private
             evidence. Each card cross-highlights its map marker; the whole card

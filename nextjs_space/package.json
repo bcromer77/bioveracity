@@ -16,7 +16,8 @@
     "build:worker": "node scripts/build-parser-worker.mjs",
     "check:worker": "node scripts/check-parser-worker.mjs",
     "test:wild-counties": "tsx scripts/test-wild-counties.ts",
-    "test:wild-community": "node --import tsx scripts/test-wild-community.ts"
+    "test:wild-community": "node --import tsx scripts/test-wild-community.ts",
+    "test:honeycomb": "node --import tsx --test tests/honeycomb-*.test.ts tests/honeycomb-ui.test.tsx"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
