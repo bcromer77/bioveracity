@@ -1,6 +1,4 @@
 'use client'
-import { EvidenceLink } from '@/components/evidence-link'
-
 import Link from 'next/link'
 import { useState } from 'react'
 const SEASONS = [
@@ -51,39 +49,43 @@ export function SeasonalLanding() {
     <>
       <section className="bv-hero bv-season-hero">
         <div>
-          <p className="bv-eyebrow">
-            For every place that shares its landscape
-          </p>
+          <p className="bv-eyebrow">Source-linked evidence for every place in Ireland</p>
           <h1>
-            The nature around you
+            Every place has a story.
             <br />
-            is changing.
-            <br />
-            <em>Help people notice.</em>
+            <em>Connect the evidence behind it.</em>
           </h1>
           <p className="bv-intro">
-            Turn what is actually happening around your place into something
-            guests can see, understand and remember — sourced, seasonal,
-            and yours to share.
+            Explore the wildlife, water, landscape and planning records that help
+            explain a place. Bring the sources together to reveal its character,
+            understand change and see what needs a closer look.
           </p>
-          <div className="bv-actions">
-            <Link className="bv-button" href="/wild/studio">
-              Create your ecology hub
-            </Link>
-            <EvidenceLink className="bv-text-link" href="#seasons">
-              See the seasonal approach ↗
-            </EvidenceLink>
+          <div className="bv-routes">
+            <article className="bv-route-card">
+              <p className="bv-eyebrow">For businesses &amp; places to visit</p>
+              <p>
+                Turn the nature around your business into a richer guest
+                experience—with a local discovery guide, seasonal stories and your
+                own QR signage.
+              </p>
+              <Link className="bv-button" href="/wild/partners">
+                Explore the business experience
+              </Link>
+            </article>
+            <article className="bv-route-card">
+              <p className="bv-eyebrow">For planners, ecologists &amp; professional teams</p>
+              <p>
+                Bring environmental records and your own documents into a
+                source-linked case. Compare findings, follow the chronology and
+                prepare reports for review.
+              </p>
+              <Link className="bv-button" href="/professionals">
+                Explore the professional workspace
+              </Link>
+            </article>
           </div>
-          <p className="bv-small">
-            Your place, your photographs, your story. You approve everything
-            before anyone sees it.
-          </p>
         </div>
-        <aside className="bv-hub-preview" aria-label="Illustrative ecology hub">
-          <div className="bv-preview-top">
-            <span>BIOVERACITY</span>
-            <span>Illustrative example</span>
-          </div>
+        <aside className="bv-hero-figure" aria-label="Featured wildlife photograph">
           <figure className="bv-preview-photo">
             <img
               src="/hero-otter.jpg"
@@ -97,24 +99,105 @@ export function SeasonalLanding() {
               <span className="bv-photo-credit">Photograph: Byrdyak (CC BY-SA 4.0)</span>
             </figcaption>
           </figure>
-          <div className="bv-preview-body">
-            <p className="bv-eyebrow">Your place. A wider world.</p>
-            <h2>A world worth noticing.</h2>
-            <p>
-              Your rooms, food, craft or experiences. The local stories that
-              make a visit memorable.
-            </p>
-            <div className="bv-preview-card">
-              <span>{current.month} · SEASONAL INSPIRATION</span>
-              <h3>{current.label}</h3>
-              <p>{current.prompt}</p>
-            </div>
-            <p className="bv-small">
-              Your website ↗ &nbsp; · &nbsp; Plan your visit ↗
-            </p>
-          </div>
+          <p className="bv-small">
+            Every photograph and record on BioVeracity carries its source and
+            date, so you always know where a story comes from.
+          </p>
         </aside>
       </section>
+
+      <section className="bv-section" id="business">
+        <p className="bv-eyebrow">For businesses &amp; places to visit</p>
+        <h2>
+          Give guests a reason
+          <br />
+          <em>to look closer.</em>
+        </h2>
+        <div className="bv-split">
+          <div>
+            <p>
+              A city hotel, coastal café, pottery studio, garden or visitor
+              attraction can all become a starting point for discovery. We help
+              you tell your place’s nature story through photographs and words
+              you approve, with a QR code guests can open at your door — no app
+              or account needed.
+            </p>
+            <div className="bv-actions">
+              <Link className="bv-button" href="/wild/partners#enquire">
+                Contact us for pricing
+              </Link>
+              <Link className="bv-text-link" href="/wild/places/example-craft-venue">
+                See an example experience ↗
+              </Link>
+            </div>
+          </div>
+          <aside className="bv-hub-preview" aria-label="Illustrative venue hub">
+            <div className="bv-preview-top">
+              <span>BIOVERACITY</span>
+              <span>Illustrative example</span>
+            </div>
+            <div className="bv-preview-body">
+              <p className="bv-eyebrow">Your place. A wider world.</p>
+              <h2>A world worth noticing.</h2>
+              <p>
+                Your rooms, food, craft or experiences, alongside the local
+                stories that make a visit memorable.
+              </p>
+              <div className="bv-preview-card">
+                <span>{current.month} · SEASONAL INSPIRATION</span>
+                <h3>{current.label}</h3>
+                <p>{current.prompt}</p>
+              </div>
+              <p className="bv-small">Your website ↗ &nbsp; · &nbsp; Plan your visit ↗</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="bv-section bv-tinted">
+        <p className="bv-eyebrow">One place, two perspectives</p>
+        <h2>
+          The River Nore,
+          <br />
+          <em>seen two ways.</em>
+        </h2>
+        <p>
+          The same source can serve a guest and a professional. Here is one
+          place in Wild Kilkenny, read from both sides of BioVeracity.
+        </p>
+        <div className="bv-perspectives">
+          <article className="bv-perspective">
+            <p className="bv-eyebrow">For a riverside business</p>
+            <h3>A reason for guests to pause.</h3>
+            <p>
+              A café or guesthouse by the Nore can tell guests why the river
+              matters — otters at dusk, the story of the freshwater pearl mussel
+              — each linked to its public source and season.
+            </p>
+            <Link className="bv-text-link" href="/wild/kilkenny#river-nore">
+              See it in Wild Kilkenny →
+            </Link>
+          </article>
+          <article className="bv-perspective">
+            <p className="bv-eyebrow">For a professional team</p>
+            <h3>The evidence, brought together.</h3>
+            <p>
+              An ecologist or planner can pull the same River Nore SAC
+              designation and qualifying species into a source-linked case,
+              compare dated records and prepare a report for review.
+            </p>
+            <Link className="bv-text-link" href="/professionals">
+              See the professional workspace →
+            </Link>
+          </article>
+        </div>
+        <p className="bv-small">
+          Both views draw on the same public source (River Barrow and River Nore
+          SAC, National Parks &amp; Wildlife Service). A designation is not a
+          promise of a sighting or a right to enter private land.
+        </p>
+      </section>
+
       <section className="bv-section" id="seasons">
         <p className="bv-eyebrow">One place. Four different invitations.</p>
         <h2>
@@ -159,9 +242,10 @@ export function SeasonalLanding() {
           or a promise of wildlife sightings.
         </p>
       </section>
+
       <section className="bv-section bv-tinted">
         <p className="bv-eyebrow">
-          You bring the place. BioVeracity builds the starting point.
+          You bring the place. BioVeracity prepares it with you.
         </p>
         <h2>
           Set it up once.
@@ -172,23 +256,23 @@ export function SeasonalLanding() {
           {[
             [
               '01',
-              'Add your story',
-              'Choose your county and venue type. Add your words, website and photographs.',
+              'Tell us about your place',
+              'Share your county, venue type, website and photographs in a short, guided conversation.',
             ],
             [
               '02',
-              'Generate your plan',
-              'Get twelve editable monthly themes, guest discovery prompts and caption drafts. Import Google Trends data if you have it.',
+              'We build your plan with you',
+              'We prepare twelve editable monthly themes, guest discovery prompts and caption drafts, drawing on sourced local material.',
             ],
             [
               '03',
-              'Submit for review',
-              'Approve your annual plan and submit it. BioVeracity reviews the content before your ecology hub and QR address go live.',
+              'You approve everything',
+              'Nothing goes live until you have reviewed and approved it. Your ecology hub and QR address are then published.',
             ],
             [
               '04',
-              'Welcome every season',
-              'The reviewed monthly feature changes with the calendar. Edit future plans privately and submit them for a fresh review.',
+              'We keep the seasons moving',
+              'The reviewed monthly feature changes with the calendar, and we refresh future plans with you.',
             ],
           ].map(([n, t, b]) => (
             <article className="bv-feature" key={n}>
@@ -199,6 +283,7 @@ export function SeasonalLanding() {
           ))}
         </div>
       </section>
+
       <section className="bv-section bv-split">
         <div>
           <p className="bv-eyebrow">
@@ -236,6 +321,7 @@ export function SeasonalLanding() {
           <Link href="/wild">Explore Wild Counties →</Link>
         </div>
       </section>
+
       <section className="bv-section bv-pricing">
         <p className="bv-eyebrow">A clear arrangement</p>
         <h2>
@@ -252,15 +338,16 @@ export function SeasonalLanding() {
           <Link className="bv-button" href="/wild/partners#enquire">
             Contact us for pricing
           </Link>
-          <Link className="bv-text-link" href="/wild/studio">
-            Start with your draft ↗
+          <Link className="bv-text-link" href="/wild/partners">
+            Explore the business experience ↗
           </Link>
         </div>
       </section>
+
       <section className="bv-section bv-professional-entry">
         <div>
           <p className="bv-eyebrow">
-            For planners, ecologists, councils & professional teams
+            For planners, ecologists, councils &amp; professional teams
           </p>
           <h2>
             Need to understand

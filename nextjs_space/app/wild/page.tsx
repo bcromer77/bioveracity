@@ -47,23 +47,35 @@ export default async function WildCountiesPage({
             <p className="text-sm text-[#637069]">{counties.length} result{counties.length === 1 ? '' : 's'}</p>
           </div>
 
+          {!q && (
+            <div className="mb-8 rounded-md border border-[#d8d3c4] bg-white p-5 text-sm leading-6 text-[#4c5751]">
+              <p className="font-semibold text-[#173d35]">Two counties are live today; the rest of Ireland is on the way.</p>
+              <p className="mt-2">We are building BioVeracity county by county across the island of Ireland. Kilkenny and Down are our founding counties, with source-backed stories drawn from public conservation and biodiversity records. Every other county is planned and will open as we review its sources.</p>
+              <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                <li><span className="font-semibold text-[#24573f]">Featured county</span> — published stories with dated, source-linked records you can open.</li>
+                <li><span className="font-semibold text-[#24573f]">Fictional example</span> — a clearly-labelled sample venue showing how a place could present its story.</li>
+                <li><span className="font-semibold text-[#6a706c]">Coming soon</span> — a planned county we have not yet published.</li>
+              </ul>
+            </div>
+          )}
+
           {counties.length ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {counties.map((county) => (
                 <Link key={county.slug} href={`/wild/${county.slug}`} className="group rounded-md border border-[#d8d3c4] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#8ea697] hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="font-display text-2xl font-semibold">{county.brandName}</h3>
-                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${county.status === 'foundation' ? 'bg-[#e4efe8] text-[#24573f]' : 'bg-[#efede6] text-[#6a706c]'}`}>{county.jurisdiction === 'Ireland' ? 'API route' : 'Awaiting API'}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${county.status === 'foundation' ? 'bg-[#e4efe8] text-[#24573f]' : 'bg-[#efede6] text-[#6a706c]'}`}>{county.status === 'foundation' ? 'Featured county' : 'Coming soon'}</span>
                   </div>
                   <p className="mt-2 text-sm text-[#66716b]">{county.province} · {county.jurisdiction}</p>
-                  <p className="mt-4 text-sm font-semibold text-[#24573f]">{county.jurisdiction === 'Ireland' ? 'Explore API biodiversity records' : 'County API not connected'} →</p>
+                  <p className="mt-4 text-sm font-semibold text-[#24573f]">{county.status === 'foundation' ? 'Explore source-backed stories' : 'Planned county'} →</p>
                 </Link>
               ))}
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-[#bbb6a8] bg-white p-10 text-center">
               <h3 className="font-display text-2xl font-semibold">No matching county</h3>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#66716b]">Try a county name. Species records are loaded from the connected API after you open a county.</p>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#66716b]">Try a county name. Kilkenny and Down are our founding counties today, with more of Ireland opening as we review each county’s sources.</p>
             </div>
           )}
         </section>
