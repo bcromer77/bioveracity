@@ -61,7 +61,7 @@ export function SourceViewer({
     setPdfError(''); setTotalPages(0)
     setPage(targetPage ?? 1)
     if (!context || context.document.id !== loadedDocIdRef.current) { pdfDocRef.current = null; loadedDocIdRef.current = '' }
-  }, [context?.document.id, targetPage]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [context?.document.id, targetPage])
 
   const copyLink = useCallback(async () => {
     try {
