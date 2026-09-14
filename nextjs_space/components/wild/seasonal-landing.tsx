@@ -84,15 +84,22 @@ export function SeasonalLanding() {
             <span>BIOVERACITY</span>
             <span>Illustrative example</span>
           </div>
-          <div className="bv-preview-art" aria-hidden="true">
-            <span className="bv-orbit" />
-            <span className="bv-hill bv-hill-one" />
-            <span className="bv-hill bv-hill-two" />
-            <span className="bv-waterline" />
-          </div>
+          <figure className="bv-preview-photo">
+            <img
+              src="/hero-otter.jpg"
+              alt="A Eurasian otter resting at the water's edge, its reflection mirrored in still water"
+              loading="eager"
+              width={1400}
+              height={1138}
+            />
+            <figcaption className="bv-photo-caption">
+              <span className="bv-photo-species">Eurasian otter</span>
+              <span className="bv-photo-credit">Photograph: Byrdyak (CC BY-SA 4.0)</span>
+            </figcaption>
+          </figure>
           <div className="bv-preview-body">
             <p className="bv-eyebrow">Your place. A wider world.</p>
-            <h2>Your ecology hub</h2>
+            <h2>A world worth noticing.</h2>
             <p>
               Your rooms, food, craft or experiences. The local stories that
               make a visit memorable.
