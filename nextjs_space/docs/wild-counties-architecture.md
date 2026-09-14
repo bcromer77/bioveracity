@@ -10,7 +10,7 @@ A visitor can search across all 32 counties for wildlife, habitats and useful pl
 - `/wild/[county]` is the canonical county route.
 - County Down and Kilkenny contain small, reviewed foundation fixtures.
 - The other 30 county pages explicitly state that evidence collection is planned.
-- Fodder and Nicholas Mosse are labelled pilot candidates. No partnership, approval or environmental performance is implied.
+- Public business candidates remain empty until participation is agreed. Venue demonstrations use explicitly fictional examples.
 
 ## Data contract
 

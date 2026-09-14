@@ -50,16 +50,7 @@ const downTopics: readonly WildTopic[] = [
   },
 ]
 
-const downCandidates: readonly BusinessCandidate[] = [
-  {
-    slug: 'fodder-killyleagh',
-    name: 'Fodder',
-    locality: 'Killyleagh',
-    category: 'eat',
-    sourceUrl: 'https://finnebroguewoods.com/fodder-in-the-woods',
-    relationshipStatus: 'pilot-candidate',
-  },
-]
+const downCandidates: readonly BusinessCandidate[] = []
 
 const kilkennyTopics: readonly WildTopic[] = [
   {
@@ -84,16 +75,7 @@ const kilkennyTopics: readonly WildTopic[] = [
   },
 ]
 
-const kilkennyCandidates: readonly BusinessCandidate[] = [
-  {
-    slug: 'nicholas-mosse',
-    name: 'Nicholas Mosse Pottery',
-    locality: 'Bennettsbridge',
-    category: 'eat',
-    sourceUrl: 'https://nicholasmosse.com/en-gb/pages/visit-us-1',
-    relationshipStatus: 'pilot-candidate',
-  },
-]
+const kilkennyCandidates: readonly BusinessCandidate[] = []
 
 export const WILD_COUNTIES: readonly WildCounty[] = [
   planned('antrim', 'Antrim', 'Ulster', 'Northern Ireland'),

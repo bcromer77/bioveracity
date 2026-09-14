@@ -8,9 +8,7 @@ assert.equal(WILD_COUNTIES.filter(({ jurisdiction }) => jurisdiction === 'Irelan
 assert.equal(searchWildCounties('fens')[0]?.slug, 'down')
 assert.equal(searchWildCounties('oysters')[0]?.slug, 'down')
 assert.equal(searchWildCounties('otters')[0]?.slug, 'kilkenny')
-assert.equal(searchWildCounties('Fodder')[0]?.slug, 'down')
-assert.equal(searchWildCounties('Nicholas Mosse')[0]?.slug, 'kilkenny')
-assert.equal(getWildCounty('down')?.businessCandidates[0]?.relationshipStatus, 'pilot-candidate')
+assert.equal(getWildCounty('down')?.businessCandidates.length, 0)
 
 for (const county of WILD_COUNTIES) {
   for (const topic of county.topics) {
@@ -24,3 +22,5 @@ for (const county of WILD_COUNTIES) {
 
 process.stdout.write('Wild Counties architecture tests passed\n')
 
+
+assert.ok(WILD_COUNTIES.every(county => county.businessCandidates.length === 0), 'No unsigned venues in public listings')
