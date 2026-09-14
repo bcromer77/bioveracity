@@ -21,7 +21,7 @@ export function WildEnquiry() {
       setDone(true)
     } catch(e) {setError(e instanceof Error?e.message:'We could not save your enquiry. Please try again.')} finally {setBusy(false)}
   }
-  if(done) return <div className="bv-form bv-confirmation" role="status" tabIndex={-1}><p className="bv-eyebrow">Enquiry received</p><h3>Thank you. Let’s discover your place.</h3><p>Your enquiry has been saved. We’ll use the email you supplied to discuss your page and pricing.</p><p>You have not subscribed or been charged.</p></div>
+  if(done) return <div className="bv-form bv-confirmation" role="status" tabIndex={-1}><p className="bv-eyebrow">Enquiry received</p><h3>Thank you. Let’s discover your place.</h3><p>Your enquiry has been saved. We’ll use the email you supplied to discuss your page and pricing.</p><p>You have not subscribed or been charged.</p><p>Ready to prepare your content? Sign in to create a private draft. It will be reviewed before publication.</p><EvidenceLink className="bv-button bv-green" href="/wild/studio">Prepare your ecology hub</EvidenceLink></div>
   return <form className="bv-form" onSubmit={submit}>
     <label htmlFor="wild-venue">Venue name <span>Required</span></label><input id="wild-venue" name="venue" required maxLength={160} autoComplete="organization" placeholder="Your venue" />
     <label htmlFor="wild-email">Email address <span>Required</span></label><input id="wild-email" name="email" type="email" required maxLength={254} autoComplete="email" placeholder="you@example.com" />

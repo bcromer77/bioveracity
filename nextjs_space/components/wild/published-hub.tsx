@@ -35,7 +35,7 @@ export function PublishedHub({
           </EvidenceLink>
         )}
         <p className="bv-small">
-          Venue content supplied and approved by the publishing account.
+          Venue content supplied and approved by the venue account.
           Business identity and environmental performance are not certified by
           BioVeracity.
         </p>
@@ -88,6 +88,7 @@ export function PublishedHub({
             timeZone: 'Europe/Dublin',
           })}
         </p>
+        {snapshot.reviewedAt && <p className="bv-small">Editorial review completed {new Date(snapshot.reviewedAt).toLocaleDateString('en-GB', {timeZone:'Europe/Dublin'})}. This is content review, not environmental certification.</p>}
         <Link href={`/wild/${profile.county}`}>
           Discover {county?.brandName} →
         </Link>

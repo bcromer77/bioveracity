@@ -67,6 +67,7 @@ export type Snapshot = {
   plan: Plan
   photoIds: string[]
   approvedAt: string
+  reviewedAt?: string
   version: number
 }
 export const MONTHS = [

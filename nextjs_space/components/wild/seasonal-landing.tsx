@@ -75,7 +75,7 @@ export function SeasonalLanding() {
             </EvidenceLink>
           </div>
           <p className="bv-small">
-            Your website and booking links stay at the centre. You approve what
+            Your venue story and seasonal experiences stay at the centre. You approve what
             guests see.
           </p>
         </div>
@@ -175,13 +175,13 @@ export function SeasonalLanding() {
             ],
             [
               '03',
-              'Review and publish',
-              'Check the content and approve your annual plan. Your ecology hub and stable QR address are created together.',
+              'Submit for review',
+              'Approve your annual plan and submit it. BioVeracity reviews the content before your ecology hub and QR address go live.',
             ],
             [
               '04',
               'Welcome every season',
-              'The approved monthly feature changes with the calendar. Edit future plans in draft and publish when ready.',
+              'The reviewed monthly feature changes with the calendar. Edit future plans privately and submit them for a fresh review.',
             ],
           ].map(([n, t, b]) => (
             <article className="bv-feature" key={n}>
