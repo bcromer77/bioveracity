@@ -89,6 +89,43 @@ If the full flow cannot pass the existing gates in this scope, ship an explicit 
 
 Explain concrete setup and monthly deliverables. Include an internal estimate of founder setup time, recurring review/support, signage, storage/scanner/API costs and limits. Label unknowns and assumptions. No billing, new subscriptions or analytics platform is requested. Use existing privacy-conscious engagement metrics only if already feasible; do not promise bookings or invent measurements.
 
+## 6. Mobile optimisation is a release requirement
+
+Design for a guest arriving from a QR scan and a business owner reviewing the offer on a phone. A desktop layout squeezed into a small viewport is not sufficient.
+
+### Layout and navigation
+
+- Verify at 320, 360, 390 and 430 CSS-pixel widths, plus tablet and desktop. Test portrait and landscape. No page-level horizontal scrolling, clipped text, overlapping controls or inaccessible content.
+- On mobile, put the shared proposition and both audience routes before the large hero photograph or venue mock-up. Use natural text wrapping, not desktop-only line breaks. Both routes must be easy to discover without navigating to the footer.
+- Use a clear mobile menu with business, professional, county and account routes. Verify open/close, focus, Escape and return navigation. Sticky controls must not obscure content or keyboard-focused elements.
+- Maintain readable body text (normally at least 16px) and comfortable spacing. Inputs should use at least 16px text. Support browser zoom and 200% text enlargement without losing content or actions.
+- Primary buttons, menu controls, map controls and icon-only actions must have at least 44 by 44 CSS-pixel touch areas with adequate separation. No essential action may depend on hover.
+- Preserve clear text contrast, visible keyboard focus, meaningful labels and reduced-motion preferences. Check the main menu, forms and discovery cards with a screen reader; report the browser/tool used and any remaining gaps.
+
+### Photography, maps and discovery
+
+- Supply responsive image sizes, reserve image dimensions to avoid layout movement, and choose a mobile crop that keeps the otter clearly visible. Keep credits legible.
+- Prioritise the hero image and lazy-load below-the-fold media. Avoid serving full-resolution originals to small screens.
+- Size maps for phones; markers, attribution and popups must remain usable. Panning must not trap normal page scrolling. Provide explicit zoom controls.
+- Supply an equivalent discovery list so guests can reach every story without manipulating a map or waiting for map tiles. Retain this list if the map fails.
+- Stack county and venue cards logically. Keep seasonal controls reachable and make selected states clear. Use wrapping or an accessible local scroller where necessary, never accidental whole-page overflow.
+
+### Forms, sign-in and QR arrival
+
+- Verify the complete enquiry journey with the on-screen keyboard open: appropriate email/URL keyboards, autofill, persistent labels, visible errors and a reachable submit button. Preserve entered values on errors and prevent duplicate submissions.
+- Verify sign-in returns the visitor to the intended hub route. If hub creation is enabled, test draft saving/reopening, photo selection, upload progress/failure, twelve-month editing and submission on mobile. Unsupported image formats need a clear message; do not bypass scanning or validation for phone uploads.
+- Guests opening a published QR link must reach the correct venue without an account or app installation. Check source links, back navigation, outbound business links and recovery from a slow or failed request.
+- Respect device safe areas and changing browser/keyboard heights. Avoid rigid viewport heights that hide buttons or clip dialogs.
+
+### Required evidence
+
+- Test the homepage, /wild/partners, /professionals, /wild/kilkenny, /wild/down, both example venues, enquiry and the enabled studio journey.
+- Attach 390px screenshots for each public route and 320px screenshots for the hero, open menu, map/list and enquiry form. Include interactive checks; screenshots alone do not establish usability.
+- Test iOS Safari and Android Chrome on physical devices or an appropriate device service, recording device, browser version and tested commit. Desktop emulation is useful but must be labelled as emulation; missing device checks remain explicit release gaps.
+- Run three cold-cache mobile performance checks on the homepage and each county/example page with the same documented throttling settings. Record median results. Set project lab targets of LCP <= 2.5 seconds and CLS <= 0.1; investigate misses, especially oversized images, map loading and blocking scripts. These are lab targets, not a claim about real-user performance or a guarantee of mobile quality.
+- Verify a slow-network journey and an API/map failure without an endless spinner or loss of the reviewed story content.
+- Fix reproducible mobile usability failures before marking the implementation ready for marketing. Report any unavailable device evidence separately; never substitute a desktop screenshot and call it a mobile pass.
+
 ## Acceptance checklist
 
 All boxes remain open until evidence is attached:
@@ -103,7 +140,9 @@ All boxes remain open until evidence is attached:
 - [ ] Main onboarding CTA completes working setup or clearly explained managed enquiry.
 - [ ] If enabled, two-account private/reviewer/public/photo/QR and stale-publication checks pass in staging.
 - [ ] Enquiry success/failure/retry persistence and notification handling pass in isolated tests.
-- [ ] Desktop and mobile screenshots, keyboard checks, map touch usability, image loading and broken-link checks recorded.
+- [ ] Section 6 mobile layout, touch, keyboard, screen-reader, form, map/list and QR journeys verified across the specified widths.
+- [ ] iOS Safari and Android Chrome checks and mobile screenshots attached; real-device versus emulated evidence clearly identified.
+- [ ] Mobile performance measurements and slow-network/error recovery recorded; remaining failures resolved or explicitly reported.
 - [ ] Explicit TypeScript check, relevant regressions and actual hosting production build pass on the reported SHA.
 - [ ] Source outages preserve useful, truthful content; empty results never imply wildlife absence.
 - [ ] Costs, recurring service scope and unresolved operational items documented.
