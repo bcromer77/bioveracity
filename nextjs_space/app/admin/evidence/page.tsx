@@ -1,3 +1,4 @@
+import { EvidenceLink } from '@/components/evidence-link'
 import { auth } from '@/auth'
 import { isAdmin } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
@@ -15,9 +16,9 @@ export default async function EvidenceReviewPage({ searchParams }: { searchParam
   return <main className="mx-auto max-w-4xl space-y-6 p-8"><h1 className="text-3xl font-bold">Review source evidence</h1>
     <p>Collected text is unverified. Read the original source before approving a specific claim. New source versions need a new review. Showing up to 20 pending documents.</p>
     <form><label>Open a document by ID <input name="id" defaultValue={params.id} className="rounded border p-2" /></label><button className="ml-2 underline">Open</button></form>
-    {!params.id && <nav className="flex gap-4">{page > 0 && <a href={`?page=${page - 1}`}>Previous</a>}{documents.length === 20 && <a href={`?page=${page + 1}`}>Next</a>}</nav>}
+    {!params.id && <nav className="flex gap-4">{page > 0 && <EvidenceLink href={`?page=${page - 1}`}>Previous</EvidenceLink>}{documents.length === 20 && <EvidenceLink href={`?page=${page + 1}`}>Next</EvidenceLink>}</nav>}
     {documents.map(d => <article key={d.id} className="space-y-4 rounded-xl border p-5">
-      <h2 className="text-xl font-semibold">{d.title}</h2><a className="underline" href={d.url} target="_blank" rel="noreferrer">Open original source</a>
+      <h2 className="text-xl font-semibold">{d.title}</h2><EvidenceLink className="underline" href={d.url} target="_blank" rel="noreferrer">Source attribution</EvidenceLink>
       <p>{d.publisher} · {d.authorityId} · Event: {d.eventDate ?? 'Unknown'} · Published: {d.publicationDate ?? 'Unknown'} · Status: {d.status} · ID: {d.id}</p>
       <details><summary>Retained source text</summary><pre className="max-h-80 overflow-auto whitespace-pre-wrap text-sm">{JSON.stringify(d.sections, null, 2)}</pre></details>
       <EvidenceReviewForm id={d.id} sections={d.sections as { locator: string; text: string }[]} />

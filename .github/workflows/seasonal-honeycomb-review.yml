@@ -1,0 +1,69 @@
+name: Seasonal and honeycomb review
+on:
+  pull_request:
+    branches: [clarity/usability-release]
+permissions:
+  contents: read
+concurrency:
+  group: seasonal-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: nextjs_space
+    env:
+      PRISMA_SKIP_POSTINSTALL_GENERATE: 'true'
+      DATABASE_URL: postgresql://isolated:isolated@127.0.0.1:5432/unused
+      NEXTAUTH_SECRET: isolated-ci-build-no-production-access
+      AUTH_SECRET: isolated-ci-build-no-production-access
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare portable dependency configuration
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          rm -f yarn.lock
+          cp ci/yarn.lock yarn.lock
+          cat > .yarnrc.yml <<'YARNRC'
+          enableGlobalCache: false
+          enableTelemetry: false
+          nodeLinker: node-modules
+          YARNRC
+      - name: Install locked dependencies
+        run: yarn install --immutable
+      - name: Generate an isolated Prisma client without connecting to a database
+        run: |
+          node <<'JS'
+          const fs = require('fs')
+          const path = require('path')
+          const schema = fs.readFileSync('prisma/schema.prisma','utf8').replace(/output\s*=\s*"[^"]*"/, 'output = '+JSON.stringify(path.join(process.cwd(),'node_modules/.prisma/client')))
+          fs.writeFileSync('ci-schema.prisma',schema)
+          JS
+          yarn prisma generate --schema ci-schema.prisma
+          rm ci-schema.prisma
+      - name: Full TypeScript check
+        run: yarn typecheck
+      - name: Install independent QR decoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends zbar-tools
+      - name: Isolated source and application tests
+        run: |
+          yarn test:honeycomb
+          yarn test:wild-hubs
+          yarn test:onsite
+          node --import tsx --test tests/private-workspaces.test.ts
+          node --import tsx scripts/test-wild-counties.ts
+          WILD_QR_DECODE_TEST=true yarn test:wild-community
+      - name: Production build
+        run: yarn build

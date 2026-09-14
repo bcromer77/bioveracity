@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, useMap, LayersControl, ZoomControl, Tooltip } from 'react-leaflet'
+import { AttributionControl, MapContainer, TileLayer, Marker, Polyline, useMap, LayersControl, ZoomControl, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import type { OPPoint, OPConnection } from './operating-picture'
@@ -148,12 +148,12 @@ export default function OperatingMapInner({
   const isEmphasised = (p: OPPoint) => !emphasisCategory || p.category === emphasisCategory
 
   return (
-    <MapContainer
+    <MapContainer attributionControl={false} 
       center={center}
       zoom={10}
       className="h-full w-full bg-[#0b1220]"
       zoomControl={false}
-      attributionControl={true}
+      
       scrollWheelZoom
     >
       <ZoomControl position="bottomright" />
@@ -204,6 +204,7 @@ export default function OperatingMapInner({
           </Marker>
         )
       })}
+    <AttributionControl prefix={false} />
     </MapContainer>
   )
 }

@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useState } from 'react'
 import { exactHistoryDay, groupPlaceHistory, historyDateLabel, historySourceUrl } from '@/lib/place-history'
@@ -37,7 +39,7 @@ export function PlaceHistoryPanel({ records, slug, placeName, anchorId, onAnchor
             <p className="text-[11px] text-slate-400">{historyDateLabel(record)} · {getEvidenceDisplay(record.evidenceClass).label}</p>
             <p className="mt-1 font-medium text-slate-100">{record.title}</p>
             {record.description && <p className="mt-2 whitespace-pre-wrap leading-relaxed">{record.description}</p>}
-            {source ? <a className="mt-2 inline-block text-sky-300 underline" href={source} target="_blank" rel="noreferrer">Open original source</a> : <p className="mt-2 text-amber-200">Source link not available in this record.</p>}
+            {source ? <EvidenceLink className="mt-2 inline-block text-sky-300 underline" href={source} target="_blank" rel="noreferrer">Source attribution</EvidenceLink> : <p className="mt-2 text-amber-200">Source link not available in this record.</p>}
           </li> })}
         </ul>
         {!grouped[phase].length && <p className="mt-3">No loaded records in this group. This does not establish that nothing happened.</p>}

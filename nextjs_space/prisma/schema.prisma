@@ -108,6 +108,10 @@ model User {
   image         String?
   password      String?
   role          String      @default("user")
+  wildSubmissions WildHubReview[] @relation("WildSubmitter")
+  wildReviews WildHubReview[] @relation("WildReviewer")
+  wildHubs WildHub[]
+  wildPublications WildHubPublication[]
   privateMemberships PrivateWorkspaceMember[]
   privateAudit PrivateWorkspaceAudit[]
   caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
@@ -949,4 +953,65 @@ model ScanUsage {
 model ScanPacing {
   id     String @id
   nextMs BigInt @default(0)
+}
+
+model WildHub {
+  id String @id
+  ownerId String
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  profile Json
+  plan Json?
+  trend Json?
+  published Json?
+  revision Int @default(1)
+  scanCount Int @default(0)
+  scanWindow DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  photos WildHubPhoto[]
+  publications WildHubPublication[]
+  reviews WildHubReview[]
+  @@index([ownerId])
+}
+model WildHubPhoto {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  caption String
+  credit String
+  hash String
+  bytes Bytes
+  createdAt DateTime @default(now())
+  @@unique([hubId, hash])
+  @@index([hubId])
+}
+model WildHubPublication {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  actorId String
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  action String
+  snapshot Json?
+  hash String?
+  createdAt DateTime @default(now())
+  @@index([hubId])
+}
+
+model WildHubReview {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  submittedBy String
+  submitter User @relation("WildSubmitter", fields: [submittedBy], references: [id], onDelete: Restrict)
+  revision Int
+  snapshot Json
+  status String @default("PENDING")
+  reviewedBy String?
+  reviewer User? @relation("WildReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  reason String @default("")
+  createdAt DateTime @default(now())
+  reviewedAt DateTime?
+  @@unique([hubId, revision])
+  @@index([status, createdAt])
 }

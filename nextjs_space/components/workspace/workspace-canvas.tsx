@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { DragEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -14,6 +16,7 @@ import { InvestigationMap, type MapLayers, type MapPoint } from './investigation
 import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximity.mjs'
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseEvidence } from './case-evidence'
+import { HoneycombPanel } from './honeycomb-panel'
 import { ReportsPanel } from './reports-panel'
 import { SourceViewer } from './source-viewer'
 import { citationUrl } from '@/lib/workspaces/citation'
@@ -679,6 +682,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
           </div>}
         </section>
 
+        <HoneycombPanel workspaceId={workspaceId} caseId={caseId} lat={place.lat} lng={place.lng} />
+
         {/* Public records retrieved for the map — STRICTLY SEPARATE from private
             evidence. Each card cross-highlights its map marker; the whole card
             toggles selection, and the source link opens the provider record. */}
@@ -704,7 +709,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
                         <span className="block font-medium break-words">{r.title}</span>
                         <span className="mt-0.5 block text-muted-foreground">{r.subtitle} · {r.eventDate ?? 'date unknown'}</span>
                         <span className="mt-0.5 block text-muted-foreground">{r.generalised ? 'Generalised location (area shown, not a precise point)' : r.precisionMeters ? `Location precision ±${r.precisionMeters} m` : 'Location precision not stated'}</span>
-                        <a href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">View source record</a>
+                        <EvidenceLink href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">Source attribution</EvidenceLink>
                       </button>
                     </li>))}</ul>}
             </div>
@@ -734,7 +739,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
                           <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Distance from centre:</dt><dd>{distance !== null ? formatMeters(distance) : 'Distance not calculated'}</dd></div>
                           <div className="flex flex-wrap gap-x-1"><dt className="font-medium text-foreground/80">Comparison distance:</dt><dd>{distance === null ? 'Not calculated' : inside ? `Inside the ${(PROXIMITY_METERS / 1000).toFixed(1)} km comparison distance` : `Outside the ${(PROXIMITY_METERS / 1000).toFixed(1)} km comparison distance`}</dd></div>
                         </dl>
-                        <a href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">View source record</a>
+                        <EvidenceLink href={r.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="mt-1 inline-block underline">Source attribution</EvidenceLink>
                       </button>
                     </li>)
                   })}</ul>}
@@ -759,8 +764,8 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
                   {proximityPairs.slice(0, 10).map(pair => (
                     <article key={`${pair.planningId}|${pair.batId}`} className="rounded-md border border-border bg-background p-3 text-sm">
                       <p className="font-medium">≈ {formatMeters(pair.distanceMeters)} apart — to review</p>
-                      <p className="mt-1 text-xs"><span className="font-medium">{pair.planning.title}</span>{pair.planning.status ? ` · ${pair.planning.status}` : ''} · {pair.planning.date ?? 'date unknown'} · <a className="underline" href={pair.planning.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
-                      <p className="mt-1 text-xs"><span className="font-medium">{pair.bat.title}</span> · {pair.bat.date ?? 'date unknown'} · <a className="underline" href={pair.bat.sourceUrl} target="_blank" rel="noreferrer">source</a></p>
+                      <p className="mt-1 text-xs"><span className="font-medium">{pair.planning.title}</span>{pair.planning.status ? ` · ${pair.planning.status}` : ''} · {pair.planning.date ?? 'date unknown'} · <EvidenceLink className="underline" href={pair.planning.sourceUrl} target="_blank" rel="noreferrer">source</EvidenceLink></p>
+                      <p className="mt-1 text-xs"><span className="font-medium">{pair.bat.title}</span> · {pair.bat.date ?? 'date unknown'} · <EvidenceLink className="underline" href={pair.bat.sourceUrl} target="_blank" rel="noreferrer">source</EvidenceLink></p>
                     </article>))}
                 </>}
             {impreciseExcluded > 0 && <p className="text-xs text-muted-foreground">{impreciseExcluded} bat record{impreciseExcluded === 1 ? ' was' : 's were'} excluded from the distance comparison because {impreciseExcluded === 1 ? 'its' : 'their'} location is not precise — either generalised or with no stated precision.</p>}

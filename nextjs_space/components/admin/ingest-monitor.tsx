@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -350,14 +352,14 @@ export function IngestMonitor({ tiles, rows }: { tiles: Tile[]; rows: Row[] }) {
                             </button>
                           ) : null}
                           {c.sourceUrl ? (
-                            <a
+                            <EvidenceLink
                               href={c.sourceUrl}
                               target="_blank"
                               rel="noreferrer"
                               className="rounded px-2.5 py-1 text-xs font-medium text-[hsl(var(--link))] underline underline-offset-2"
                             >
                               Source
-                            </a>
+                            </EvidenceLink>
                           ) : null}
                         </div>
                       </li>

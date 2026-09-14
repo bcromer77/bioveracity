@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
@@ -559,7 +561,7 @@ export function RegionalOperatingPicture({
                             <>
                               <span className="text-slate-600">·</span>
                               {e.sourceUrl ? (
-                                <a
+                                <EvidenceLink
                                   href={e.sourceUrl}
                                   target="_blank"
                                   rel="noreferrer"
@@ -567,7 +569,7 @@ export function RegionalOperatingPicture({
                                   className="underline decoration-slate-600 underline-offset-2 hover:text-slate-200"
                                 >
                                   {e.sourceDomain}
-                                </a>
+                                </EvidenceLink>
                               ) : (
                                 <span>{e.sourceDomain}</span>
                               )}

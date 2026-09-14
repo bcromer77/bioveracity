@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -165,9 +167,9 @@ export function AssetDetail({ asset }: { asset: any }) {
                           </span>
                           <span className="text-[10px] text-muted-foreground">{event?.eventType ?? ''}</span>
                           {event?.sourceUrl && (
-                            <a href={event?.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent hover:underline flex items-center gap-0.5">
+                            <EvidenceLink href={event?.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent hover:underline flex items-center gap-0.5">
                               Source <ExternalLink className="h-2.5 w-2.5" />
-                            </a>
+                            </EvidenceLink>
                           )}
                         </div>
                       </div>
@@ -354,9 +356,9 @@ export function AssetDetail({ asset }: { asset: any }) {
                         <span className="text-[10px] text-muted-foreground font-mono">{item?.sourceDomain ?? ''}</span>
                         <span className="text-[10px] text-muted-foreground"><SafeDate date={item?.date} options={{ dateStyle: 'medium' }} /></span>
                         {item?.sourceUrl && (
-                          <a href={item?.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent hover:underline flex items-center gap-0.5">
+                          <EvidenceLink href={item?.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent hover:underline flex items-center gap-0.5">
                             Source <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
+                          </EvidenceLink>
                         )}
                       </div>
                     </div>

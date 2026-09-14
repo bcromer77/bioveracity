@@ -1,7 +1,9 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useEffect } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from 'react-leaflet'
+import { AttributionControl, MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -96,7 +98,7 @@ function RecordMarker({ point, selected, onSelect }: { point: MapPoint; selected
             {point.kind === 'species' && (
               <div style={{ color: '#555' }}>{point.generalised ? 'Generalised location (area shown, not a precise point)' : point.precisionMeters ? `Location precision ±${point.precisionMeters} m` : 'Location precision not stated'}</div>
             )}
-            <a href={point.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '4px', color: '#1d4ed8' }}>View source record</a>
+            <EvidenceLink href={point.sourceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '4px', color: '#1d4ed8' }}>Source attribution</EvidenceLink>
           </div>
         </Popup>
       </CircleMarker>
@@ -129,7 +131,7 @@ export default function InvestigationMapInner({
 }) {
   const selectedPoint = selectedId ? [...species, ...planning].find(p => p.id === selectedId) ?? null : null
   return (
-    <MapContainer
+    <MapContainer attributionControl={false}
       center={[lat, lng]}
       zoom={zoom}
       scrollWheelZoom={false}
@@ -139,7 +141,7 @@ export default function InvestigationMapInner({
       {/* Esri light-grey basemap + labels. Keyless and reliable from server
           environments (OpenStreetMap and CARTO block/require-key here). */}
       <TileLayer
-        attribution='Tiles &copy; <a href="https://www.esri.com/">Esri</a>'
+        attribution='Tiles &copy; <a href="/attribution">Esri</a>'
         url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
         maxZoom={16}
       />
@@ -183,6 +185,7 @@ export default function InvestigationMapInner({
           </div>
         </Popup>
       </Marker>
+    <AttributionControl prefix={false} />
     </MapContainer>
   )
 }

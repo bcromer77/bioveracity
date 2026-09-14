@@ -1,25 +1,19 @@
-import { auth } from '@/auth'
-import { SiteHeader } from '@/components/site-header'
-import { SiteFooter } from '@/components/site-footer'
-import { LandingHero } from '@/components/home/landing-hero'
-import { LandingSections } from '@/components/home/landing-sections'
-
-export const dynamic = 'force-dynamic'
-
-export default async function HomePage() {
-  const session = await auth()
-  // Signed-in visitors go straight to their workspace; signed-out visitors are
-  // sent to sign-in / account creation.
-  const openHref = session?.user?.id ? '/workspace' : '/login?callbackUrl=/workspace'
-
+import { PublicShell } from '@/components/wild/public-shell'
+import { SeasonalLanding } from '@/components/wild/seasonal-landing'
+export const metadata = {
+  title: 'BioVeracity | Your place. Every season.',
+  description:
+    'Create an ecology hub for your hotel or venue. Bring your photographs, local nature stories and seasonal guest ideas together through one QR code.',
+  openGraph: {
+    title: 'BioVeracity | Your place. Every season.',
+    description:
+      'Your story, local discoveries and a seasonal plan guests can explore.',
+  },
+}
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      <main className="flex-1">
-        <LandingHero openHref={openHref} />
-        <LandingSections openHref={openHref} />
-      </main>
-      <SiteFooter />
-    </div>
+    <PublicShell>
+      <SeasonalLanding />
+    </PublicShell>
   )
 }

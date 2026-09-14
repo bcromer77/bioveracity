@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -146,7 +148,7 @@ export function SourceViewer({
             <div className="mt-2 flex flex-wrap gap-2">
               <Button variant="outline" onClick={copyLink}>{copied ? 'Link copied' : 'Copy citation link'}</Button>
               <Button variant="outline" onClick={download}>Download original document</Button>
-              {context.document.sourceUrl && <a href={context.document.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm underline">Open provider source record</a>}
+              {context.document.sourceUrl && <EvidenceLink href={context.document.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm underline">Provider attribution</EvidenceLink>}
             </div>
           </div>
 

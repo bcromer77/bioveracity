@@ -1,4 +1,6 @@
 'use client'
+import { EvidenceLink } from '@/components/evidence-link'
+
 
 import { useMemo, useState } from 'react'
 import { Slider } from '@/components/ui/slider'
@@ -125,9 +127,9 @@ export function PlaceTimeline({
           </p>
           <p className="mt-1 text-[14px] text-muted-foreground">
             Replaying the complete history — and rewinding to any earlier period or project window — is an institutional capability.{' '}
-            <a href="/institutional" className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">
+            <EvidenceLink href="/institutional" className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">
               Request institutional access →
-            </a>
+            </EvidenceLink>
           </p>
         </div>
       )}
@@ -203,14 +205,14 @@ export function PlaceTimeline({
                       {item.evidenceClass && <EvidenceBadge classCode={item.evidenceClass} />}
                       {item.eventType && <span className="text-[13px] text-muted-foreground">{item.eventType}</span>}
                       {item.sourceUrl && (
-                        <a
+                        <EvidenceLink
                           href={item.sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-0.5 text-[13px] text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2"
                         >
                           {item.sourceDomain ?? 'Source'} <ExternalLink className="h-3 w-3" />
-                        </a>
+                        </EvidenceLink>
                       )}
                       {isDiv && (
                         <button

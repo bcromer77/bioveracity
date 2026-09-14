@@ -1,3 +1,4 @@
+import { EvidenceLink } from '@/components/evidence-link'
 import * as React from 'react';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
@@ -45,7 +46,7 @@ const PaginationLink = ({
   size = 'icon',
   ...props
 }: PaginationLinkProps) => (
-  <a
+  <EvidenceLink
     aria-current={isActive ? 'page' : undefined}
     className={cn(
       buttonVariants({
