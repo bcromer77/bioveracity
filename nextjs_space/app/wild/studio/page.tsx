@@ -14,10 +14,11 @@ export default async function StudioPage() {
     return (
       <PublicShell>
         <section className="bv-section">
-          <h1>Create your ecology hub</h1>
+          <h1>Your ecology hub, prepared with our team</h1>
           <p>
-            Online setup is being prepared. Contact us to discuss your venue and
-            seasonal plan.
+            We set up each founding partner’s hub personally — there is nothing to
+            build on your own. Tell us about your venue and we’ll prepare your
+            page, seasonal features and signage with you.
           </p>
           <Link className="bv-button bv-green" href="/wild/partners#enquire">
             Contact us for pricing

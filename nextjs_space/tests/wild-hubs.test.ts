@@ -189,7 +189,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
         'utf8',
       ),
     )
-    await pg.exec(readFileSync(new URL('../prisma/migrations/20260914_wild_editorial_review/migration.sql', import.meta.url), 'utf8'))
+    await pg.exec(readFileSync(new URL('../prisma/migrations/20260915_wild_editorial_review/migration.sql', import.meta.url), 'utf8'))
     const sql = (client: Pick<PGlite, 'query'>): Sql => ({
       query: async <T>(statement: string, values: unknown[]) =>
         (await client.query<T>(statement, values)).rows,
