@@ -41,7 +41,7 @@ export default async function WildCountyPage({ params }: { params: Promise<{ cou
         <section className="mx-auto max-w-[1050px] px-5 py-12">
           {county.topics.length ? (
             <>
-              <h2 className="font-display text-3xl font-semibold">Explore reviewed starting points</h2>
+              <h2 className="font-display text-3xl font-semibold">Discover the landscape</h2>
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 {county.topics.map((topic) => (
                   <article key={topic.slug} className="rounded-md border border-[#d8d3c4] bg-white p-6 shadow-sm">
@@ -57,7 +57,12 @@ export default async function WildCountyPage({ params }: { params: Promise<{ cou
                 ))}
               </div>
 
-              <div className="mt-12">
+              <div className="mt-8 rounded border border-[#d8d3c4] bg-[#eeeddf] p-6">
+                <h2 className="font-display text-2xl font-semibold">Your place in this Wild County</h2>
+                <p className="my-3">Your own story, local discoveries and a QR code that starts at your door.</p>
+                <Link href="/wild/partners" className="font-semibold underline">Explore community membership →</Link>
+              </div>
+              {county.businessCandidates.length > 0 && <div className="mt-12">
                 <h2 className="font-display text-3xl font-semibold">Possible places along the way</h2>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6962]">These are public business candidates for a future pilot. They are not confirmed BioVeracity partners, approved listings or evidence of environmental performance.</p>
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -69,7 +74,7 @@ export default async function WildCountyPage({ params }: { params: Promise<{ cou
                     </a>
                   ))}
                 </div>
-              </div>
+              </div>}
             </>
           ) : (
             <div className="rounded-md border border-dashed border-[#bbb6a8] bg-white p-10 text-center">

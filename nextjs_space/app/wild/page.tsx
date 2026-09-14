@@ -26,7 +26,8 @@ export default async function WildCountiesPage({
           <div className="mx-auto max-w-[1100px]">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e0c86e]">Powered by BioVeracity</p>
             <h1 className="mt-4 max-w-4xl font-display text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Find the wild story in every county.</h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-[#dfe9e4]">Search habitats, species and places to visit. Every factual nature story must remain connected to its source and geographical scope.</p>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-[#dfe9e4]">Discover the nature and stories of a place, with sources you can explore for yourself.</p>
+            <Link href="/wild/partners" className="mt-6 inline-block rounded bg-[#dfc27a] px-5 py-3 font-semibold text-[#173d35]">Run a venue? Discover the Wild community →</Link>
             <form className="mt-8 flex max-w-2xl overflow-hidden rounded-md bg-white p-1.5 shadow-xl" action="/wild">
               <Search className="ml-3 mt-3 h-5 w-5 text-[#65736d]" aria-hidden="true" />
               <label className="sr-only" htmlFor="wild-search">Search Wild Counties</label>
@@ -39,7 +40,7 @@ export default async function WildCountiesPage({
         <section className="mx-auto max-w-[1100px] px-5 py-10 md:py-14">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f744f]">32-county architecture</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f744f]">Explore Ireland</p>
               <h2 className="mt-2 font-display text-3xl font-semibold">{q ? `Results for “${q}”` : 'Choose a county'}</h2>
             </div>
             <p className="text-sm text-[#637069]">{counties.length} result{counties.length === 1 ? '' : 's'}</p>
@@ -54,7 +55,7 @@ export default async function WildCountiesPage({
                     <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${county.status === 'foundation' ? 'bg-[#e4efe8] text-[#24573f]' : 'bg-[#efede6] text-[#6a706c]'}`}>{county.status}</span>
                   </div>
                   <p className="mt-2 text-sm text-[#66716b]">{county.province} · {county.jurisdiction}</p>
-                  <p className="mt-4 text-sm font-semibold text-[#24573f]">{county.topics.length ? `${county.topics.length} reviewed topic seeds` : 'Evidence collection planned'} →</p>
+                  <p className="mt-4 text-sm font-semibold text-[#24573f]">{county.topics.length ? `${county.topics.length} stories to explore` : 'Evidence collection planned'} →</p>
                 </Link>
               ))}
             </div>
