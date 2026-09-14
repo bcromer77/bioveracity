@@ -46,7 +46,8 @@ export function HubStudio() {
     [approved, setApproved] = useState(false),
     [authorised, setAuthorised] = useState(false),
     [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
-  const [year, setYear] = useState(new Date().getFullYear()),
+  const [currentYear, setCurrentYear] = useState(0)
+  const [year, setYear] = useState(0),
     [month, setMonth] = useState(0),
     [csv, setCsv] = useState(''),
     [term, setTerm] = useState(''),
@@ -71,6 +72,11 @@ export function HubStudio() {
     const json = await api('/api/wild/hubs')
     setList(json.hubs)
   }
+  useEffect(() => {
+    const y = new Date().getFullYear()
+    setCurrentYear(y)
+    setYear((prev) => (prev ? prev : y))
+  }, [])
   useEffect(() => {
     refresh().catch((e) => setError(e.message))
   }, [])
@@ -517,7 +523,7 @@ export function HubStudio() {
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
                 >
-                  {[new Date().getFullYear(), new Date().getFullYear() + 1].map(
+                  {(currentYear ? [currentYear, currentYear + 1] : []).map(
                     (y) => (
                       <option key={y}>{y}</option>
                     ),
