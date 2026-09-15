@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { EllonaMap } from './ellona-map'
 import type { MapPoint } from './ellona-map-inner'
 import type { OpportunityDTO } from './types'
@@ -12,9 +13,11 @@ function OppCard({ o }: { o: OpportunityDTO }) {
         <span className="bv-tag bv-tag-status">{o.status}</span>
         <span className="bv-tag bv-tag-class">{o.classification}</span>
         {o.following ? <span className="bv-tag bv-tag-cat">Following</span> : null}
+        {o.isSeed ? <span className="bv-tag bv-tag-cat">Trial seed — previously published</span> : null}
+        {o.accessLimited ? <span className="bv-tag bv-tag-warn">Source access limited</span> : null}
       </div>
       <h3>
-        <a href={`/ellona/opportunity/${o.id}`}>{o.title}</a>
+        <Link href={`/ellona/opportunity/${o.id}`}>{o.title}</Link>
       </h3>
       <div className="bv-opp-meta">
         {o.buyer}
@@ -26,9 +29,9 @@ function OppCard({ o }: { o: OpportunityDTO }) {
         <span className="bv-opp-meta">
           {o.tenderDeadline ? `Submission: ${o.tenderDeadline}` : o.clarificationDeadline ? `Clarification: ${o.clarificationDeadline}` : 'No dated deadline'}
         </span>
-        <a href={`/ellona/opportunity/${o.id}`} style={{ fontWeight: 700, fontSize: 13 }}>
+        <Link href={`/ellona/opportunity/${o.id}`} style={{ fontWeight: 700, fontSize: 13 }}>
           Open record →
-        </a>
+        </Link>
       </div>
     </article>
   )
@@ -109,15 +112,21 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
       nextAction: o.nextAction || '',
     }))
 
-  const actionRequired = filtered.filter((o) => o.status === 'ACTION REQUIRED')
-  const newQualified = filtered.filter((o) => o.status === 'NEW' || o.status === 'QUALIFIED' || o.status === 'UNDER REVIEW')
-  const following = filtered.filter((o) => o.following && !CLOSED.has(o.status))
-  const earlySignals = filtered.filter(
-    (o) =>
-      o.classification === 'EARLY SIGNAL — REQUIRES QUALIFICATION' || o.classification === 'PRE-MARKET ENGAGEMENT',
-  )
   const corrections = filtered.filter((o) => o.hasCorrection || o.classification === 'CORRECTION OR DEADLINE CHANGE')
-  const closed = filtered.filter((o) => CLOSED.has(o.status))
+  const correctionIds = new Set(corrections.map((o) => o.id))
+  const following = filtered.filter((o) => o.following && !correctionIds.has(o.id))
+  const followingIds = new Set(following.map((o) => o.id))
+  const seedRecords = filtered.filter((o) => o.isSeed && !correctionIds.has(o.id) && !followingIds.has(o.id))
+  const seedIds = new Set(seedRecords.map((o) => o.id))
+  const closed = filtered.filter((o) => CLOSED.has(o.status) && !correctionIds.has(o.id) && !followingIds.has(o.id) && !seedIds.has(o.id))
+  const closedIds = new Set(closed.map((o) => o.id))
+  const newlyRouted = filtered.filter((o) =>
+    o.newSinceLastPortfolio &&
+    !correctionIds.has(o.id) && !followingIds.has(o.id) && !seedIds.has(o.id) && !closedIds.has(o.id),
+  )
+  const allocated = new Set([...correctionIds, ...followingIds, ...seedIds, ...closedIds, ...newlyRouted.map((o) => o.id)])
+  const unchangedOpen = filtered.filter((o) => !allocated.has(o.id) && !CLOSED.has(o.status))
+  const accessGaps = filtered.filter((o) => o.accessLimited)
 
   return (
     <>
@@ -215,12 +224,13 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
         Showing {filtered.length} of {opportunities.length} opportunities.
       </p>
 
-      <Section title="Action required" items={actionRequired} />
-      <Section title="New and qualified opportunities" items={newQualified} />
-      <Section title="Following" items={following} />
-      <Section title="Early signals" items={earlySignals} />
       <Section title="Corrections and changes" items={corrections} />
-      <Section title="Recently closed" items={closed} />
+      <Section title="Newly routed opportunities" items={newlyRouted} />
+      <Section title="Open and unchanged" items={unchangedOpen} />
+      <Section title="Following" items={following} />
+      <Section title="Closed or superseded" items={closed} />
+      <Section title="Trial seed records — previously published" items={seedRecords} />
+      <Section title="Source-access gaps requiring review" items={accessGaps} />
 
       {filtered.length === 0 ? <p className="bv-ellona-count">No opportunities match the current filters.</p> : null}
     </>

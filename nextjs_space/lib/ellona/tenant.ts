@@ -8,7 +8,7 @@
 
 import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
-import { ELLONA } from './config'
+import { ELLONA, ELLONA_MONITORING_PROFILE } from './config'
 
 export type ProvisionResult = {
   workspaceId: string
@@ -31,6 +31,7 @@ export async function provisionEllonaTenant(): Promise<ProvisionResult> {
   if (existing) {
     // Ensure Natalia's account + membership still exist (idempotent repair).
     const user = await ensureCustomerUser(existing.workspaceId)
+    await ensureMonitoringProfile(existing.workspaceId)
     return { workspaceId: existing.workspaceId, userId: user.id, originatorUserId: originator?.id ?? null, created: false }
   }
 
@@ -59,7 +60,19 @@ export async function provisionEllonaTenant(): Promise<ProvisionResult> {
   })
 
   const user = await ensureCustomerUser(workspaceId)
+  await ensureMonitoringProfile(workspaceId)
   return { workspaceId, userId: user.id, originatorUserId: originator?.id ?? null, created: true }
+}
+
+async function ensureMonitoringProfile(workspaceId: string): Promise<void> {
+  const profile = ELLONA_MONITORING_PROFILE
+  const values = {
+    territories: [...profile.territories], themes: [...profile.themes], capabilities: [...profile.capabilities],
+    immediateClassifications: [...profile.immediateClassifications], enabled: true,
+  }
+  await prisma.partnerMonitoringProfile.upsert({
+    where: { workspaceId }, update: values, create: { workspaceId, ...values },
+  })
 }
 
 async function ensureCustomerUser(workspaceId: string): Promise<{ id: string }> {

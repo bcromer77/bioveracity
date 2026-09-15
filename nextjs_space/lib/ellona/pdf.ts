@@ -252,11 +252,18 @@ export type PortfolioItem = {
   deadline: string | null
   location: string | null
   recordUrl: string
+  bucket: 'NEW' | 'CORRECTION' | 'OPEN' | 'FOLLOWING' | 'CLOSED' | 'SEED'
+  accessLimitation: string | null
+  nextAction: string | null
 }
 
 export async function renderPortfolio(input: {
   dashboardUrl: string
   generatedForLabel: string
+  snapshotLabel: string
+  evidenceRefreshedLabel: string
+  versionLabel: string
+  coverageNotes: string[]
   items: PortfolioItem[]
 }): Promise<Buffer> {
   const pdf = await PDFDocument.create()
@@ -269,13 +276,27 @@ export async function renderPortfolio(input: {
   draw(ctx, safe, ELLONA.workspaceName, { size: 11, font: bold, color: [0.09, 0.24, 0.21] })
   draw(ctx, safe, 'Opportunity portfolio', { size: 17, font: bold })
   draw(ctx, safe, input.generatedForLabel, { size: 10, color: [0.35, 0.38, 0.34] })
+  draw(ctx, safe, `Report version: ${input.versionLabel}`, { size: 9 })
+  draw(ctx, safe, `Evidence last refreshed: ${input.evidenceRefreshedLabel}`, { size: 9 })
+  draw(ctx, safe, `Portfolio snapshot generated: ${input.snapshotLabel}`, { size: 9 })
   draw(ctx, safe, `${input.items.length} opportunit${input.items.length === 1 ? 'y' : 'ies'} in scope`, {
     size: 10,
   })
   gap(ctx)
 
-  input.items.forEach((it, idx) => {
-    draw(ctx, safe, `${idx + 1}. ${it.buyer} — ${it.title}`, { size: 12, font: bold })
+  const sections: Array<[PortfolioItem['bucket'], string]> = [
+    ['NEW', 'Newly routed opportunities'], ['CORRECTION', 'Corrections and status changes'],
+    ['OPEN', 'Open and unchanged'], ['FOLLOWING', 'Opportunities being followed'],
+    ['CLOSED', 'Closed or superseded'], ['SEED', 'Trial seed records — previously published'],
+  ]
+  let index = 0
+  for (const [bucket, heading] of sections) {
+    const selected = input.items.filter((item) => item.bucket === bucket)
+    if (!selected.length) continue
+    draw(ctx, safe, heading, { size: 13, font: bold, color: [0.09, 0.24, 0.21] })
+    for (const it of selected) {
+      index++
+      draw(ctx, safe, `${index}. ${it.buyer} — ${it.title}`, { size: 12, font: bold })
     draw(ctx, safe, `${it.classification}  •  Status: ${it.status}`, {
       size: 9,
       font: italic,
@@ -285,9 +306,25 @@ export async function renderPortfolio(input: {
     if (it.measurementNeed) draw(ctx, safe, `Measurement need: ${it.measurementNeed}`, { size: 10, indent: 4 })
     if (it.location) draw(ctx, safe, `Location: ${it.location}`, { size: 10, indent: 4 })
     draw(ctx, safe, `Deadline: ${it.deadline || 'no stated deadline'}`, { size: 10, indent: 4 })
+    if (it.nextAction) draw(ctx, safe, `Recommended action: ${it.nextAction}`, { size: 10, indent: 4 })
+    if (it.accessLimitation) draw(ctx, safe, `Source access limitation: ${it.accessLimitation}`, { size: 9, indent: 4 })
     draw(ctx, safe, `Open record: ${it.recordUrl}`, { size: 9, link: it.recordUrl, color: [0.1, 0.3, 0.7], indent: 4 })
     gap(ctx, 8)
-  })
+    }
+  }
+
+  const gaps = input.items.filter((item) => item.accessLimitation)
+  if (gaps.length || input.coverageNotes.length) {
+    draw(ctx, safe, 'Coverage and inaccessible sources', { size: 13, font: bold })
+    for (const note of input.coverageNotes) draw(ctx, safe, `• ${note}`, { size: 9, indent: 4 })
+    for (const item of gaps) draw(ctx, safe, `${item.buyer}: ${item.accessLimitation}`, { size: 9, indent: 4 })
+    gap(ctx)
+  }
+
+  draw(ctx, safe, 'Recommended actions', { size: 13, font: bold })
+  const actions = input.items.filter((item) => item.nextAction && item.bucket !== 'CLOSED').slice(0, 8)
+  if (!actions.length) draw(ctx, safe, 'No current action is supported by the routed evidence.', { size: 10 })
+  for (const item of actions) draw(ctx, safe, `• ${item.buyer}: ${item.nextAction}`, { size: 10, indent: 4 })
 
   gap(ctx, 6)
   await drawQr(ctx, input.dashboardUrl, 'Scan to open your live opportunity watch.', safe)

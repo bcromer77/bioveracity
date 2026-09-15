@@ -34,7 +34,7 @@ export default async function EllonaAssessReviewPage({ params }: { params: Promi
   if (!owned) notFound()
 
   const tenant = await prisma.partnerTenant.findUnique({ where: { workspaceId: membership.workspaceId } })
-  const readOnly = !tenant || !trialAllowsWrites(tenant.trialState)
+  const readOnly = !tenant || !trialAllowsWrites(tenant.trialState, tenant.trialEndsAt)
   const isAdmin = (session?.user?.email || '').toLowerCase() === BAZIL_EMAIL
 
   return (

@@ -40,15 +40,15 @@ export async function createInvitation(
 ): Promise<{ token: string; expiresAt: Date }> {
   const token = randomBytes(32).toString('hex')
   const expiresAt = new Date(Date.now() + INVITATION_TTL_MS)
-  await prisma.partnerInvitation.create({
-    data: {
-      id: randomUUID(),
-      workspaceId,
-      email: email.toLowerCase(),
-      purpose,
-      tokenHash: hashToken(token),
-      expiresAt,
-    },
+  await prisma.$transaction(async (tx) => {
+    // Only the newest invitation for this purpose remains usable.
+    await tx.partnerInvitation.updateMany({
+      where: { workspaceId, email: email.toLowerCase(), purpose, consumedAt: null },
+      data: { consumedAt: new Date() },
+    })
+    await tx.partnerInvitation.create({
+      data: { id: randomUUID(), workspaceId, email: email.toLowerCase(), purpose, tokenHash: hashToken(token), expiresAt },
+    })
   })
   await recordAuthEvent(
     workspaceId,
@@ -137,12 +137,12 @@ export async function consumeAndSetPassword(
 
   try {
     await prisma.$transaction(async (tx) => {
-      // Re-check consumption inside the transaction (single-use guarantee).
-      const fresh = await tx.partnerInvitation.findUnique({ where: { id: invitation.id } })
-      if (!fresh || fresh.consumedAt || fresh.expiresAt.getTime() < Date.now()) {
-        throw new Error('TOKEN_UNAVAILABLE')
-      }
-      await tx.partnerInvitation.update({ where: { id: invitation.id }, data: { consumedAt: new Date() } })
+      // Atomic compare-and-set: simultaneous requests cannot both consume it.
+      const consumed = await tx.partnerInvitation.updateMany({
+        where: { id: invitation.id, consumedAt: null, expiresAt: { gt: new Date() } },
+        data: { consumedAt: new Date() },
+      })
+      if (consumed.count !== 1) throw new Error('TOKEN_UNAVAILABLE')
       await tx.user.update({ where: { email: invitation.email }, data: { password: passwordHash } })
     })
   } catch {

@@ -1,10 +1,11 @@
 'use client'
 
 import { signOut } from 'next-auth/react'
+import Link from 'next/link'
 
 export function SignOutButton() {
   return (
-    <a
+    <Link
       href="/"
       onClick={(e) => {
         e.preventDefault()
@@ -12,6 +13,6 @@ export function SignOutButton() {
       }}
     >
       Sign out
-    </a>
+    </Link>
   )
 }

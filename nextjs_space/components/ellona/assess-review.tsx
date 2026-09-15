@@ -12,6 +12,7 @@
 // never auto-published; this is private working material.
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 
 type Category = 'SOURCE FACT' | 'BIOVERACITY ANALYSIS' | 'ELLONA INPUT' | 'UNKNOWN'
 const CATEGORIES: Category[] = ['SOURCE FACT', 'BIOVERACITY ANALYSIS', 'ELLONA INPUT', 'UNKNOWN']
@@ -351,9 +352,9 @@ export function AssessReview({ id, readOnly }: { id: string; readOnly: boolean }
             This assessment is marked reviewed. The brief reflects your corrections and only the comments you chose to
             include.
           </p>
-          <a className="bv-button bv-green" href={`/api/ellona/assessment/${id}/pdf`} style={{ marginTop: 10 }}>
+          <Link className="bv-button bv-green" href={`/api/ellona/assessment/${id}/pdf`} style={{ marginTop: 10 }}>
             Download qualification brief
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="bv-notice" style={{ marginTop: 6 }}>

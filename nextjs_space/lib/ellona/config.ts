@@ -64,6 +64,34 @@ export const CLASSIFICATIONS = [
   'CORRECTION OR DEADLINE CHANGE',
 ] as const
 
+// Shared public records are evaluated against this tenant-specific lens. The
+// profile stores no public evidence; it only controls which canonical records
+// are referenced from Ellona's private workspace and which classes may alert.
+export const ELLONA_MONITORING_PROFILE = {
+  territories: [
+    'United Kingdom', 'Cambridge', 'Cambridgeshire', 'Peterborough',
+    'Republic of Ireland', 'Northern Ireland', 'Puglia', 'European Union',
+  ],
+  themes: [
+    'odour', 'air quality', 'gases', 'dust', 'noise', 'vibration',
+    'water', 'wastewater', 'rivers', 'reservoirs', 'lagoons', 'catchments',
+    'industrial emissions', 'environmental permits', 'planning conditions',
+    'treatment-process failures', 'environmental complaints', 'ports',
+    'marine infrastructure', 'coastal monitoring', 'environmental sensors',
+    'public consultation', 'procurement',
+  ],
+  capabilities: [
+    'odour identification', 'source attribution', 'air quality monitoring',
+    'gas monitoring', 'dust monitoring', 'noise monitoring', 'vibration monitoring',
+    'water monitoring', 'wastewater monitoring', 'industrial emissions monitoring',
+    'environmental sensor deployment',
+  ],
+  immediateClassifications: [
+    'OPEN TENDER', 'PRE-MARKET ENGAGEMENT', 'FUNDED PROJECT',
+    'PERMIT OR PLANNING OPPORTUNITY', 'MONITORING NEED', 'PARTNER OPPORTUNITY',
+  ],
+} as const
+
 // Decision types for a customer-created Opportunity Assessment (latest brief).
 export const DECISION_TYPES = ['BID', 'PARTNER', 'MONITOR', 'PASS', 'UNSURE'] as const
 export type DecisionType = (typeof DECISION_TYPES)[number]

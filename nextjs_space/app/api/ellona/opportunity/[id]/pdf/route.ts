@@ -1,10 +1,10 @@
 // Authorised qualification brief for a single monitored opportunity.
 // Tenant-scoped; a foreign opportunity id resolves to 404.
 
-import { prisma } from '@/lib/prisma'
 import { EllonaAccessError } from '@/lib/ellona/access'
 import { requireReader, jsonError } from '@/lib/ellona/http'
 import { renderOpportunityBrief } from '@/lib/ellona/pdf'
+import { workspaceOpportunity } from '@/lib/ellona/routing'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const { id } = await params
     const { membership } = await requireReader()
-    const opp = await prisma.opportunity.findFirst({ where: { id, workspaceId: membership.workspaceId } })
+    const opp = await workspaceOpportunity(membership.workspaceId, id)
     if (!opp) return jsonError(404, 'Opportunity not found')
 
     const base = process.env.NEXTAUTH_URL || 'https://bioveracity.com'
@@ -29,12 +29,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       ['Project', opp.projectName || opp.title],
       ['Location', location],
       ['Measurement need', opp.measurementNeed || 'Not stated'],
+      ['Why Ellona may care', opp.workspaceRelevance || 'Workspace relevance requires review'],
+      ['Supported source claim', opp.supportedClaim || 'Not stated'],
+      ['Supporting passage', opp.supportingPassage || 'Not stated'],
       ['Published value', value],
       ['Publication date', opp.publicationDate || 'Not stated'],
       ['Clarification deadline', opp.clarificationDeadline || 'Not stated'],
       ['Submission deadline', opp.tenderDeadline || 'Not stated'],
       ['Duration', opp.duration || 'Not stated'],
       ['Source', `${opp.sourceName}${opp.officialId ? ' \u2014 ref ' + opp.officialId : ''}`],
+      ['Primary-source URL', opp.sourceUrl],
+      ['Source access limitations', opp.accessLimitations || 'None recorded'],
+      ['Evidence refreshed', opp.evidenceRefreshedAt.toISOString()],
       ['Recommended next action', opp.nextAction || 'Review the source and confirm relevance.'],
     ]
 

@@ -20,6 +20,7 @@ import path from 'node:path'
 import { prisma } from '../lib/prisma'
 import { ELLONA } from '../lib/ellona/config'
 import { createInvitation } from '../lib/ellona/invitation'
+import { workspaceOpportunities } from '../lib/ellona/routing'
 import {
   renderActivationEmail,
   renderAlertEmail,
@@ -51,7 +52,7 @@ async function main() {
   writeFileSync(`${OUT}/activation-email.html`, activation.html)
 
   // 3) Alert email for the flagship EPA opportunity.
-  const epa = await prisma.opportunity.findFirst({ where: { workspaceId, id: 'ellona-seed-epa-air' } })
+  const epa = (await workspaceOpportunities(workspaceId)).find((opportunity) => opportunity.officialId === '8929884')
   let alertId = 'skipped'
   if (epa) {
     const line: OpportunityLine = {

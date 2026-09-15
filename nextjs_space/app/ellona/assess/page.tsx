@@ -28,7 +28,7 @@ export default async function EllonaAssessPage() {
   if (!membership) redirect('/professionals')
 
   const tenant = await prisma.partnerTenant.findUnique({ where: { workspaceId: membership.workspaceId } })
-  const readOnly = !tenant || !trialAllowsWrites(tenant.trialState)
+  const readOnly = !tenant || !trialAllowsWrites(tenant.trialState, tenant.trialEndsAt)
   const isAdmin = (session?.user?.email || '').toLowerCase() === BAZIL_EMAIL
 
   const decisions = DECISION_TYPES.map((d) => ({ value: d, label: DECISION_LABELS[d] }))

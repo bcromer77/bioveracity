@@ -7,7 +7,9 @@ import { resolveEllonaView, trialAllowsWrites } from '@/lib/ellona/access'
 import { EllonaShell } from '@/components/ellona/ellona-shell'
 import { EllonaMap } from '@/components/ellona/ellona-map'
 import { OpportunityActions } from '@/components/ellona/opportunity-actions'
+import { EvidenceLink } from '@/components/evidence-link'
 import type { MapPoint } from '@/components/ellona/ellona-map-inner'
+import { workspaceOpportunity } from '@/lib/ellona/routing'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Opportunity record | BioVeracity', robots: { index: false, follow: false } }
@@ -35,7 +37,7 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
   const workspaceId = view.workspaceId
   const preview = view.preview
 
-  const opp = await prisma.opportunity.findFirst({ where: { id, workspaceId } })
+  const opp = await workspaceOpportunity(workspaceId, id)
   if (!opp) notFound()
 
   const [events, followActions, tenant] = await Promise.all([
@@ -50,7 +52,7 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
 
   const following = followActions.length ? followActions[followActions.length - 1].kind === 'FOLLOW' : opp.status === 'FOLLOWING'
   // Read-only when there is no writable trial, and always in the originator preview.
-  const readOnly = preview || !tenant || !trialAllowsWrites(tenant.trialState)
+  const readOnly = preview || !tenant || !trialAllowsWrites(tenant.trialState, tenant.trialEndsAt)
   const isAdmin = (session?.user?.email || '').toLowerCase() === BAZIL_EMAIL
 
   const themes = (opp.themes as unknown as string[]) || []
@@ -92,9 +94,9 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
       <p className="bv-ellona-rep">{REPRESENTATION_LINE}</p>
 
       <div className="bv-ellona-cta">
-        <a className="bv-button bv-green" href={`/api/ellona/opportunity/${opp.id}/pdf`}>
+        <Link className="bv-button bv-green" href={`/api/ellona/opportunity/${opp.id}/pdf`}>
           Download opportunity brief (PDF)
-        </a>
+        </Link>
       </div>
 
       <h2>Record</h2>
@@ -107,10 +109,13 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
           <Row label="Environmental themes">{themes.join(', ')}</Row>
           <Row label="Measurement requirement">{opp.measurementNeed}</Row>
           <Row label="Relevant Ellona capabilities (analysis)">{capabilities.join(', ')}</Row>
+          <Row label="Why this may matter to Ellona">{opp.workspaceRelevance}</Row>
+          <Row label="Supported source claim">{opp.supportedClaim}</Row>
+          <Row label="Supporting passage">{opp.supportingPassage}</Row>
           <Row label="Primary source">
-            <a href={opp.sourceUrl} target="_blank" rel="noreferrer">
+            <EvidenceLink href={opp.sourceUrl} target="_blank" rel="noreferrer">
               {opp.sourceName} ↗
-            </a>
+            </EvidenceLink>
           </Row>
           <Row label="Official reference">{opp.officialId}</Row>
           <Row label="Procedure id">{opp.procedureId}</Row>
@@ -121,6 +126,10 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
           <Row label="Published value">{opp.publishedValue}</Row>
           <Row label="Value basis">{opp.valueBasis}</Row>
           <Row label="Recommended next action">{opp.nextAction}</Row>
+          <Row label="Source access limitations">{opp.accessLimitations || 'None recorded'}</Row>
+          <Row label="Evidence last refreshed">
+            {new Intl.DateTimeFormat('en-IE', { timeZone: 'Europe/Dublin', dateStyle: 'medium', timeStyle: 'short' }).format(opp.evidenceRefreshedAt)}
+          </Row>
         </dl>
       </div>
 

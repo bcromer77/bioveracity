@@ -32,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const tenant = await prisma.partnerTenant.findUnique({ where: { workspaceId } })
     if (!tenant) return jsonError(404, 'Workspace unavailable')
-    if (!trialAllowsWrites(tenant.trialState)) {
+    if (!trialAllowsWrites(tenant.trialState, tenant.trialEndsAt)) {
       return jsonError(403, 'Your trial is read-only. Actions cannot be recorded until the trial is converted.')
     }
 

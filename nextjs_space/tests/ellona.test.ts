@@ -44,6 +44,15 @@ import {
   ORIGINATOR_EMAIL,
 } from '../lib/ellona/access'
 import { ELLONA } from '../lib/ellona/config'
+import {
+  evaluateOpportunity,
+  opportunityVersionHash,
+  classifyChange,
+  parseCanonicalOpportunityInput,
+  routeCanonicalOpportunity,
+  type CanonicalOpportunityInput,
+} from '../lib/ellona/routing'
+import { renderOpportunityBrief, renderPortfolio } from '../lib/ellona/pdf'
 
 const require = createRequire(import.meta.url)
 const SCAN_KEY = 'test-scanner-key-0123456789'
@@ -269,6 +278,163 @@ describe('password policy + breach check', () => {
   })
 })
 
+describe('canonical opportunity routing', () => {
+  const input: CanonicalOpportunityInput = {
+    verificationState: 'VERIFIED', sourceName: 'Official test portal', sourceUrl: 'https://example.test/notices/air-1',
+    publisher: 'Test Authority', officialId: 'AIR-1', buyer: 'Test Council', title: 'Air monitoring requirement',
+    country: 'United Kingdom', region: 'Cambridge', classification: 'OPEN TENDER', sourceStatus: 'OPEN',
+    themes: ['air quality'], capabilities: ['air quality monitoring'], measurementNeed: 'Continuous particulate measurement.',
+    publicationDate: '15 September 2026', tenderDeadline: '30 September 2026 12:00 (Europe/Dublin)',
+    supportedClaim: 'The authority is procuring an air monitoring service.', supportingPassage: 'The authority invites tenders for continuous particulate monitoring.',
+    sourceReadable: true, retrievedAt: new Date('2026-09-15T12:00:00Z'),
+    nextAction: 'Review the notice and decide whether to bid or partner.',
+  }
+  const profile = { workspaceId: 'ellona', territories: ['United Kingdom'], themes: ['air quality'], capabilities: ['air quality monitoring'], immediateClassifications: ['OPEN TENDER'], enabled: true }
+
+  test('routes only a territorial, thematic match that passes the alert gate', () => {
+    const decision = evaluateOpportunity(input, profile)
+    assert.equal(decision.matched, true)
+    assert.equal(decision.alertEligible, true)
+    assert.deepEqual(decision.matchedThemes, ['air quality'])
+    assert.equal(evaluateOpportunity(input, { ...profile, territories: ['Puglia'] }).matched, false)
+  })
+
+  test('authenticated hand-off parser rejects unsupported or unbounded opportunity metadata', () => {
+    const wire = { ...input, retrievedAt: input.retrievedAt.toISOString(), evidenceDocumentId: 'verified-evidence-test' }
+    assert.equal(parseCanonicalOpportunityInput(wire).evidenceDocumentId, 'verified-evidence-test')
+    assert.throws(() => parseCanonicalOpportunityInput({ ...wire, sourceUrl: 'http://example.test/insecure' }))
+    assert.throws(() => parseCanonicalOpportunityInput({ ...wire, verificationState: 'PENDING_REVIEW' }))
+    assert.throws(() => parseCanonicalOpportunityInput({ ...wire, supportedClaim: '' }))
+    assert.throws(() => parseCanonicalOpportunityInput({ ...wire, customerWorkspaceId: 'ellona-test' }))
+  })
+
+  test('retrieval alone does not create a new version; a deadline correction does', () => {
+    const laterRetrieval = { ...input, retrievedAt: new Date('2026-09-15T13:00:00Z') }
+    assert.equal(opportunityVersionHash(input), opportunityVersionHash(laterRetrieval))
+    const corrected = { ...input, tenderDeadline: '1 October 2026 12:00 (Europe/Dublin)' }
+    assert.notEqual(opportunityVersionHash(input), opportunityVersionHash(corrected))
+    assert.equal(classifyChange({ tenderDeadline: corrected.tenderDeadline }, false), 'DEADLINE_CHANGE')
+  })
+
+  test('one canonical test record routes to isolated overlays, deduplicates, and suppresses alerts after expiry', async () => {
+    const canonicals = new Map<string, any>()
+    const versions: any[] = []
+    const overlays: any[] = []
+    const events: any[] = []
+    const emails: any[] = []
+    const profiles = [
+      { workspaceId: 'ellona-test', territories: ['United Kingdom'], themes: ['air quality'], capabilities: ['air quality monitoring'], immediateClassifications: ['OPEN TENDER'], enabled: true, lastEvidenceRefreshAt: null, lastSourceAccessStatus: null },
+      { workspaceId: 'mara-test', territories: ['United Kingdom'], themes: ['marine'], capabilities: ['marine monitoring'], immediateClassifications: ['OPEN TENDER'], enabled: true, lastEvidenceRefreshAt: null, lastSourceAccessStatus: null },
+      { workspaceId: 'expired-test', territories: ['United Kingdom'], themes: ['air quality'], capabilities: ['air quality monitoring'], immediateClassifications: ['OPEN TENDER'], enabled: true, lastEvidenceRefreshAt: null, lastSourceAccessStatus: null },
+    ]
+    const tenants = new Map(profiles.map((row) => [row.workspaceId, { workspaceId: row.workspaceId, contactEmail: `${row.workspaceId}@example.invalid`, trialState: 'ACTIVE', trialEndsAt: new Date(Date.now() + 86_400_000), alertsPaused: false }]))
+    tenants.get('expired-test')!.trialEndsAt = new Date(Date.now() - 1)
+    const tx: any = {
+      $executeRaw: async () => 1,
+      publicOpportunity: {
+        findUnique: async ({ where }: any) => {
+          const record = canonicals.get(where.canonicalKey)
+          return record ? { ...record, versions: versions.filter((version) => version.publicOpportunityId === record.id).slice(-1) } : null
+        },
+        upsert: async ({ where, update, create }: any) => {
+          const existing = canonicals.get(where.canonicalKey)
+          const record = existing ? Object.assign(existing, update) : { ...create }
+          canonicals.set(where.canonicalKey, record)
+          return record
+        },
+      },
+      publicOpportunityVersion: { create: async ({ data }: any) => { const row = { ...data, detectedAt: new Date() }; versions.push(row); return row } },
+      partnerMonitoringProfile: {
+        findMany: async () => profiles,
+        update: async ({ where, data }: any) => Object.assign(profiles.find((row) => row.workspaceId === where.workspaceId)!, data),
+      },
+      opportunity: {
+        findFirst: async ({ where }: any) => overlays.find((row) => row.workspaceId === where.workspaceId && row.publicOpportunityId === where.publicOpportunityId) || null,
+        upsert: async ({ where, update, create }: any) => {
+          const key = where.workspaceId_publicOpportunityId
+          const existing = overlays.find((row) => row.workspaceId === key.workspaceId && row.publicOpportunityId === key.publicOpportunityId)
+          if (existing) return Object.assign(existing, update)
+          const row = { ...create }; overlays.push(row); return row
+        },
+      },
+      opportunityEvent: { create: async ({ data }: any) => { events.push(data); return data } },
+      partnerTenant: { findUnique: async ({ where }: any) => tenants.get(where.workspaceId) || null },
+      partnerEmail: {
+        upsert: async ({ where, create }: any) => {
+          const key = where.workspaceId_dedupKey
+          const existing = emails.find((row) => row.workspaceId === key.workspaceId && row.dedupKey === key.dedupKey)
+          if (existing) return existing
+          emails.push(create); return create
+        },
+      },
+    }
+    const database: any = { $transaction: async (callback: any) => callback(tx) }
+    const routedInput = { ...input, themes: ['air quality', 'marine'], capabilities: ['air quality monitoring', 'marine monitoring'] }
+    const interpretations = {
+      'ellona-test': { relevance: 'Ellona air-quality lens.' },
+      'mara-test': { relevance: 'Mara marine lens.' },
+    }
+
+    const first = await routeCanonicalOpportunity(routedInput, interpretations, database)
+    assert.equal(first.duplicate, false)
+    assert.equal(canonicals.size, 1)
+    assert.equal(versions.length, 1)
+    assert.equal(overlays.length, 3)
+    assert.equal(emails.length, 2)
+    assert.notEqual(overlays.find((row) => row.workspaceId === 'ellona-test').workspaceRelevance, overlays.find((row) => row.workspaceId === 'mara-test').workspaceRelevance)
+    assert.equal(emails.some((row) => row.workspaceId === 'expired-test'), false)
+
+    const repeated = await routeCanonicalOpportunity({ ...routedInput, retrievedAt: new Date('2026-09-15T13:00:00Z') }, interpretations, database)
+    assert.equal(repeated.duplicate, true)
+    assert.equal(versions.length, 1)
+    assert.equal(overlays.length, 3)
+    assert.equal(emails.length, 2)
+
+    const corrected = await routeCanonicalOpportunity({ ...routedInput, tenderDeadline: '1 October 2026 12:00 (Europe/Dublin)' }, interpretations, database)
+    assert.equal(corrected.duplicate, false)
+    assert.equal(versions.length, 2)
+    assert.equal(overlays.length, 3)
+    assert.equal(emails.length, 4)
+    assert.equal(events.filter((event) => event.kind === 'CORRECTION').length, 3)
+  })
+})
+
+describe('opportunity PDF snapshots', () => {
+  test('renders an individual brief and a categorised, timestamped portfolio', async () => {
+    const brief = await renderOpportunityBrief({
+      heading: 'Test Council — Air monitoring requirement',
+      subheading: 'Continuous particulate measurement',
+      recordUrl: 'https://bioveracity.com/ellona/opportunity/test-record',
+      classification: 'OPEN TENDER',
+      status: 'NEW',
+      metaRows: [['Supported source claim', 'The authority is procuring an air monitoring service.']],
+    })
+    const portfolio = await renderPortfolio({
+      dashboardUrl: 'https://bioveracity.com/ellona',
+      generatedForLabel: 'Ellona Environmental Opportunity Watch',
+      snapshotLabel: '15 September 2026, 19:00',
+      evidenceRefreshedLabel: '15 September 2026, 18:55',
+      versionLabel: 'v1',
+      coverageNotes: ['One source reported a disclosed access limitation.'],
+      items: [{
+        buyer: 'Test Council', title: 'Air monitoring requirement', classification: 'OPEN TENDER',
+        status: 'NEW', measurementNeed: 'Continuous particulate measurement', deadline: '30 September 2026',
+        location: 'Cambridge, United Kingdom', recordUrl: 'https://bioveracity.com/ellona/opportunity/test-record',
+        bucket: 'NEW', accessLimitation: null, nextAction: 'Review the notice.',
+      }],
+    })
+    for (const [bytes, expectedTitle] of [
+      [brief, 'Test Council — Air monitoring requirement'],
+      [portfolio, 'Ellona opportunity portfolio'],
+    ] as const) {
+      assert.equal(bytes.subarray(0, 4).toString(), '%PDF')
+      const parsed = await PDFDocument.load(bytes)
+      assert.ok(parsed.getPageCount() >= 1)
+      assert.match(parsed.getTitle() || '', new RegExp(expectedTitle, 'i'))
+    }
+  })
+})
+
 // ---------------------------------------------------------------------------
 // 7 + 8. DB-backed: invitation single-use/expiry + tenant isolation.
 //        Run only when a database is configured; every row is cleaned up.
@@ -343,7 +509,7 @@ dbTest('tenant isolation (DB)', () => {
 })
 
 dbTest('originator read-only preview access (DB)', () => {
-  test('a real member gets a writable view; the originator gets a read-only preview; others get nothing', async () => {
+  test('another partner member cannot resolve the Ellona route; the originator preview targets Ellona only', async () => {
     const { prisma } = await import('../lib/prisma')
     const ws = `test-ws-${randomUUID()}`
     const memberId = `test-user-${randomUUID()}`
@@ -365,13 +531,11 @@ dbTest('originator read-only preview access (DB)', () => {
       await prisma.user.create({ data: { id: memberId, email: `member-${randomUUID()}@example.invalid`, name: 'Test Member', role: 'partner_member' } })
       await prisma.privateWorkspaceMember.create({ data: { workspaceId: ws, userId: memberId, role: 'CONTRIBUTOR' } })
 
-      // 1) A real member resolves to a WRITABLE view (preview: false) of their own tenant.
+      // Membership of a different partner tenant never resolves /ellona.
       const memberView = await resolveEllonaView(memberId, 'anything@example.invalid')
-      assert.ok(memberView, 'member should resolve a view')
-      assert.equal(memberView!.preview, false)
-      assert.equal(memberView!.workspaceId, ws)
+      assert.equal(memberView, null)
       const memberWs = await findEllonaWorkspace(memberId)
-      assert.ok(memberWs && memberWs.workspaceId === ws)
+      assert.equal(memberWs, null)
 
       // 2) The originator (Bazil) is NOT a member anywhere, so he resolves to a
       //    READ-ONLY preview that targets the real Ellona tenant only.
@@ -394,6 +558,76 @@ dbTest('originator read-only preview access (DB)', () => {
       await prisma.user.delete({ where: { id: memberId } }).catch(() => {})
       await prisma.partnerTenant.delete({ where: { workspaceId: ws } }).catch(() => {})
       await prisma.privateWorkspace.delete({ where: { id: ws } }).catch(() => {})
+    }
+  })
+})
+
+dbTest('canonical routing and correction lifecycle (DB)', () => {
+  test('one public record feeds two isolated overlays and emits one sandbox notification per workspace/version', async () => {
+    const { prisma } = await import('../lib/prisma')
+    const suffix = randomUUID()
+    const wsA = `test-ellona-${suffix}`
+    const wsB = `test-mara-${suffix}`
+    const officialId = `TEST-${suffix}`
+    const base: CanonicalOpportunityInput = {
+      verificationState: 'VERIFIED', sourceName: 'Official test portal', sourceUrl: `https://example.test/notices/${officialId}`,
+      publisher: 'Test Authority', officialId, buyer: 'Test Council', title: 'Test air and port monitoring tender',
+      country: 'United Kingdom', region: 'Cambridge', classification: 'OPEN TENDER', sourceStatus: 'OPEN',
+      themes: ['air quality', 'marine'], capabilities: ['air quality monitoring', 'marine monitoring'],
+      measurementNeed: 'Continuous environmental measurement.', publicationDate: '15 September 2026',
+      tenderDeadline: '30 September 2026 12:00 (Europe/Dublin)', supportedClaim: 'The authority is procuring monitoring.',
+      supportingPassage: 'The authority invites tenders for environmental monitoring.', sourceReadable: true,
+      retrievedAt: new Date(), nextAction: 'Review the notice and decide whether to bid or partner.',
+    }
+    try {
+      for (const [workspaceId, orgName, contactEmail, themes, capabilities] of [
+        [wsA, 'Ellona Test', `ellona-${suffix}@example.invalid`, ['air quality'], ['air quality monitoring']],
+        [wsB, 'Mara Test', `mara-${suffix}@example.invalid`, ['marine'], ['marine monitoring']],
+      ] as const) {
+        await prisma.partnerTenant.create({ data: { workspaceId, orgName, workspaceName: `${orgName} Watch`, contactName: orgName, contactEmail, originatorName: 'Test', originatorOrg: 'Test', trialState: 'ACTIVE', trialEndsAt: new Date(Date.now() + 86_400_000) } })
+        await prisma.partnerMonitoringProfile.create({ data: { workspaceId, territories: ['United Kingdom'], themes: [...themes], capabilities: [...capabilities], immediateClassifications: ['OPEN TENDER'] } })
+      }
+      const interpretations = {
+        [wsA]: { relevance: 'Ellona air-quality lens.', nextAction: 'Assess sensor fit.' },
+        [wsB]: { relevance: 'Mara marine lens.', nextAction: 'Assess port-monitoring fit.' },
+      }
+      const first = await routeCanonicalOpportunity(base, interpretations)
+      assert.equal(first.duplicate, false)
+      assert.equal(first.routedWorkspaceIds.length, 2)
+      assert.equal(first.notificationIds.length, 2)
+      assert.equal(await prisma.publicOpportunity.count({ where: { id: first.canonicalId } }), 1)
+      const overlays = await prisma.opportunity.findMany({ where: { publicOpportunityId: first.canonicalId }, orderBy: { workspaceId: 'asc' } })
+      assert.equal(overlays.length, 2)
+      assert.notEqual(overlays[0].workspaceRelevance, overlays[1].workspaceRelevance)
+      assert.equal(await prisma.partnerEmail.count({ where: { workspaceId: wsA } }), 1)
+      assert.equal(await prisma.partnerEmail.count({ where: { workspaceId: wsB } }), 1)
+
+      const repeated = await routeCanonicalOpportunity({ ...base, retrievedAt: new Date(Date.now() + 1000) }, interpretations)
+      assert.equal(repeated.duplicate, true)
+      assert.equal(repeated.versionId, null)
+      assert.equal(repeated.notificationIds.length, 0)
+      assert.equal(await prisma.partnerEmail.count({ where: { workspaceId: { in: [wsA, wsB] } } }), 2)
+
+      const corrected = await routeCanonicalOpportunity({ ...base, tenderDeadline: '1 October 2026 12:00 (Europe/Dublin)', retrievedAt: new Date(Date.now() + 2000) }, interpretations)
+      assert.equal(corrected.duplicate, false)
+      assert.equal(corrected.notificationIds.length, 2)
+      assert.equal(await prisma.publicOpportunityVersion.count({ where: { publicOpportunityId: first.canonicalId } }), 2)
+      assert.equal(await prisma.opportunity.count({ where: { publicOpportunityId: first.canonicalId } }), 2)
+      assert.equal(await prisma.partnerEmail.count({ where: { workspaceId: { in: [wsA, wsB] } } }), 4)
+    } finally {
+      const canonical = await prisma.publicOpportunity.findFirst({ where: { officialId } })
+      const workspaceIds = [wsA, wsB]
+      const links = await prisma.opportunity.findMany({ where: { workspaceId: { in: workspaceIds } }, select: { id: true } })
+      await prisma.opportunityEvent.deleteMany({ where: { opportunityId: { in: links.map((row) => row.id) } } })
+      await prisma.opportunityAction.deleteMany({ where: { workspaceId: { in: workspaceIds } } })
+      await prisma.opportunity.deleteMany({ where: { workspaceId: { in: workspaceIds } } })
+      await prisma.partnerEmail.deleteMany({ where: { workspaceId: { in: workspaceIds } } })
+      await prisma.partnerMonitoringProfile.deleteMany({ where: { workspaceId: { in: workspaceIds } } })
+      await prisma.partnerTenant.deleteMany({ where: { workspaceId: { in: workspaceIds } } })
+      if (canonical) {
+        await prisma.publicOpportunityVersion.deleteMany({ where: { publicOpportunityId: canonical.id } })
+        await prisma.publicOpportunity.delete({ where: { id: canonical.id } })
+      }
     }
   })
 })

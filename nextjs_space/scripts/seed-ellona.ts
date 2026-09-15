@@ -8,18 +8,18 @@
 // location, the Ellona relevance, the open unknowns and a recommended next
 // action. Nothing here claims Ellona holds an accreditation, is a prime, is
 // short-listed, or has any relationship with a buyer. Published values are
-// whole-contract / whole-award values attributable to no bidder. No record is
-// described as "previously published": each is a real notice with a resolvable
-// primary source verified on the retrieval date below.
+// whole-contract / whole-award values attributable to no bidder. Every record is
+// labelled "Trial seed record — previously published" so it cannot be mistaken
+// for a newly discovered opportunity during Natalia's trial.
 //
 // Run: yarn tsx --require dotenv/config scripts/seed-ellona.ts
 
-import { randomUUID } from 'node:crypto'
 import { prisma } from '../lib/prisma'
-import { provisionEllonaTenant, originRecord } from '../lib/ellona/tenant'
+import { provisionEllonaTenant } from '../lib/ellona/tenant'
+import { routeCanonicalOpportunity } from '../lib/ellona/routing'
 
 // Common retrieval date for the source verification pass in this seed.
-const RETRIEVED_AT = '15 September 2026 (Europe/Dublin)'
+const RETRIEVED_AT = new Date('2026-09-15T17:00:00.000Z')
 
 const EPA_SOURCE_URL = 'https://www.etenders.gov.ie/epps/cft/prepareViewCfTWS.do?resourceId=8929884'
 
@@ -84,6 +84,7 @@ type Seed = {
   clarificationQuestions: string[]
   // Provenance fields (Part 3): every record carries these.
   publisher: string
+  supportedClaim: string
   supportingPassage: string
   statusNote: string
   ellonaRelevance: string
@@ -117,8 +118,9 @@ function seeds(): Seed[] {
       locationType: 'national',
       precision: 'national',
       publisher: 'eTenders — Irish Government procurement portal (Office of Government Procurement)',
+      supportedClaim: 'The EPA is procuring an independent air-emissions monitoring programme for 2027–2029.',
       supportingPassage:
-        'Provision of Air Emissions Monitoring Programme — air-emission compliance monitoring at selected EPA-licensed sites (Environmental Protection Agency, eTenders resource 8929884).',
+        'The EPA wishes to procure, by means of a competitive tender, the programme of independent air emissions monitoring for the period 2027 - 2029.',
       statusNote:
         'Open tender at retrieval. Clarification deadline 16 September 2026 17:00; tender deadline 23 September 2026 17:00 (Europe/Dublin).',
       ellonaRelevance:
@@ -133,7 +135,7 @@ function seeds(): Seed[] {
     {
       id: 'ellona-seed-leicester-aq-network',
       status: 'CLOSED',
-      classification: 'RECENT COMPARABLE — SUBMISSIONS CLOSED',
+      classification: 'MONITORING NEED',
       buyer: 'Leicester City Council',
       title: 'Provision of Air Quality Monitoring Network & Associated Services',
       projectName: 'City air-quality sensor network',
@@ -157,6 +159,7 @@ function seeds(): Seed[] {
         'Approximate Leicester city-centre centroid for map display only; the notice does not publish individual sensor coordinates.',
       precision: 'city',
       publisher: 'Find a Tender — UK Government procurement service (Cabinet Office)',
+      supportedClaim: 'Leicester City Council sought 20 air-quality sensors for deployment at city pollution hotspots.',
       supportingPassage:
         'The Council wishes to purchase twenty (20) Air Quality Sensors. The Sensors are to be deployed across the City of Leicester to measure and monitor air quality at various hotspots that have potential poor air quality.',
       statusNote:
@@ -173,7 +176,7 @@ function seeds(): Seed[] {
     {
       id: 'ellona-seed-greater-cambridge-sssi',
       status: 'AWARDED',
-      classification: 'PRIORITY-GEOGRAPHY SIGNAL — AWARDED',
+      classification: 'MONITORING NEED',
       buyer: 'Cambridge City Council and South Cambridgeshire District Council',
       title: 'Air Quality modelling of Sites of Special Scientific Interest (SSSIs) to inform the Greater Cambridge Local Plan',
       projectName: 'Greater Cambridge Local Plan — air-quality evidence',
@@ -197,6 +200,7 @@ function seeds(): Seed[] {
         'Approximate Cambridge city-centre centroid for map display only; the requirement covers the Greater Cambridge area, not a single point.',
       precision: 'area',
       publisher: 'Find a Tender — UK Government procurement service (Cabinet Office)',
+      supportedClaim: 'The Greater Cambridge councils sought consultants to model road-traffic emissions near Sites of Special Scientific Interest.',
       supportingPassage:
         'Cambridge City Council and South Cambridgeshire District Council (the Councils) are seeking suitably qualified consultants to carry out air quality modelling of road traffic emissions in proximity of Sites of Special Scientific Interest (SSSIs) within the area of Cambridge City Council and South Cambridgeshire District Council (Greater Cambridge).',
       statusNote:
@@ -213,7 +217,7 @@ function seeds(): Seed[] {
     {
       id: 'ellona-seed-daera-aq-regs',
       status: 'CLOSED',
-      classification: 'REGULATORY DRIVER — CONSULTATION CLOSED',
+      classification: 'EARLY SIGNAL — REQUIRES QUALIFICATION',
       buyer: 'Department of Agriculture, Environment and Rural Affairs (DAERA), Northern Ireland',
       title: 'Consultation on the Draft Air Quality (Amendment) Regulations (Northern Ireland) 2026',
       projectName: 'Tightening of PM10 / PM2.5 limits in Northern Ireland',
@@ -231,6 +235,7 @@ function seeds(): Seed[] {
       locationType: 'regional',
       precision: 'regional',
       publisher: 'Department of Agriculture, Environment and Rural Affairs (DAERA), Northern Ireland',
+      supportedClaim: 'DAERA launched a consultation proposing tighter annual PM10 and PM2.5 limits in Northern Ireland.',
       supportingPassage:
         'The Department of Agriculture, Environment and Rural Affairs (DAERA) has launched a public consultation on the Draft Air Quality (Amendment) Regulations (Northern Ireland) 2026 to tighten annual average particulate matter (PM10 and PM2.5) limits, targets and objectives in Northern Ireland.',
       statusNote:
@@ -250,7 +255,6 @@ function seeds(): Seed[] {
 async function main() {
   const prov = await provisionEllonaTenant()
   const workspaceId = prov.workspaceId
-  const origin = originRecord(workspaceId, prov.originatorUserId)
   const epaFetch = await tryFetchEpa()
 
   let created = 0
@@ -258,17 +262,14 @@ async function main() {
   for (const s of seeds()) {
     const isEpa = s.id === 'ellona-seed-epa-air'
     const provenance = {
-      ...origin,
       source_of_record: s.sourceName,
       source_url: s.sourceUrl,
       publisher: s.publisher,
       publication_date: s.publicationDate ?? null,
-      retrieved_at: RETRIEVED_AT,
-      supporting_passage: s.supportingPassage,
+      retrieved_at: RETRIEVED_AT.toISOString(),
       status_note: s.statusNote,
-      ellona_relevance: s.ellonaRelevance,
       facts_basis:
-        'Verified public-source record; the supporting passage above is quoted from the cited primary source and was confirmed resolvable on the retrieval date.',
+        'Human-reviewed public-source record. The supporting passage is preserved separately from workspace interpretation.',
       ...(isEpa
         ? {
             fetch_note: epaFetch.note,
@@ -276,15 +277,20 @@ async function main() {
           }
         : {}),
     }
-    const data = {
-      workspaceId,
-      status: s.status,
-      classification: s.classification,
+    const result = await routeCanonicalOpportunity({
+      verificationState: 'VERIFIED',
+      sourceName: s.sourceName,
+      sourceUrl: s.sourceUrl,
+      publisher: s.publisher,
+      officialId: s.officialId ?? null,
+      procedureId: s.procedureId ?? null,
       buyer: s.buyer,
       title: s.title,
       projectName: s.projectName ?? null,
       country: s.country,
       region: s.region ?? null,
+      classification: s.classification,
+      sourceStatus: s.status,
       themes: s.themes,
       capabilities: s.capabilities,
       measurementNeed: s.measurementNeed,
@@ -294,10 +300,10 @@ async function main() {
       clarificationDeadline: s.clarificationDeadline ?? null,
       tenderDeadline: s.tenderDeadline ?? null,
       duration: s.duration ?? null,
-      sourceName: s.sourceName,
-      sourceUrl: s.sourceUrl,
-      officialId: s.officialId ?? null,
-      procedureId: s.procedureId ?? null,
+      supportedClaim: s.supportedClaim,
+      supportingPassage: s.supportingPassage,
+      sourceReadable: !isEpa || epaFetch.ok,
+      accessLimitations: isEpa && !epaFetch.ok ? epaFetch.note : null,
       provenance,
       locationType: s.locationType ?? null,
       latitude: s.latitude ?? null,
@@ -306,26 +312,17 @@ async function main() {
       precision: s.precision ?? null,
       nextAction: s.nextAction,
       clarificationQuestions: s.clarificationQuestions,
-      seedLabel: 'Verified public-source record',
-      fetchedAt: isEpa ? epaFetch.fetchedAt : null,
-    }
-    const existing = await prisma.opportunity.findUnique({ where: { id: s.id }, select: { id: true } })
-    await prisma.opportunity.upsert({ where: { id: s.id }, update: data, create: { id: s.id, ...data } })
-    if (existing) {
-      updated++
-    } else {
-      created++
-      await prisma.opportunityEvent.create({
-        data: {
-          id: randomUUID(),
-          opportunityId: s.id,
-          kind: 'CREATED',
-          summary: `Verified public-source record added to the Ellona watch (${s.classification}).`,
-          changedFields: {},
-          previousValues: {},
-        },
-      })
-    }
+      retrievedAt: isEpa && epaFetch.fetchedAt ? epaFetch.fetchedAt : RETRIEVED_AT,
+      seedRecord: true,
+    }, {
+      [workspaceId]: {
+        relevance: s.ellonaRelevance,
+        nextAction: s.nextAction,
+        clarificationQuestions: s.clarificationQuestions,
+      },
+    })
+    if (result.duplicate) updated++
+    else created++
   }
 
   console.log(`Ellona tenant workspaceId=${workspaceId} (created=${prov.created})`)

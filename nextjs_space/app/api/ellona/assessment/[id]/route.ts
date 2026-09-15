@@ -54,7 +54,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     const tenant = await prisma.partnerTenant.findUnique({ where: { workspaceId } })
     if (!tenant) return jsonError(404, 'Workspace unavailable')
-    if (!trialAllowsWrites(tenant.trialState)) {
+    if (!trialAllowsWrites(tenant.trialState, tenant.trialEndsAt)) {
       return jsonError(403, 'Your trial is read-only. Changes cannot be saved until the trial is converted.')
     }
 

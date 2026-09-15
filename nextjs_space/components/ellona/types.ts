@@ -19,4 +19,9 @@ export type OpportunityDTO = {
   following: boolean
   hasCorrection: boolean
   deadlineSort: number | null
+  routedAt: string
+  evidenceRefreshedAt: string
+  isSeed: boolean
+  accessLimited: boolean
+  newSinceLastPortfolio: boolean
 }

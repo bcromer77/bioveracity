@@ -101,6 +101,7 @@ export async function resolveEllonaView(
 }
 
 // Trial write-lock: after expiry the workspace becomes read-only.
-export function trialAllowsWrites(trialState: string): boolean {
-  return trialState === 'ACTIVE' || trialState === 'CONVERTED'
+export function trialAllowsWrites(trialState: string, trialEndsAt?: Date | null, now = new Date()): boolean {
+  if (trialState === 'CONVERTED') return true
+  return trialState === 'ACTIVE' && Boolean(trialEndsAt && trialEndsAt.getTime() > now.getTime())
 }

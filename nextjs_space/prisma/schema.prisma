@@ -39,6 +39,7 @@ model EvidenceDocument {
   sourceRegisterId   String?
   sourceRegister     EvidenceSourceRegister? @relation(fields: [sourceRegisterId], references: [id])
   reviews         EvidenceReview[]
+  publicOpportunities PublicOpportunity[]
 
   @@index([documentKey, observedAt])
   @@index([authorityId])
@@ -1018,10 +1019,93 @@ model WildHubReview {
 
 // ---------------------------------------------------------------------------
 // Ellona Environmental Opportunity Watch (partner tenant) — ADDITIVE ONLY.
-// New tables only; no existing model is modified. Tenant isolation is enforced
+// New tables plus one EvidenceDocument relation. Tenant isolation is enforced
 // in application code via PrivateWorkspaceMember; these tables carry a plain
 // workspaceId column (no FK) so the migration cannot affect existing rows.
 // ---------------------------------------------------------------------------
+// One public opportunity is stored once. Partner workspaces reference it and
+// keep only their private interpretation and engagement in Opportunity.
+model PublicOpportunity {
+  id                    String   @id
+  canonicalKey          String   @unique
+  evidenceDocumentId    String?
+  evidenceDocument      EvidenceDocument? @relation(fields: [evidenceDocumentId], references: [id], onDelete: Restrict)
+  verificationState     String   @default("VERIFIED")
+  currentVersionHash    String
+  sourceName            String
+  sourceUrl             String
+  publisher             String
+  officialId            String?
+  procedureId           String?
+  buyer                 String
+  title                 String
+  projectName           String?
+  country               String
+  region                String?
+  classification        String
+  sourceStatus          String
+  themes                Json     @default("[]")
+  measurementNeed       String
+  publishedValue        String?
+  valueBasis            String?
+  publicationDate       String?
+  eventDate             String?
+  clarificationDeadline String?
+  tenderDeadline        String?
+  duration              String?
+  supportedClaim        String
+  supportingPassage     String
+  accessLimitations     String?
+  sourceReadable        Boolean  @default(true)
+  locationType          String?
+  latitude              Float?
+  longitude             Float?
+  coordSource           String?
+  precision             String?
+  waterbody             String?
+  catchment             String?
+  port                   String?
+  protectedSite         String?
+  planningAuthority     String?
+  provenance            Json     @default("{}")
+  retrievedAt           DateTime @db.Timestamptz(3)
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  versions              PublicOpportunityVersion[]
+  workspaceLinks        Opportunity[]
+  @@index([country, region])
+  @@index([classification, sourceStatus])
+  @@index([evidenceDocumentId])
+}
+
+model PublicOpportunityVersion {
+  id                  String   @id
+  publicOpportunityId String
+  versionHash         String
+  changeType          String   // RECORD_ADDED, MATERIAL_CHANGE, CORRECTION, DEADLINE_CHANGE, STATUS_CHANGE
+  snapshot            Json
+  changedFields       Json     @default("{}")
+  previousValues      Json     @default("{}")
+  detectedAt          DateTime @default(now()) @db.Timestamptz(3)
+  publicOpportunity   PublicOpportunity @relation(fields: [publicOpportunityId], references: [id], onDelete: Restrict)
+  workspaceEvents     OpportunityEvent[]
+  @@unique([publicOpportunityId, versionHash])
+  @@index([publicOpportunityId, detectedAt])
+}
+
+model PartnerMonitoringProfile {
+  workspaceId              String   @id
+  territories              Json     @default("[]")
+  themes                   Json     @default("[]")
+  capabilities             Json     @default("[]")
+  immediateClassifications Json     @default("[]")
+  enabled                  Boolean  @default(true)
+  lastEvidenceRefreshAt    DateTime? @db.Timestamptz(3)
+  lastSourceAccessStatus   String?
+  createdAt                DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+}
+
 model PartnerTenant {
   workspaceId     String   @id
   orgName         String
@@ -1070,12 +1154,16 @@ model PartnerAuthEvent {
 model Opportunity {
   id                    String   @id
   workspaceId           String
+  publicOpportunityId   String?
+  publicOpportunity     PublicOpportunity? @relation(fields: [publicOpportunityId], references: [id], onDelete: Restrict)
   status                String   @default("NEW")
   classification        String
-  buyer                 String
-  title                 String
+  // Legacy factual columns remain nullable during the additive backfill. New
+  // routing reads public facts from PublicOpportunity rather than copying them.
+  buyer                 String?
+  title                 String?
   projectName           String?
-  country               String
+  country               String?
   region                String?
   themes                Json     @default("[]")
   capabilities          Json     @default("[]")
@@ -1086,8 +1174,8 @@ model Opportunity {
   clarificationDeadline String?
   tenderDeadline        String?
   duration              String?
-  sourceName            String
-  sourceUrl             String
+  sourceName            String?
+  sourceUrl             String?
   officialId            String?
   procedureId           String?
   provenance            Json     @default("{}")
@@ -1104,6 +1192,10 @@ model Opportunity {
   protectedSite         String?
   planningAuthority     String?
   nextAction            String?
+  workspaceRelevance    String?
+  alertEligible         Boolean  @default(false)
+  routedAt              DateTime? @db.Timestamptz(3)
+  lastEvaluatedAt       DateTime? @db.Timestamptz(3)
   clarificationQuestions Json    @default("[]")
   seedLabel             String?
   fetchedAt             DateTime? @db.Timestamptz(3)
@@ -1112,6 +1204,7 @@ model Opportunity {
   events                OpportunityEvent[]
   actions               OpportunityAction[]
   @@index([workspaceId, status])
+  @@unique([workspaceId, publicOpportunityId])
 }
 
 model OpportunityEvent {
@@ -1122,9 +1215,12 @@ model OpportunityEvent {
   changedFields Json     @default("{}")
   previousValues Json    @default("{}")
   emailedBefore Boolean  @default(false)
+  publicVersionId String?
+  publicVersion   PublicOpportunityVersion? @relation(fields: [publicVersionId], references: [id], onDelete: Restrict)
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
   @@index([opportunityId, createdAt])
+  @@index([publicVersionId])
 }
 
 model OpportunityAction {
@@ -1175,4 +1271,19 @@ model PartnerEmail {
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
   @@index([workspaceId, kind])
   @@unique([workspaceId, dedupKey])
+}
+
+model PartnerReport {
+  id                  String   @id
+  workspaceId         String
+  kind                String   // OPPORTUNITY_BRIEF, OPPORTUNITY_PORTFOLIO
+  version             Int
+  generatedBy         String
+  evidenceRefreshedAt DateTime? @db.Timestamptz(3)
+  snapshot            Json
+  contentHash         String
+  pdfBytes            Bytes
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  @@unique([workspaceId, kind, version])
+  @@index([workspaceId, kind, createdAt])
 }

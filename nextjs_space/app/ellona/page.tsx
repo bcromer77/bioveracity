@@ -9,6 +9,7 @@ import { parseDisplayDate } from '@/lib/ellona/display-date'
 import { EllonaShell } from '@/components/ellona/ellona-shell'
 import { EllonaDashboard } from '@/components/ellona/dashboard'
 import type { OpportunityDTO } from '@/components/ellona/types'
+import { workspaceOpportunities } from '@/lib/ellona/routing'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Opportunity Watch | BioVeracity', robots: { index: false, follow: false } }
@@ -38,12 +39,18 @@ export default async function EllonaDashboardPage() {
   if (!tenant) redirect('/professionals')
   const trial = computeTrialInfo(tenant)
 
-  const [opps, followActions] = await Promise.all([
-    prisma.opportunity.findMany({ where: { workspaceId }, orderBy: { createdAt: 'asc' } }),
+  const [opps, followActions, monitoringProfile, previousPortfolio] = await Promise.all([
+    workspaceOpportunities(workspaceId),
     prisma.opportunityAction.findMany({
       where: { workspaceId, kind: { in: ['FOLLOW', 'UNFOLLOW'] } },
       orderBy: { createdAt: 'asc' },
       select: { opportunityId: true, kind: true },
+    }),
+    prisma.partnerMonitoringProfile.findUnique({ where: { workspaceId } }),
+    prisma.partnerReport.findFirst({
+      where: { workspaceId, kind: 'OPPORTUNITY_PORTFOLIO' },
+      orderBy: { version: 'desc' },
+      select: { createdAt: true },
     }),
   ])
 
@@ -52,7 +59,10 @@ export default async function EllonaDashboardPage() {
   for (const a of followActions) followState.set(a.opportunityId, a.kind === 'FOLLOW')
 
   const corrEvents = await prisma.opportunityEvent.findMany({
-    where: { opportunityId: { in: opps.map((o) => o.id) }, kind: 'CORRECTION' },
+    where: {
+      opportunityId: { in: opps.map((o) => o.id) },
+      kind: { in: ['CORRECTION', 'DEADLINE_CHANGE', 'STATUS_CHANGE', 'MATERIAL_CHANGE'] },
+    },
     select: { opportunityId: true },
   })
   const corrected = new Set(corrEvents.map((e) => e.opportunityId))
@@ -80,6 +90,11 @@ export default async function EllonaDashboardPage() {
       following: followState.get(o.id) ?? o.status === 'FOLLOWING',
       hasCorrection: corrected.has(o.id),
       deadlineSort: deadlineDate ? deadlineDate.getTime() : null,
+      routedAt: (o.routedAt || o.createdAt).toISOString(),
+      evidenceRefreshedAt: o.evidenceRefreshedAt.toISOString(),
+      isSeed: Boolean(o.seedLabel),
+      accessLimited: Boolean(o.accessLimitations),
+      newSinceLastPortfolio: !previousPortfolio || Boolean(o.routedAt && o.routedAt > previousPortfolio.createdAt),
     }
   })
 
@@ -92,8 +107,11 @@ export default async function EllonaDashboardPage() {
   const nearest = upcoming[0] || null
   const recommended = nearest || dtos.find((o) => o.id === 'ellona-seed-epa-air') || dtos[0] || null
 
-  const monitoredCountries = Array.from(new Set(dtos.map((o) => o.country))).join(', ') || ELLONA.territories
-  const monitoredThemes = Array.from(new Set(dtos.flatMap((o) => o.themes))).slice(0, 8).join(', ')
+  const profileTerritories = (monitoringProfile?.territories as string[] | undefined) || []
+  const profileThemes = (monitoringProfile?.themes as string[] | undefined) || []
+  const monitoredCountries = profileTerritories.join(', ') || ELLONA.territories
+  const monitoredThemes = profileThemes.slice(0, 8).join(', ') || Array.from(new Set(dtos.flatMap((o) => o.themes))).slice(0, 8).join(', ')
+  const evidenceRefreshedAt = monitoringProfile?.lastEvidenceRefreshAt
 
   const isAdmin = (session?.user?.email || '').toLowerCase() === BAZIL_EMAIL
 
@@ -150,6 +168,12 @@ export default async function EllonaDashboardPage() {
         </div>
       </div>
 
+      <p className="bv-ellona-refresh">
+        Shared public evidence last refreshed:{' '}
+        {evidenceRefreshedAt ? formatDublin(evidenceRefreshedAt, true) : 'No canonical evidence refresh recorded yet'}.
+        {' '}Each generated portfolio records its own later snapshot time and version.
+      </p>
+
       {recommended ? (
         <div className="bv-notice">
           <strong>Today’s recommended action.</strong> {recommended.buyer} — {recommended.title}.{' '}
@@ -161,12 +185,12 @@ export default async function EllonaDashboardPage() {
       ) : null}
 
       <div className="bv-ellona-cta">
-        <a className="bv-button bv-green" href="#opportunities">
+        <Link className="bv-button bv-green" href="#opportunities">
           View current opportunities
-        </a>
-        <a className="bv-button" href="/api/ellona/portfolio/pdf">
+        </Link>
+        <Link className="bv-button" href="/api/ellona/portfolio/pdf">
           Generate opportunity portfolio (PDF)
-        </a>
+        </Link>
         {preview ? null : (
           <Link className="bv-text-link" href="/ellona/assess">
             Analyse your own opportunity →
