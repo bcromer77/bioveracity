@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
-import { WILD_COUNTIES } from '@/lib/wild-counties/counties'
+import { searchWildCounties } from '@/lib/wild-counties/counties'
 
 export const metadata: Metadata = {
   title: 'Wild Counties | BioVeracity',
-  description: 'Explore source-linked nature, habitats and participating places across the counties of Ireland.',
+  description: 'Explore source-linked nature, habitats and participating places across Ireland and Cambridgeshire & Peterborough.',
 }
 
 export default async function WildCountiesPage({
@@ -16,8 +16,7 @@ export default async function WildCountiesPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const { q = '' } = await searchParams
-  const needle = q.trim().toLocaleLowerCase('en-IE')
-  const counties = WILD_COUNTIES.filter(county => !needle || [county.name,county.brandName,county.province,...(county.aliases || [])].some(value => value.toLocaleLowerCase('en-IE').includes(needle)))
+  const counties = searchWildCounties(q)
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f2e9] text-[#18332a]">
@@ -32,7 +31,7 @@ export default async function WildCountiesPage({
             <form className="mt-8 flex max-w-2xl overflow-hidden rounded-md bg-white p-1.5 shadow-xl" action="/wild">
               <Search className="ml-3 mt-3 h-5 w-5 text-[#65736d]" aria-hidden="true" />
               <label className="sr-only" htmlFor="wild-search">Search Wild Counties</label>
-              <input id="wild-search" name="q" defaultValue={q} placeholder="Try Kilkenny, Wexford or Down" className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-[#17231e] outline-none" />
+              <input id="wild-search" name="q" defaultValue={q} placeholder="Try snowdrops, Cambridgeshire or Kilkenny" className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-[#17231e] outline-none" />
               <button className="rounded bg-[#e0c86e] px-5 py-2.5 text-sm font-bold text-[#17231e]">Search</button>
             </form>
           </div>
@@ -41,7 +40,7 @@ export default async function WildCountiesPage({
         <section className="mx-auto max-w-[1100px] px-5 py-10 md:py-14">
           <div className="mb-6 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f744f]">Explore Ireland</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f744f]">Explore Wild Counties</p>
               <h2 className="mt-2 font-display text-3xl font-semibold">{q ? `Results for “${q}”` : 'Choose a county'}</h2>
             </div>
             <p className="text-sm text-[#637069]">{counties.length} result{counties.length === 1 ? '' : 's'}</p>
@@ -74,8 +73,8 @@ export default async function WildCountiesPage({
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-[#bbb6a8] bg-white p-10 text-center">
-              <h3 className="font-display text-2xl font-semibold">No matching county</h3>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#66716b]">Try a county name. Kilkenny and Down are our founding counties today, with more of Ireland opening as we review each county’s sources.</p>
+              <h3 className="font-display text-2xl font-semibold">No matching place or topic</h3>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#66716b]">Try a county, place or topic such as snowdrops. Coverage is limited to the collections shown.</p>
             </div>
           )}
         </section>

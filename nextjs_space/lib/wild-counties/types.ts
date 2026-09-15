@@ -1,6 +1,6 @@
-export type WildCountyJurisdiction = 'Ireland' | 'Northern Ireland'
+export type WildCountyJurisdiction = 'Ireland' | 'Northern Ireland' | 'England'
 export type WildCountyStatus = 'foundation' | 'planned'
-export type EvidenceScope = 'county' | 'regional' | 'national-context'
+export type EvidenceScope = 'county' | 'regional' | 'national-context' | 'site'
 
 export type WildTopic = {
   slug: string
@@ -10,9 +10,15 @@ export type WildTopic = {
   publisher: string
   evidenceScope: EvidenceScope
   reviewStatus: 'source-reviewed'
-  caveat?: string
-  /** Plain-language seasonal reason to look, for guest discovery copy. */
+  locality?: string
   season?: string
+  access?: string
+  sourceLocator?: string
+  sourcePublishedAt?: string | null
+  checkedAt?: string
+  relatedSlugs?: readonly string[]
+  connectionNote?: string
+  caveat?: string
   /** Public discovery locality / map marker label (never a sensitive species location). */
   place?: string
   /** Approximate public latitude of the locality/landmark for the discovery map. */
@@ -36,7 +42,7 @@ export type WildCounty = {
   slug: string
   name: string
   brandName: string
-  province: 'Connacht' | 'Leinster' | 'Munster' | 'Ulster'
+  province: 'Connacht' | 'Leinster' | 'Munster' | 'Ulster' | 'East of England'
   jurisdiction: WildCountyJurisdiction
   status: WildCountyStatus
   aliases?: readonly string[]
