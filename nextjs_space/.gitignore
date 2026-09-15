@@ -38,3 +38,7 @@ yarn-error.log*
 coverage/
 *.tsbuildinfo
 next-env.d.ts
+
+# Cambridgeshire ingestion operator receipts (transient, per-run)
+public/cambridgeshire/*.attempt.json
+public/cambridgeshire/*.tmp
