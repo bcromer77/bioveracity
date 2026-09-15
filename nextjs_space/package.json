@@ -19,7 +19,9 @@
     "test:wild-community": "node --import tsx scripts/test-wild-community.ts",
     "test:wild-hubs": "node --import tsx --test tests/wild-hubs.test.ts && node --test tests/wild-hubs-ui.test.mjs",
     "test:honeycomb": "node --import tsx --test tests/honeycomb-*.test.ts tests/honeycomb-ui.test.tsx",
-    "test:onsite": "node --import tsx --test tests/onsite-content.test.ts"
+    "test:onsite": "node --import tsx --test tests/onsite-content.test.ts",
+    "test:cambridgeshire": "node --import tsx --test tests/cambridgeshire-*.test.ts tests/cambridgeshire-*.test.tsx",
+    "ingest:cambridgeshire": "node --import tsx scripts/ingest-cambridgeshire.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"

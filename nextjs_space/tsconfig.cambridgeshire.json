@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false, "plugins": [] },
+  "include": [
+    "lib/cambridgeshire/**/*.ts",
+    "components/wild/regional-search.tsx",
+    "components/wild/regional-study.tsx",
+    "scripts/ingest-cambridgeshire.ts",
+    "tests/cambridgeshire-*.test.ts",
+    "tests/cambridgeshire-*.test.tsx"
+  ],
+  "exclude": ["node_modules"]
+}
