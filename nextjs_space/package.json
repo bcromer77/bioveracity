@@ -23,7 +23,9 @@
     "test:brochure": "node --import tsx --test tests/brochure.test.ts",
     "render:brochures": "tsx --require dotenv/config scripts/render-brochures.ts",
     "test:cambridgeshire": "node --import tsx --test tests/cambridgeshire-*.test.ts tests/cambridgeshire-*.test.tsx",
-    "ingest:cambridgeshire": "node --import tsx scripts/ingest-cambridgeshire.ts"
+    "ingest:cambridgeshire": "node --import tsx scripts/ingest-cambridgeshire.ts",
+    "seed:ellona": "tsx --require dotenv/config scripts/seed-ellona.ts",
+    "test:ellona": "node --import tsx --test tests/ellona.test.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
