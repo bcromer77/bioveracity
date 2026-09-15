@@ -18,6 +18,14 @@ test('licence, absence, withheld/generalised data and geographical gates reject 
   assert.ok(eligible(occurrence, geometry))
   for (const patch of [{ license: 'CC-BY-NC' }, { occurrenceStatus: 'ABSENT' }, { informationWithheld: 'sensitive' }, { dataGeneralizations: 'generalised' }, { hasGeospatialIssues: true }, { countryCode: 'IE' }, { year: null }, { decimalLongitude: 2 }, { coordinateUncertaintyInMeters: 2000 }, { coordinateUncertaintyInMeters: null }, { key: null }]) assert.equal(eligible({ ...occurrence, ...patch }, geometry), null)
 })
+test('order-level matches do not label moths as butterflies or damselflies as dragonflies', () => {
+  const moth = eligible({ ...occurrence, species: 'Testus mothus', order: 'Lepidoptera', family: 'Noctuidae' }, geometry)!
+  assert.ok(moth.taxonKeys.includes('moths')); assert.ok(!moth.taxonKeys.includes('butterflies'))
+  const butterfly = eligible({ ...occurrence, species: 'Testus butterflyus', order: 'Lepidoptera', family: 'Pieridae' }, geometry)!
+  assert.ok(butterfly.taxonKeys.includes('butterflies'))
+  const damselfly = eligible({ ...occurrence, species: 'Testus damselflyus', order: 'Odonata', family: 'Coenagrionidae' }, geometry)!
+  assert.ok(damselfly.taxonKeys.includes('damselflies')); assert.ok(!damselfly.taxonKeys.includes('dragonflies'))
+})
 test('all six district jobs execute; duplicates removed; public output cannot expose raw locations or IDs', async () => {
   let boundaryRequests = 0
   const snapshot = await ingestRegion(async url => {

@@ -72,3 +72,35 @@ Further scope remains: exact LNRS action-layer matching and rights, regional hab
 - GBIF API reference: https://techdocs.gbif.org/en/openapi/
 
 All other visitor source references remain attached to the original PR49 place accounts. BGC is a generalised administrative boundary, not a definitive land parcel or ecological boundary.
+
+
+## Recorded verification: 15 September 2026
+
+- `npm run test:cambridgeshire`: **16 passed**, including actual React component interactions. React's test renderer emits its deprecation notice; this is not a browser visual test.
+- `tsc --noEmit -p tsconfig.cambridgeshire.json`: **passed**, including the new components, core modules, importer and tests against actual React/Next type packages.
+- Existing Wild County registry/discovery checks: **passed**. Modified county page: esbuild transpilation **passed**. Full app typecheck, actual host build, desktop/mobile browser QA and production deployment were not completed in this environment.
+- Real capped import: **7,800 inspected rows, 1,321 eligible records, 499 district/species/dataset groups**, 160,030-byte public snapshot. These are acquisition results, not user benefit measurements.
+
+| District | Inspected | Eligible | Coverage |
+|---|---:|---:|---|
+| Cambridge | 1,500 | 794 | Partial: sample cap |
+| East Cambridgeshire | 300 | 4 | Partial: later retrieval/validation failure |
+| Fenland | 1,500 | 87 | Partial: sample cap |
+| Huntingdonshire | 1,500 | 66 | Partial: sample cap |
+| South Cambridgeshire | 1,500 | 131 | Partial: sample cap |
+| Peterborough | 1,500 | 239 | Partial: sample cap |
+
+The saved real snapshot passes `loadSnapshot` and `parseSnapshot` and was searched through the implemented engine:
+
+| Query | Place accounts | Occurrence groups | Eligible records in those groups |
+|---|---:|---:|---:|
+| badgers | 1 | 0 | 0 |
+| snowdrops | 1 | 6 | 15 |
+| Galanthus nivalis | 1 | 5 | 11 |
+| orchids | 2 | 5 | 8 |
+| Lepidoptera | 1 | 22 | 28 |
+| wider ecology | 13 | 499 | 1,321 |
+
+Badger proof is the reviewed Overhall Grove manager account; no eligible GBIF badger record was present in this sample. Snowdrop occurrences are not automatically classified as wild rather than cultivated. Lepidoptera includes moths as well as butterflies; the narrowed query logic does not label all order-level records as butterflies. The first saved snapshot predates the added family-based narrow tags, so such groups stay unclassified for narrow queries until a fresh import. No taxa are inferred from habitat suitability.
+
+The public projection is a separate controlled acquisition artifact, not committed occurrence data. To use it in the hosted demonstration, place the delivered snapshot at the configured path or rerun ingestion in the host environment, then verify it through the page after revalidation. **There are no guest or professional participant results yet.**

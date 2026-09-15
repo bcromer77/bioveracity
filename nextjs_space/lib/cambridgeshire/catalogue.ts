@@ -3,10 +3,10 @@ import type { Claim, District, Theme } from './model'
 
 const links: Record<string, { district: District; taxa: string[]; themes: Theme[] }> = {
   'overhall-grove': { district: 'E07000012', taxa: ['meles meles', 'hyacinthoides non scripta'], themes: ['woodland'] },
-  'anglesey-abbey': { district: 'E07000009', taxa: ['galanthus'], themes: ['gardens'] },
-  'wicken-fen': { district: 'E07000009', taxa: ['cuculus canorus', 'falco subbuteo', 'odonata'], themes: ['wetland'] },
+  'anglesey-abbey': { district: 'E07000009', taxa: ['galanthus', 'galanthus nivalis'], themes: ['gardens'] },
+  'wicken-fen': { district: 'E07000009', taxa: ['cuculus canorus', 'falco subbuteo', 'odonata', 'dragonflies'], themes: ['wetland'] },
   'fulbourn-fen': { district: 'E07000012', taxa: ['orchidaceae'], themes: ['grassland', 'wetland'] },
-  'gamlingay-wood': { district: 'E07000012', taxa: ['hyacinthoides non scripta', 'lepidoptera'], themes: ['woodland'] },
+  'gamlingay-wood': { district: 'E07000012', taxa: ['hyacinthoides non scripta', 'lepidoptera', 'butterflies'], themes: ['woodland'] },
   'botanic-winter-garden': { district: 'E07000008', taxa: [], themes: ['gardens'] },
   'fen-drayton-lakes': { district: 'E07000012', taxa: [], themes: ['wetland', 'woodland', 'grassland'] },
   'ouse-fen': { district: 'E07000011', taxa: ['botaurus stellaris', 'panurus biarmicus'], themes: ['wetland'] },

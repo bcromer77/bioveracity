@@ -32,20 +32,26 @@ export const normalise = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u0
 
 export const TAXA: Record<string, readonly string[]> = {
   'meles meles': ['badger', 'badgers', 'european badger', 'meles meles'],
-  galanthus: ['snowdrop', 'snowdrops', 'galanthus', 'galanthus nivalis'],
+  galanthus: ['snowdrop', 'snowdrops', 'galanthus'],
+  'galanthus nivalis': ['galanthus nivalis'],
   'hyacinthoides non scripta': ['bluebell', 'bluebells', 'hyacinthoides non scripta'],
   orchidaceae: ['orchid', 'orchids', 'orchidaceae'],
-  odonata: ['dragonfly', 'dragonflies', 'damselfly', 'damselflies', 'odonata'],
+  odonata: ['odonata'],
+  dragonflies: ['dragonfly', 'dragonflies'],
+  damselflies: ['damselfly', 'damselflies'],
   'cuculus canorus': ['cuckoo', 'cuckoos', 'cuculus canorus'],
   'falco subbuteo': ['hobby', 'hobbies', 'falco subbuteo'],
   'botaurus stellaris': ['bittern', 'bitterns', 'botaurus stellaris'],
   'panurus biarmicus': ['bearded tit', 'bearded tits', 'panurus biarmicus'],
   'lutra lutra': ['otter', 'otters', 'lutra lutra'],
   chiroptera: ['bat', 'bats', 'chiroptera'],
-  lepidoptera: ['butterfly', 'butterflies', 'moth', 'moths', 'lepidoptera'],
+  lepidoptera: ['lepidoptera'],
+  butterflies: ['butterfly', 'butterflies', 'papilionoidea'],
+  moths: ['moth', 'moths'],
   fungi: ['fungi', 'fungus', 'mushrooms'],
 }
 export const containsPhrase = (text: string, term: string) => (` ${normalise(text)} `).includes(` ${normalise(term)} `)
 export function resolveTaxa(q: string): string[] {
-  return Object.entries(TAXA).filter(([, names]) => names.some(n => containsPhrase(q, n))).map(([key]) => key)
+  const keys = Object.entries(TAXA).filter(([, names]) => names.some(n => containsPhrase(q, n))).map(([key]) => key)
+  return keys.includes('galanthus nivalis') ? keys.filter(k => k !== 'galanthus') : keys
 }

@@ -43,8 +43,16 @@ export function eligible(value: unknown, geometry: Geometry) {
     typeof r.coordinateUncertaintyInMeters !== 'number' || r.coordinateUncertaintyInMeters < 0 || r.coordinateUncertaintyInMeters > 1000 ||
     !contains([r.decimalLongitude, r.decimalLatitude], geometry)) return null
   const names = ['species', 'genus', 'family', 'order', 'class', 'kingdom'].map(k => typeof r[k] === 'string' ? normalise(String(r[k])) : '')
+  const keys = Object.keys(TAXA).filter(k => names.includes(k))
+  const family = normalise(typeof r.family === 'string' ? r.family : '')
+  const butterflies = ['hesperiidae', 'papilionidae', 'pieridae', 'lycaenidae', 'nymphalidae', 'riodinidae', 'hedylidae']
+  if (names.includes('lepidoptera') && family) keys.push(butterflies.includes(family) ? 'butterflies' : 'moths')
+  if (names.includes('odonata')) {
+    if (['aeshnidae', 'corduliidae', 'cordulegastridae', 'gomphidae', 'libellulidae', 'petaluridae'].includes(family)) keys.push('dragonflies')
+    if (['calopterygidae', 'coenagrionidae', 'lestidae', 'platycnemididae'].includes(family)) keys.push('damselflies')
+  }
   return { key: r.key as number, taxon: r.species.slice(0, 160), year: r.year as number, licence,
-    datasetKey: r.datasetKey, attribution: typeof r.datasetTitle === 'string' ? r.datasetTitle.slice(0, 240) : `GBIF dataset ${r.datasetKey}`, taxonKeys: Object.keys(TAXA).filter(k => names.includes(k)) }
+    datasetKey: r.datasetKey, attribution: typeof r.datasetTitle === 'string' ? r.datasetTitle.slice(0, 240) : `GBIF dataset ${r.datasetKey}`, taxonKeys: keys }
 }
 
 /** Full refresh over all six district polygons; no Irish grid or taxon restriction.

@@ -35,7 +35,7 @@ export function searchRegion(query: string, district: District | '', snapshot: S
   }
   const claims = CLAIMS.filter(matches)
   const groups = (snapshot?.groups || []).filter(g => (!area || g.district === area) &&
-    !season && !themeKeys.length && (!taxa.length || taxa.some(t => g.taxonKeys.includes(t))) &&
+    !season && !themeKeys.length && (!taxa.length || taxa.some(t => g.taxonKeys.includes(t) || normalise(g.taxon) === t)) &&
       (residual.length === 0 || residual.every(t => containsPhrase(g.taxon, t))))
   const coverage = Object.keys(DISTRICTS).filter(d => !area || d === area).map(d => ({
     district: d as District, name: DISTRICTS[d as District],
