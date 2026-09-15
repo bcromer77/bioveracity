@@ -1,6 +1,6 @@
-export type WildCountyJurisdiction = 'Ireland' | 'Northern Ireland'
+export type WildCountyJurisdiction = 'Ireland' | 'Northern Ireland' | 'England'
 export type WildCountyStatus = 'foundation' | 'planned'
-export type EvidenceScope = 'county' | 'regional' | 'national-context'
+export type EvidenceScope = 'county' | 'regional' | 'national-context' | 'site'
 
 export type WildTopic = {
   slug: string
@@ -10,6 +10,14 @@ export type WildTopic = {
   publisher: string
   evidenceScope: EvidenceScope
   reviewStatus: 'source-reviewed'
+  locality?: string
+  season?: string
+  access?: string
+  sourceLocator?: string
+  sourcePublishedAt?: string | null
+  checkedAt?: string
+  relatedSlugs?: readonly string[]
+  connectionNote?: string
   caveat?: string
 }
 
@@ -26,7 +34,7 @@ export type WildCounty = {
   slug: string
   name: string
   brandName: string
-  province: 'Connacht' | 'Leinster' | 'Munster' | 'Ulster'
+  province: 'Connacht' | 'Leinster' | 'Munster' | 'Ulster' | 'East of England'
   jurisdiction: WildCountyJurisdiction
   status: WildCountyStatus
   aliases?: readonly string[]

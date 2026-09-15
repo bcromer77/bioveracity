@@ -1,3 +1,4 @@
+import { CAMBRIDGESHIRE_TOPICS } from './cambridgeshire'
 import type { BusinessCandidate, WildCounty, WildTopic } from './types'
 
 const planned = (
@@ -121,6 +122,8 @@ export const WILD_COUNTIES: readonly WildCounty[] = [
   planned('westmeath', 'Westmeath', 'Leinster'),
   planned('wexford', 'Wexford', 'Leinster'),
   planned('wicklow', 'Wicklow', 'Leinster'),
+  { ...planned('cambridgeshire', 'Cambridgeshire & Peterborough', 'East of England', 'England', ['Cambridge', 'Peterborough', 'Ely']),
+    brandName: 'Wild Cambridgeshire & Peterborough', status: 'foundation', topics: CAMBRIDGESHIRE_TOPICS },
 ] as const
 
 export function getWildCounty(slug: string): WildCounty | undefined {
@@ -138,7 +141,7 @@ export function searchWildCounties(query: string): readonly WildCounty[] {
       county.province,
       county.jurisdiction,
       ...(county.aliases ?? []),
-      ...county.topics.flatMap((topic) => [topic.title, topic.summary]),
+      ...county.topics.flatMap((topic) => [topic.title, topic.summary, topic.locality ?? '', topic.season ?? '']),
       ...county.businessCandidates.flatMap((business) => [business.name, business.locality, business.category]),
     ]
     return searchable.some((value) => value.toLocaleLowerCase('en-IE').includes(needle))
