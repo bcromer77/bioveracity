@@ -15,13 +15,13 @@ export function SiteFooter() {
           </div>
           <div className="flex items-center gap-5 text-[15px]">
             <Link href="/search" className="text-muted-foreground hover:text-foreground">Search</Link>
-            <Link href="/institutional" className="text-muted-foreground hover:text-foreground">Institutional access</Link>
+            <Link href="/institutional" className="text-muted-foreground hover:text-foreground">For organisations</Link>
             <Link href="/privacy" className="text-muted-foreground hover:text-foreground">Privacy</Link>
             <Link href="/contact" className="text-muted-foreground hover:text-foreground">Contact</Link>
           </div>
         </div>
         <p className="mt-6 border-t border-border pt-5 text-[13px] leading-relaxed text-muted-foreground">
-          BioVeracity is an independent evidence platform. It is not affiliated with, endorsed by, or operated on behalf of any regulator, government department, or infrastructure operator. All intelligence is derived from publicly available sources, planning records, regulatory publications, operator disclosures, community reports, and media.
+          BioVeracity is independent of the organisations it covers. Follow the sources to see where information comes from. An operator’s statement or a community observation is not automatically a confirmed finding.
         </p>
       </div>
     </footer>
