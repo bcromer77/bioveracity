@@ -1,3 +1,5 @@
+import { RegionalSearch } from '@/components/wild/regional-search'
+import { loadSnapshot } from '@/lib/cambridgeshire/server'
 import { EvidenceLink } from '@/components/evidence-link'
 import type { Metadata } from 'next'
 import Link from 'next/link'
@@ -5,15 +7,19 @@ import { notFound } from 'next/navigation'
 import { PublicShell } from '@/components/wild/public-shell'
 import { CountyNature } from '@/components/wild/county-nature'
 import { getWildCounty, WILD_COUNTIES } from '@/lib/wild-counties/counties'
+// Pick up atomically refreshed public snapshots without a redeployment.
+export const revalidate = 300
 export function generateStaticParams() { return WILD_COUNTIES.map(({slug}) => ({county:slug})) }
 export async function generateMetadata({params}:{params:Promise<{county:string}>}):Promise<Metadata> {
  const county=getWildCounty((await params).county)
- return county ? {title:county.brandName+' | BioVeracity',description:county.jurisdiction === 'England' ? 'Twelve sourced nature stories and places to explore across Cambridgeshire and Peterborough.' : 'Explore API-sourced county biodiversity records inside BioVeracity.'} : {}
+ return county ? {title:county.brandName+' | BioVeracity',description:county.jurisdiction === 'England' ? 'Search sourced wildlife, seasonal displays and visitor places across Cambridgeshire and Peterborough.' : 'Explore API-sourced county biodiversity records inside BioVeracity.'} : {}
 }
 export default async function WildCountyPage({params}:{params:Promise<{county:string}>}) {
  const county=getWildCounty((await params).county);if(!county)notFound()
+ const regional = county.jurisdiction === 'England' ? await loadSnapshot() : null
  return <PublicShell>
   <section className="bv-hero"><Link href="/wild">All Wild Counties</Link><p className="bv-eyebrow">{county.province} · {county.jurisdiction}</p><h1>{county.brandName}</h1><p className="bv-intro">Discover the wider story through recorded wildlife, with its source and date kept in view.</p></section>
+  {regional && <RegionalSearch snapshot={regional.snapshot} status={regional.status} />}
   {county.jurisdiction === 'England' ? <section className="bv-section">
    <h2>Places and their connections</h2>
    <p>Source pages checked 15 September 2026. Seasonal descriptions are not current sightings. Check the manager’s latest access information before travelling. These places are not listed as BioVeracity partners.</p>

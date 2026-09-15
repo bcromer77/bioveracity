@@ -241,5 +241,25 @@ export const CAMBRIDGESHIRE_TOPICS: readonly WildTopic[] = [
       "fulbourn-fen"
     ],
     "connectionNote": "Compare limestone grassland with Fulbourn’s chalk-fed meadows; not a shared catchment claim."
-  }
+  },
+{
+  "slug": "overhall-grove",
+  "title": "Overhall Grove: woodland life",
+  "locality": "Knapwell",
+  "summary": "Wildlife Trust BCN identifies badgers, bluebells and beetles at this elm woodland. This is a manager account, not a dated field observation or a viewing guarantee.",
+  "season": "The manager describes year-round visits and spring woodland interest. No current badger sighting established.",
+  "access": "Check the manager’s visitor directions. Rough narrow paths and entrance steps; dogs on leads. Observe wildlife without seeking out setts.",
+  "sourceUrl": "https://www.wildlifebcn.org/nature-reserves/overhall-grove",
+  "publisher": "Wildlife Trust BCN",
+  "sourceLocator": "Introduction; Species; Know before you go",
+  "sourcePublishedAt": null,
+  "checkedAt": "2026-09-15",
+  "evidenceScope": "site",
+  "reviewStatus": "source-reviewed",
+  "caveat": "No exact wildlife locations, current sighting or BioVeracity partnership implied.",
+  "relatedSlugs": [
+    "gamlingay-wood"
+  ],
+  "connectionNote": "Compare two woodland landscapes. This is an editorial connection, not a surveyed route or shared-species claim."
+}
 ]
