@@ -7,10 +7,12 @@ export function OpportunityActions({
   id,
   following,
   readOnly,
+  preview = false,
 }: {
   id: string
   following: boolean
   readOnly: boolean
+  preview?: boolean
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
@@ -37,6 +39,33 @@ export function OpportunityActions({
     } finally {
       setBusy(null)
     }
+  }
+
+  // Originator preview: show the controls so they can be inspected, but keep
+  // them disabled and record nothing. The write API is member-only, so even a
+  // forced request would be rejected server-side.
+  if (preview) {
+    return (
+      <div>
+        <div className="bv-notice">
+          Read-only preview — these are the controls Natalia will use to mark relevance, follow, request an
+          investigation and record a decision. Nothing you do here is recorded.
+        </div>
+        <div className="bv-ellona-actions" aria-hidden="true">
+          <button disabled>Mark relevant</button>
+          <button disabled>Not relevant</button>
+          <button disabled>{following ? 'Following ✓ (unfollow)' : 'Follow'}</button>
+          <button disabled>Request investigation</button>
+        </div>
+        <div className="bv-ellona-actions" aria-hidden="true">
+          {(['BID', 'PARTNER', 'MONITOR', 'PASS', 'UNSURE'] as const).map((d) => (
+            <button key={d} disabled>
+              Record decision: {d === 'UNSURE' ? 'Not sure yet' : d.charAt(0) + d.slice(1).toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (readOnly) {

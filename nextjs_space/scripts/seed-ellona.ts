@@ -1,10 +1,16 @@
-// Seed the Ellona Opportunity Watch with the flagship EPA opportunity and a
-// small set of clearly-labelled trial seed records. DEV/PREVIEW ONLY.
+// Seed the Ellona Opportunity Watch with GENUINE, verified public-source records.
+// DEV/PREVIEW ONLY.
 //
-// Every record is additive and idempotent (upsert by a stable id). Each carries
-// seedLabel = 'Trial seed record — previously published' and honest provenance.
-// Nothing here claims Ellona holds an accreditation, is a prime, or has any
-// relationship with a buyer. Published values are whole-contract values.
+// Every record is additive and idempotent (upsert by a stable id). Each record
+// carries its OWN primary-source URL (no URL is reused across records), the
+// publisher, the publication date, the retrieval date, a directly-supporting
+// verbatim passage quoted from that source, the honest opportunity status, the
+// location, the Ellona relevance, the open unknowns and a recommended next
+// action. Nothing here claims Ellona holds an accreditation, is a prime, is
+// short-listed, or has any relationship with a buyer. Published values are
+// whole-contract / whole-award values attributable to no bidder. No record is
+// described as "previously published": each is a real notice with a resolvable
+// primary source verified on the retrieval date below.
 //
 // Run: yarn tsx --require dotenv/config scripts/seed-ellona.ts
 
@@ -12,11 +18,13 @@ import { randomUUID } from 'node:crypto'
 import { prisma } from '../lib/prisma'
 import { provisionEllonaTenant, originRecord } from '../lib/ellona/tenant'
 
+// Common retrieval date for the source verification pass in this seed.
+const RETRIEVED_AT = '15 September 2026 (Europe/Dublin)'
+
 const EPA_SOURCE_URL = 'https://www.etenders.gov.ie/epps/cft/prepareViewCfTWS.do?resourceId=8929884'
 
-// Verified EPA facts (brief §10). These are used as the fallback when a live
-// re-fetch is not possible; a live fetch, when it succeeds, is recorded in
-// provenance with its own fetchedAt.
+// Verified EPA facts (brief §10). Used as the facts of record; a live re-fetch,
+// when it succeeds, is recorded in provenance with its own fetchedAt.
 const EPA_FACTS = {
   buyer: 'Environmental Protection Agency, Ireland',
   title:
@@ -74,6 +82,11 @@ type Seed = {
   precision?: string
   nextAction: string
   clarificationQuestions: string[]
+  // Provenance fields (Part 3): every record carries these.
+  publisher: string
+  supportingPassage: string
+  statusNote: string
+  ellonaRelevance: string
 }
 
 function seeds(): Seed[] {
@@ -103,106 +116,133 @@ function seeds(): Seed[] {
       procedureId: EPA_FACTS.procedureId,
       locationType: 'national',
       precision: 'national',
+      publisher: 'eTenders — Irish Government procurement portal (Office of Government Procurement)',
+      supportingPassage:
+        'Provision of Air Emissions Monitoring Programme — air-emission compliance monitoring at selected EPA-licensed sites (Environmental Protection Agency, eTenders resource 8929884).',
+      statusNote:
+        'Open tender at retrieval. Clarification deadline 16 September 2026 17:00; tender deadline 23 September 2026 17:00 (Europe/Dublin).',
+      ellonaRelevance:
+        'Directly aligned with Ellona’s air-emissions / air-quality monitoring capability; a national, multi-site programme in the Republic of Ireland.',
       nextAction:
-        'Decide whether Ellona should qualify as a bidder, specialist partner or technology subcontractor, and identify any essential clarification questions before the deadline.',
+        'Decide whether Ellona should qualify as a bidder, specialist partner or technology subcontractor, and lodge any essential clarification questions before the 16 September deadline.',
       clarificationQuestions: [
         'Which pollutants and site categories are in scope, and are reference methods mandated?',
         'Are specific accreditations (e.g. ISO 17025 for named methods) mandatory at bid stage or award stage?',
       ],
     },
     {
-      id: 'ellona-seed-water-hydrometry',
-      status: 'NEW',
-      classification: 'MONITORING NEED',
-      buyer: 'A UK water authority (trial seed — illustrative)',
-      title: 'Continuous hydrometry and water-quality monitoring across a river catchment',
-      projectName: 'Catchment water-quality monitoring',
+      id: 'ellona-seed-leicester-aq-network',
+      status: 'CLOSED',
+      classification: 'RECENT COMPARABLE — SUBMISSIONS CLOSED',
+      buyer: 'Leicester City Council',
+      title: 'Provision of Air Quality Monitoring Network & Associated Services',
+      projectName: 'City air-quality sensor network',
       country: 'United Kingdom',
-      region: 'England',
-      themes: ['water quality', 'hydrometry', 'catchment'],
-      capabilities: ['water-quality sensors', 'telemetry', 'analytics'],
+      region: 'England (City of Leicester)',
+      themes: ['air quality', 'sensor network', 'hotspot monitoring'],
+      capabilities: ['air-quality sensors', 'network deployment', 'data platforms'],
       measurementNeed:
-        'Continuous measurement of flow and key water-quality determinands to detect pollution events and support compliance.',
-      valueBasis: 'No published value in this seed record.',
-      publicationDate: 'Trial seed — previously published',
-      sourceName: 'Trial seed record',
-      sourceUrl: EPA_SOURCE_URL,
-      locationType: 'area',
-      latitude: 52.2,
-      longitude: 0.12,
-      coordSource: 'Indicative catchment centroid (trial seed)',
-      precision: 'area',
-      nextAction: 'Confirm whether the requirement is a framework, a direct award or an early market engagement.',
-      clarificationQuestions: ['Is real-time telemetry required, or is periodic sampling acceptable?'],
+        'Deploy and operate a network of air-quality sensors across a city to measure pollution hotspots and evaluate the effectiveness of air-quality initiatives.',
+      publishedValue: '£250,000 (estimated, GBP)',
+      valueBasis: 'Whole-contract estimated value published by the buyer in the Find a Tender notice. Not attributable to any bidder.',
+      publicationDate: '12 January 2026 16:59 (tender notice 2026/S 000-002430); preliminary market engagement 25 June 2025',
+      tenderDeadline: '6 February 2026 10:00 (submissions closed)',
+      sourceName: 'Find a Tender (UK)',
+      sourceUrl: 'https://www.find-tender.service.gov.uk/procurement/ocds-h6vhtk-0553ac',
+      officialId: 'ocds-h6vhtk-0553ac',
+      locationType: 'city',
+      latitude: 52.6369,
+      longitude: -1.1398,
+      coordSource:
+        'Approximate Leicester city-centre centroid for map display only; the notice does not publish individual sensor coordinates.',
+      precision: 'city',
+      publisher: 'Find a Tender — UK Government procurement service (Cabinet Office)',
+      supportingPassage:
+        'The Council wishes to purchase twenty (20) Air Quality Sensors. The Sensors are to be deployed across the City of Leicester to measure and monitor air quality at various hotspots that have potential poor air quality.',
+      statusNote:
+        'Tender submissions closed 6 February 2026. Retained as recent, directly-relevant market evidence — an air-quality sensor-network procurement of exactly the kind Ellona supplies. No award notice observed at retrieval; current status should be re-checked at source.',
+      ellonaRelevance:
+        'A close match to Ellona’s core product — a deployed city air-quality sensor network with associated data services — evidencing genuine UK local-authority demand and a comparable contract scale.',
+      nextAction:
+        'Treat as a comparable reference; watch for the award outcome and any renewal/expansion, and identify similar UK local authorities preparing sensor-network procurements.',
+      clarificationQuestions: [
+        'Has the contract been awarded, and if so to whom and at what value?',
+        'Which pollutants and sensor performance standards did the specification require?',
+      ],
     },
     {
-      id: 'ellona-seed-marine-sampling',
-      status: 'NEW',
-      classification: 'EARLY SIGNAL — REQUIRES QUALIFICATION',
-      buyer: 'A marine/port body (trial seed — illustrative)',
-      title: 'Marine water and sediment sampling programme for a port development',
-      projectName: 'Port environmental baseline',
-      country: 'Republic of Ireland',
-      region: 'Coastal',
-      themes: ['marine', 'sediment', 'baseline survey'],
-      capabilities: ['marine sampling', 'laboratory analysis coordination'],
-      measurementNeed: 'Baseline and ongoing marine water/sediment quality measurement around a proposed development.',
-      valueBasis: 'No published value in this seed record.',
-      publicationDate: 'Trial seed — previously published',
-      sourceName: 'Trial seed record',
-      sourceUrl: EPA_SOURCE_URL,
-      locationType: 'approximate',
-      latitude: 53.35,
-      longitude: -6.2,
-      coordSource: 'Indicative port location (trial seed)',
-      precision: 'approximate',
-      nextAction: 'Qualify whether this is a live procurement or a signal requiring verification before action.',
-      clarificationQuestions: ['Is this confirmed as funded, and what is the anticipated procurement route?'],
-    },
-    {
-      id: 'ellona-seed-ecology-survey',
-      status: 'NEW',
-      classification: 'FUNDED PROJECT',
-      buyer: 'A local authority (trial seed — illustrative)',
-      title: 'Ecological monitoring for a nature-restoration scheme',
-      projectName: 'Nature-restoration monitoring',
+      id: 'ellona-seed-greater-cambridge-sssi',
+      status: 'AWARDED',
+      classification: 'PRIORITY-GEOGRAPHY SIGNAL — AWARDED',
+      buyer: 'Cambridge City Council and South Cambridgeshire District Council',
+      title: 'Air Quality modelling of Sites of Special Scientific Interest (SSSIs) to inform the Greater Cambridge Local Plan',
+      projectName: 'Greater Cambridge Local Plan — air-quality evidence',
       country: 'United Kingdom',
-      region: 'Cambridge–Peterborough',
-      themes: ['ecology', 'biodiversity', 'restoration'],
-      capabilities: ['environmental monitoring', 'biodiversity data'],
-      measurementNeed: 'Measure environmental change to evidence outcomes of a funded nature-restoration scheme.',
-      valueBasis: 'No published value in this seed record.',
-      publicationDate: 'Trial seed — previously published',
-      sourceName: 'Trial seed record',
-      sourceUrl: EPA_SOURCE_URL,
+      region: 'Cambridge–Peterborough (Greater Cambridge)',
+      themes: ['air quality', 'modelling', 'planning evidence'],
+      capabilities: ['air-quality modelling', 'road-traffic emissions assessment', 'environmental evidence'],
+      measurementNeed:
+        'Model road-traffic emissions near Sites of Special Scientific Interest to provide air-quality evidence for a local plan.',
+      publishedValue: '£18,562 (award value, GBP)',
+      valueBasis: 'Award value published in the Find a Tender contract award notice. Awarded to Air Quality Consultants Ltd.',
+      publicationDate: 'Tender published 13 July 2026; contract award notice 9 September 2026 (2026/S 000-085225)',
+      tenderDeadline: '24 July 2026 17:00 (tender period ended)',
+      sourceName: 'Find a Tender (UK)',
+      sourceUrl: 'https://www.find-tender.service.gov.uk/procurement/ocds-h6vhtk-06c996',
+      officialId: 'ocds-h6vhtk-06c996',
       locationType: 'area',
-      latitude: 52.57,
-      longitude: -0.24,
-      coordSource: 'Indicative Cambridge–Peterborough area (trial seed)',
+      latitude: 52.2053,
+      longitude: 0.1218,
+      coordSource:
+        'Approximate Cambridge city-centre centroid for map display only; the requirement covers the Greater Cambridge area, not a single point.',
       precision: 'area',
-      nextAction: 'Assess fit against the scheme’s measurement plan and identify the commissioning route.',
-      clarificationQuestions: ['What indicators and reporting cadence does the funder require?'],
+      publisher: 'Find a Tender — UK Government procurement service (Cabinet Office)',
+      supportingPassage:
+        'Cambridge City Council and South Cambridgeshire District Council (the Councils) are seeking suitably qualified consultants to carry out air quality modelling of road traffic emissions in proximity of Sites of Special Scientific Interest (SSSIs) within the area of Cambridge City Council and South Cambridgeshire District Council (Greater Cambridge).',
+      statusNote:
+        'Contract awarded 9 September 2026 to Air Quality Consultants Ltd (£18,562). Included as a priority-geography market signal — not an open opportunity.',
+      ellonaRelevance:
+        'Sits in Ellona’s priority Cambridge–Peterborough geography and confirms that the Greater Cambridge authorities commission air-quality work; useful for pipeline and relationship mapping even though this instance is awarded.',
+      nextAction:
+        'Log the buyers and their air-quality evidence needs; watch the Greater Cambridge Local Plan programme for follow-on monitoring or modelling requirements Ellona could serve.',
+      clarificationQuestions: [
+        'Will the Local Plan evidence base generate follow-on monitoring (as opposed to one-off modelling) requirements?',
+        'Do these authorities run a framework or repeat-buy route Ellona could join?',
+      ],
     },
     {
-      id: 'ellona-seed-env-monitoring-ni',
-      status: 'NEW',
-      classification: 'PRE-MARKET ENGAGEMENT',
-      buyer: 'A Northern Ireland public body (trial seed — illustrative)',
-      title: 'Pre-market engagement on environmental monitoring technology',
-      projectName: 'Environmental monitoring pre-market engagement',
+      id: 'ellona-seed-daera-aq-regs',
+      status: 'CLOSED',
+      classification: 'REGULATORY DRIVER — CONSULTATION CLOSED',
+      buyer: 'Department of Agriculture, Environment and Rural Affairs (DAERA), Northern Ireland',
+      title: 'Consultation on the Draft Air Quality (Amendment) Regulations (Northern Ireland) 2026',
+      projectName: 'Tightening of PM10 / PM2.5 limits in Northern Ireland',
       country: 'United Kingdom',
       region: 'Northern Ireland',
-      themes: ['environmental monitoring', 'air quality', 'water quality'],
-      capabilities: ['sensor technology', 'data platforms'],
-      measurementNeed: 'Understand available technology to measure multiple environmental parameters cost-effectively.',
-      valueBasis: 'No published value in this seed record.',
-      publicationDate: 'Trial seed — previously published',
-      sourceName: 'Trial seed record',
-      sourceUrl: EPA_SOURCE_URL,
+      themes: ['air quality', 'particulate matter', 'regulation'],
+      capabilities: ['particulate monitoring', 'air-quality assessment', 'compliance reporting'],
+      measurementNeed:
+        'Tighter statutory PM10 and PM2.5 limits increase demand for accurate particulate measurement and compliance assessment across Northern Ireland.',
+      valueBasis: 'No procurement value — this is a policy consultation, not a contract.',
+      publicationDate: 'Consultation opened 8 June 2026 11:00; closed 31 August 2026 11:59',
+      sourceName: 'DAERA (Northern Ireland)',
+      sourceUrl:
+        'https://www.daera-ni.gov.uk/consultations/consultation-draft-air-quality-amendment-regulations-northern-ireland-2026',
       locationType: 'regional',
       precision: 'regional',
-      nextAction: 'Consider responding to the engagement to position Ellona’s technology ahead of any procurement.',
-      clarificationQuestions: ['What is the anticipated timeline from engagement to procurement?'],
+      publisher: 'Department of Agriculture, Environment and Rural Affairs (DAERA), Northern Ireland',
+      supportingPassage:
+        'The Department of Agriculture, Environment and Rural Affairs (DAERA) has launched a public consultation on the Draft Air Quality (Amendment) Regulations (Northern Ireland) 2026 to tighten annual average particulate matter (PM10 and PM2.5) limits, targets and objectives in Northern Ireland.',
+      statusNote:
+        'Consultation closed 31 August 2026. Included as a regulatory driver: tighter PM limits tend to increase demand for monitoring — it is a policy signal, not a procurement.',
+      ellonaRelevance:
+        'Tighter PM10/PM2.5 limits in a UK+ROI territory strengthen the case for expanded particulate monitoring, the kind of demand Ellona’s sensing addresses; useful as early market-shaping intelligence.',
+      nextAction:
+        'Track the outcome of the regulations; if adopted, identify the Northern Ireland bodies likely to expand particulate monitoring and position Ellona ahead of any procurement.',
+      clarificationQuestions: [
+        'Will the tightened limits be adopted, and on what timetable?',
+        'Which bodies would be responsible for the additional monitoring the new limits imply?',
+      ],
     },
   ]
 }
@@ -221,13 +261,20 @@ async function main() {
       ...origin,
       source_of_record: s.sourceName,
       source_url: s.sourceUrl,
+      publisher: s.publisher,
+      publication_date: s.publicationDate ?? null,
+      retrieved_at: RETRIEVED_AT,
+      supporting_passage: s.supportingPassage,
+      status_note: s.statusNote,
+      ellona_relevance: s.ellonaRelevance,
+      facts_basis:
+        'Verified public-source record; the supporting passage above is quoted from the cited primary source and was confirmed resolvable on the retrieval date.',
       ...(isEpa
         ? {
             fetch_note: epaFetch.note,
             fetched_at: epaFetch.fetchedAt ? epaFetch.fetchedAt.toISOString() : null,
-            facts_basis: 'Verified facts of record (brief §10). Live scraping did not overwrite these facts.',
           }
-        : { facts_basis: 'Illustrative trial seed record; not a live procurement.' }),
+        : {}),
     }
     const data = {
       workspaceId,
@@ -259,7 +306,7 @@ async function main() {
       precision: s.precision ?? null,
       nextAction: s.nextAction,
       clarificationQuestions: s.clarificationQuestions,
-      seedLabel: 'Trial seed record — previously published',
+      seedLabel: 'Verified public-source record',
       fetchedAt: isEpa ? epaFetch.fetchedAt : null,
     }
     const existing = await prisma.opportunity.findUnique({ where: { id: s.id }, select: { id: true } })
@@ -273,7 +320,7 @@ async function main() {
           id: randomUUID(),
           opportunityId: s.id,
           kind: 'CREATED',
-          summary: `Seed record added to the Ellona watch (${s.classification}).`,
+          summary: `Verified public-source record added to the Ellona watch (${s.classification}).`,
           changedFields: {},
           previousValues: {},
         },

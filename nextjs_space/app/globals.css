@@ -251,6 +251,7 @@
 /* ===== Ellona Environmental Opportunity Watch (private partner area) ===== */
 .bv-ellona{--forest:#173d35;--gold:#dfc27a;--cream:#f7f4ec;background:var(--cream);min-height:100vh;color:#1c261f;font-size:15px}
 .bv-ellona a{color:#173d35}
+.bv-ellona-preview-banner{background:var(--gold);color:#3a2f10;font:600 12.5px system-ui,sans-serif;letter-spacing:.3px;text-align:center;padding:8px max(5vw,20px);border-bottom:1px solid rgba(0,0,0,.12)}
 .bv-ellona-head{background:var(--forest);color:#f6f2e6;padding:18px max(5vw,20px);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
 .bv-ellona-head .bv-brand{color:#fff;font:600 22px Georgia,serif;text-decoration:none}
 .bv-ellona-head .bv-brand span{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-family:system-ui,sans-serif;font-weight:700}

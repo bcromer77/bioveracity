@@ -38,6 +38,12 @@ import {
   validatePasswordPolicy,
   isBreachedPassword,
 } from '../lib/ellona/invitation'
+import {
+  resolveEllonaView,
+  findEllonaWorkspace,
+  ORIGINATOR_EMAIL,
+} from '../lib/ellona/access'
+import { ELLONA } from '../lib/ellona/config'
 
 const require = createRequire(import.meta.url)
 const SCAN_KEY = 'test-scanner-key-0123456789'
@@ -332,6 +338,62 @@ dbTest('tenant isolation (DB)', () => {
       assert.equal(foreign, null)
     } finally {
       await prisma.opportunityAssessment.deleteMany({ where: { id: idA } })
+    }
+  })
+})
+
+dbTest('originator read-only preview access (DB)', () => {
+  test('a real member gets a writable view; the originator gets a read-only preview; others get nothing', async () => {
+    const { prisma } = await import('../lib/prisma')
+    const ws = `test-ws-${randomUUID()}`
+    const memberId = `test-user-${randomUUID()}`
+    const strangerId = `test-user-${randomUUID()}`
+    try {
+      // A self-contained partner tenant with one active member.
+      await prisma.privateWorkspace.create({ data: { id: ws, name: 'Test tenant', persona: 'ecology' } })
+      await prisma.partnerTenant.create({
+        data: {
+          workspaceId: ws,
+          orgName: 'Test Org',
+          workspaceName: 'Test tenant',
+          contactName: 'Test Member',
+          contactEmail: `member-${randomUUID()}@example.invalid`,
+          originatorName: 'Origin',
+          originatorOrg: 'Origin Org',
+        },
+      })
+      await prisma.user.create({ data: { id: memberId, email: `member-${randomUUID()}@example.invalid`, name: 'Test Member', role: 'partner_member' } })
+      await prisma.privateWorkspaceMember.create({ data: { workspaceId: ws, userId: memberId, role: 'CONTRIBUTOR' } })
+
+      // 1) A real member resolves to a WRITABLE view (preview: false) of their own tenant.
+      const memberView = await resolveEllonaView(memberId, 'anything@example.invalid')
+      assert.ok(memberView, 'member should resolve a view')
+      assert.equal(memberView!.preview, false)
+      assert.equal(memberView!.workspaceId, ws)
+      const memberWs = await findEllonaWorkspace(memberId)
+      assert.ok(memberWs && memberWs.workspaceId === ws)
+
+      // 2) The originator (Bazil) is NOT a member anywhere, so he resolves to a
+      //    READ-ONLY preview that targets the real Ellona tenant only.
+      const ellona = await prisma.partnerTenant.findFirst({ where: { contactEmail: ELLONA.contactEmail }, select: { workspaceId: true } })
+      const originatorView = await resolveEllonaView(strangerId, ORIGINATOR_EMAIL)
+      if (ellona) {
+        assert.ok(originatorView, 'originator should resolve a preview view when the Ellona tenant exists')
+        assert.equal(originatorView!.preview, true)
+        assert.equal(originatorView!.workspaceId, ellona.workspaceId)
+        assert.equal(originatorView!.role, 'ORIGINATOR_PREVIEW')
+        // The originator is never granted a real membership row.
+        assert.equal(await findEllonaWorkspace(strangerId), null)
+      }
+
+      // 3) A stranger who is neither a member nor the originator gets nothing.
+      const none = await resolveEllonaView(strangerId, 'stranger@example.invalid')
+      assert.equal(none, null)
+    } finally {
+      await prisma.privateWorkspaceMember.delete({ where: { workspaceId_userId: { workspaceId: ws, userId: memberId } } }).catch(() => {})
+      await prisma.user.delete({ where: { id: memberId } }).catch(() => {})
+      await prisma.partnerTenant.delete({ where: { workspaceId: ws } }).catch(() => {})
+      await prisma.privateWorkspace.delete({ where: { id: ws } }).catch(() => {})
     }
   })
 })

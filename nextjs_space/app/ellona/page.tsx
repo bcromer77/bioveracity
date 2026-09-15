@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { ellonaEnabled, ELLONA, REPRESENTATION_LINE } from '@/lib/ellona/config'
-import { findEllonaWorkspace } from '@/lib/ellona/access'
+import { resolveEllonaView } from '@/lib/ellona/access'
 import { onPartnerLogin, computeTrialInfo, formatDublin } from '@/lib/ellona/trial'
 import { parseDisplayDate } from '@/lib/ellona/display-date'
 import { EllonaShell } from '@/components/ellona/ellona-shell'
@@ -21,15 +21,16 @@ export default async function EllonaDashboardPage() {
   const session = await auth()
   const userId = session?.user?.id
   if (!userId) redirect('/login?callbackUrl=/ellona')
-  const membership = await findEllonaWorkspace(userId)
-  if (!membership) redirect('/professionals')
-  const workspaceId = membership.workspaceId
+  const view = await resolveEllonaView(userId, session?.user?.email)
+  if (!view) redirect('/professionals')
+  const workspaceId = view.workspaceId
+  const preview = view.preview
 
   // Start the 14-day trial atomically on the first CUSTOMER login only, and
-  // refresh lastLoginAt. The originator (Bazil) must never start or shorten the
-  // trial — even if he holds membership for oversight — so his visits are excluded.
-  const callerEmail = (session?.user?.email || '').toLowerCase()
-  if (callerEmail !== BAZIL_EMAIL) {
+  // refresh lastLoginAt. The originator (Bazil) reviews through a READ-ONLY
+  // preview view — his visits must never start, shorten or touch the trial or
+  // record any engagement, so onPartnerLogin is skipped entirely in preview.
+  if (!preview) {
     await onPartnerLogin(workspaceId)
   }
 
@@ -97,7 +98,7 @@ export default async function EllonaDashboardPage() {
   const isAdmin = (session?.user?.email || '').toLowerCase() === BAZIL_EMAIL
 
   return (
-    <EllonaShell showAdmin={isAdmin}>
+    <EllonaShell showAdmin={isAdmin} preview={preview}>
       <p className="bv-eyebrow" style={{ color: '#7d7148' }}>
         Welcome, {ELLONA.contactName.split(' ')[0]} — {ELLONA.workspaceName}
       </p>
@@ -116,11 +117,17 @@ export default async function EllonaDashboardPage() {
             {trial.state === 'ACTIVE'
               ? `Day ${trial.dayNumber ?? 1} of ${ELLONA.trialDays}`
               : trial.state === 'INVITED_NOT_ACTIVATED'
-              ? 'Starting now'
+              ? preview
+                ? 'Not activated'
+                : 'Starting now'
               : trial.state}
           </div>
           <div className="s">
-            {trial.startedAt ? `Started ${formatDublin(trial.startedAt)}` : 'Starts on first sign-in'}
+            {trial.startedAt
+              ? `Started ${formatDublin(trial.startedAt)}`
+              : preview
+              ? 'Starts when Natalia first signs in'
+              : 'Starts on first sign-in'}
             {trial.endsAt ? ` · ends ${formatDublin(trial.endsAt)}` : ''}
           </div>
         </div>
@@ -160,9 +167,11 @@ export default async function EllonaDashboardPage() {
         <a className="bv-button" href="/api/ellona/portfolio/pdf">
           Generate opportunity portfolio (PDF)
         </a>
-        <Link className="bv-text-link" href="/ellona/assess">
-          Analyse your own opportunity →
-        </Link>
+        {preview ? null : (
+          <Link className="bv-text-link" href="/ellona/assess">
+            Analyse your own opportunity →
+          </Link>
+        )}
       </div>
 
       <div id="opportunities" />

@@ -7,7 +7,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { auth } from '@/auth'
 import { ellonaEnabled, ELLONA, REPRESENTATION_LINE } from '@/lib/ellona/config'
-import { findEllonaWorkspace } from '@/lib/ellona/access'
+import { resolveEllonaView } from '@/lib/ellona/access'
 import { prisma } from '@/lib/prisma'
 import { computeTrialInfo, formatDublin } from '@/lib/ellona/trial'
 import { EllonaShell } from '@/components/ellona/ellona-shell'
@@ -27,9 +27,9 @@ export default async function EllonaAdminPage() {
   // does not reveal its own existence.
   if (email !== BAZIL_EMAIL) notFound()
 
-  const membership = await findEllonaWorkspace(userId)
-  if (!membership) notFound()
-  const workspaceId = membership.workspaceId
+  const view = await resolveEllonaView(userId, email)
+  if (!view) notFound()
+  const workspaceId = view.workspaceId
 
   const [tenant, authEvents, emails, assessments, opps] = await Promise.all([
     prisma.partnerTenant.findUnique({ where: { workspaceId } }),
@@ -48,7 +48,7 @@ export default async function EllonaAdminPage() {
   const trial = computeTrialInfo(tenant)
 
   return (
-    <EllonaShell showAdmin>
+    <EllonaShell showAdmin preview={view.preview}>
       <div className="bv-eyebrow">Admin — originator view</div>
       <h1 style={{ marginTop: 8 }}>{ELLONA.workspaceName}</h1>
       <p className="bv-lead" style={{ marginTop: 8 }}>

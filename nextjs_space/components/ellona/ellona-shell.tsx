@@ -3,16 +3,29 @@ import type { ReactNode } from 'react'
 import { REPRESENTATION_LINE, ELLONA } from '@/lib/ellona/config'
 import { SignOutButton } from './sign-out-button'
 
-export function EllonaShell({ children, showAdmin = false }: { children: ReactNode; showAdmin?: boolean }) {
+export function EllonaShell({
+  children,
+  showAdmin = false,
+  preview = false,
+}: {
+  children: ReactNode
+  showAdmin?: boolean
+  preview?: boolean
+}) {
   return (
     <div className="bv-ellona">
+      {preview ? (
+        <div className="bv-ellona-preview-banner" role="status">
+          Previewing Natalia&rsquo;s experience &mdash; trial timing and customer activity are not being recorded.
+        </div>
+      ) : null}
       <header className="bv-ellona-head">
         <Link className="bv-brand" href="/ellona">
           BioVeracity<span>Environmental Opportunity Watch</span>
         </Link>
         <nav aria-label="Opportunity watch navigation">
           <Link href="/ellona">Dashboard</Link>
-          <Link href="/ellona/assess">Analyse your own opportunity</Link>
+          {preview ? null : <Link href="/ellona/assess">Analyse your own opportunity</Link>}
           {showAdmin ? <Link href="/ellona/admin">Admin</Link> : null}
           <SignOutButton />
         </nav>

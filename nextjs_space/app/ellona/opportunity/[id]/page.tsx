@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { ellonaEnabled, ELLONA, REPRESENTATION_LINE } from '@/lib/ellona/config'
-import { findEllonaWorkspace, trialAllowsWrites } from '@/lib/ellona/access'
+import { resolveEllonaView, trialAllowsWrites } from '@/lib/ellona/access'
 import { EllonaShell } from '@/components/ellona/ellona-shell'
 import { EllonaMap } from '@/components/ellona/ellona-map'
 import { OpportunityActions } from '@/components/ellona/opportunity-actions'
@@ -30,9 +30,10 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
   const session = await auth()
   const userId = session?.user?.id
   if (!userId) redirect(`/login?callbackUrl=/ellona/opportunity/${id}`)
-  const membership = await findEllonaWorkspace(userId)
-  if (!membership) redirect('/professionals')
-  const workspaceId = membership.workspaceId
+  const view = await resolveEllonaView(userId, session?.user?.email)
+  if (!view) redirect('/professionals')
+  const workspaceId = view.workspaceId
+  const preview = view.preview
 
   const opp = await prisma.opportunity.findFirst({ where: { id, workspaceId } })
   if (!opp) notFound()
@@ -48,7 +49,8 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
   ])
 
   const following = followActions.length ? followActions[followActions.length - 1].kind === 'FOLLOW' : opp.status === 'FOLLOWING'
-  const readOnly = !tenant || !trialAllowsWrites(tenant.trialState)
+  // Read-only when there is no writable trial, and always in the originator preview.
+  const readOnly = preview || !tenant || !trialAllowsWrites(tenant.trialState)
   const isAdmin = (session?.user?.email || '').toLowerCase() === BAZIL_EMAIL
 
   const themes = (opp.themes as unknown as string[]) || []
@@ -75,7 +77,7 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
       : []
 
   return (
-    <EllonaShell showAdmin={isAdmin}>
+    <EllonaShell showAdmin={isAdmin} preview={preview}>
       <p className="bv-eyebrow" style={{ color: '#7d7148' }}>
         <Link href="/ellona">← Back to dashboard</Link>
       </p>
@@ -154,7 +156,7 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
       )}
 
       <h2>Reviewer actions</h2>
-      <OpportunityActions id={opp.id} following={following} readOnly={readOnly} />
+      <OpportunityActions id={opp.id} following={following} readOnly={readOnly} preview={preview} />
 
       <h2>Change chronology</h2>
       <div className="bv-ellona-panel">

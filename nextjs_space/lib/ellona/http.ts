@@ -4,7 +4,13 @@
 // tenant — unknown/foreign ids resolve to the same 404 as missing ones.
 
 import { auth } from '@/auth'
-import { EllonaAccessError, findEllonaWorkspace, requireEllonaMember, type EllonaMembership } from './access'
+import {
+  EllonaAccessError,
+  findEllonaWorkspace,
+  requireEllonaMember,
+  resolveEllonaView,
+  type EllonaMembership,
+} from './access'
 import { ellonaEnabled } from './config'
 
 export const privateHeaders = {
@@ -30,6 +36,30 @@ export async function requireCaller(): Promise<{ userId: string; membership: Ell
   const membership = await findEllonaWorkspace(userId)
   if (!membership) throw new EllonaAccessError(404, 'Workspace unavailable')
   return { userId, membership }
+}
+
+/**
+ * Resolve a READ-ONLY caller: a real member (Natalia) OR the originator's
+ * read-only preview (Bazil). Use this ONLY for read endpoints (e.g. PDF
+ * downloads). Write endpoints must keep using requireCaller so the preview can
+ * never mutate the tenant.
+ */
+export async function requireReader(): Promise<{
+  userId: string
+  membership: EllonaMembership
+  preview: boolean
+}> {
+  if (!ellonaEnabled()) throw new EllonaAccessError(404, 'Not found')
+  const session = await auth()
+  const userId = session?.user?.id
+  if (!userId) throw new EllonaAccessError(401, 'Authentication required')
+  const view = await resolveEllonaView(userId, session?.user?.email)
+  if (!view) throw new EllonaAccessError(404, 'Workspace unavailable')
+  return {
+    userId,
+    membership: { userId: view.userId, workspaceId: view.workspaceId, role: view.role },
+    preview: view.preview,
+  }
 }
 
 /** Confirm the caller may act on a specific workspace id (defence in depth). */

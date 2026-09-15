@@ -3,7 +3,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { EllonaAccessError } from '@/lib/ellona/access'
-import { requireCaller, jsonError } from '@/lib/ellona/http'
+import { requireReader, jsonError } from '@/lib/ellona/http'
 import { renderOpportunityBrief } from '@/lib/ellona/pdf'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const { membership } = await requireCaller()
+    const { membership } = await requireReader()
     const opp = await prisma.opportunity.findFirst({ where: { id, workspaceId: membership.workspaceId } })
     if (!opp) return jsonError(404, 'Opportunity not found')
 

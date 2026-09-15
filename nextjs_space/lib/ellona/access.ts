@@ -4,7 +4,13 @@
 // revoking a member immediately blocks the dashboard, APIs and PDF downloads.
 
 import { prisma } from '@/lib/prisma'
-import { ellonaEnabled } from './config'
+import { ellonaEnabled, ELLONA } from './config'
+
+// The originator (Bazil). He is NOT a member of Natalia's tenant — he is granted
+// a read-only PREVIEW view so he can review the customer experience without
+// touching trial timing, engagement or Natalia's records. Writes remain
+// member-only, so his preview can never mutate the tenant.
+export const ORIGINATOR_EMAIL = 'bazil.cromer@ripplexn.com'
 
 export class EllonaAccessError extends Error {
   status: number
@@ -59,6 +65,39 @@ export async function requireEllonaMember(
     : null
   if (!membership || !tenant) throw new EllonaAccessError(404, 'Workspace unavailable')
   return { userId, workspaceId, role: membership.role }
+}
+
+export type EllonaView = EllonaMembership & { preview: boolean }
+
+/**
+ * Resolve the view a user may see for the Ellona tenant.
+ * - A real active member (Natalia) gets a full, writable view (preview: false).
+ * - The originator (Bazil), who is deliberately NOT a member, gets a READ-ONLY
+ *   preview of the single Ellona tenant so he can review Natalia's experience.
+ *   This grants no membership row and no write capability — every write API is
+ *   still gated on real membership (requireCaller), so a preview view resolves
+ *   to 404 on any mutation.
+ * Returns null for everyone else.
+ */
+export async function resolveEllonaView(
+  userId: string,
+  email?: string | null,
+): Promise<EllonaView | null> {
+  if (!userId) return null
+  const real = await findEllonaWorkspace(userId)
+  if (real) return { ...real, preview: false }
+  if ((email || '').toLowerCase() === ORIGINATOR_EMAIL) {
+    // Target the Ellona tenant specifically (by its contact email) so no other
+    // customer workspace can ever be exposed through the preview.
+    const tenant = await prisma.partnerTenant.findFirst({
+      where: { contactEmail: ELLONA.contactEmail },
+      select: { workspaceId: true },
+    })
+    if (tenant) {
+      return { userId, workspaceId: tenant.workspaceId, role: 'ORIGINATOR_PREVIEW', preview: true }
+    }
+  }
+  return null
 }
 
 // Trial write-lock: after expiry the workspace becomes read-only.

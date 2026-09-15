@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { EllonaAccessError } from '@/lib/ellona/access'
-import { requireCaller, jsonError } from '@/lib/ellona/http'
+import { requireReader, jsonError } from '@/lib/ellona/http'
 import { renderPortfolio, type PortfolioItem } from '@/lib/ellona/pdf'
 import { ELLONA } from '@/lib/ellona/config'
 import { formatDublin } from '@/lib/ellona/trial'
@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 
 export async function GET() {
   try {
-    const { membership } = await requireCaller()
+    const { membership } = await requireReader()
     const base = process.env.NEXTAUTH_URL || 'https://bioveracity.com'
 
     const opps = await prisma.opportunity.findMany({
