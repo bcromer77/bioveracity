@@ -1015,3 +1015,164 @@ model WildHubReview {
   @@unique([hubId, revision])
   @@index([status, createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// Ellona Environmental Opportunity Watch (partner tenant) — ADDITIVE ONLY.
+// New tables only; no existing model is modified. Tenant isolation is enforced
+// in application code via PrivateWorkspaceMember; these tables carry a plain
+// workspaceId column (no FK) so the migration cannot affect existing rows.
+// ---------------------------------------------------------------------------
+model PartnerTenant {
+  workspaceId     String   @id
+  orgName         String
+  workspaceName   String
+  contactName     String
+  contactEmail    String   @unique
+  partnerRole     String   @default("partner_member")
+  originatorName  String
+  originatorOrg   String
+  deliveryProduct String   @default("BioVeracity")
+  territories     String   @default("")
+  trialDays       Int      @default(14)
+  trialState      String   @default("INVITED_NOT_ACTIVATED") // INVITED_NOT_ACTIVATED, ACTIVE, EXPIRED, CONVERTED, REVOKED
+  activatedAt     DateTime? @db.Timestamptz(3)
+  firstLoginAt    DateTime? @db.Timestamptz(3)
+  lastLoginAt     DateTime? @db.Timestamptz(3)
+  trialStartedAt  DateTime? @db.Timestamptz(3)
+  trialEndsAt     DateTime? @db.Timestamptz(3)
+  alertsPaused    Boolean  @default(false)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+}
+
+model PartnerInvitation {
+  id          String   @id
+  workspaceId String
+  email       String
+  purpose     String   // ACTIVATION, RESET
+  tokenHash   String   @unique
+  expiresAt   DateTime @db.Timestamptz(3)
+  consumedAt  DateTime? @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  @@index([workspaceId, purpose])
+}
+
+model PartnerAuthEvent {
+  id          String   @id
+  workspaceId String
+  email       String
+  kind        String   // INVITE_CREATED, ACTIVATION_LINK_RENDERED, ACTIVATED, TOKEN_EXPIRED, RESET_REQUESTED, PASSWORD_SET, LOGIN, REVOKED
+  detail      String   @default("")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  @@index([workspaceId, createdAt])
+}
+
+model Opportunity {
+  id                    String   @id
+  workspaceId           String
+  status                String   @default("NEW")
+  classification        String
+  buyer                 String
+  title                 String
+  projectName           String?
+  country               String
+  region                String?
+  themes                Json     @default("[]")
+  capabilities          Json     @default("[]")
+  measurementNeed       String?
+  publishedValue        String?
+  valueBasis            String?
+  publicationDate       String?
+  clarificationDeadline String?
+  tenderDeadline        String?
+  duration              String?
+  sourceName            String
+  sourceUrl             String
+  officialId            String?
+  procedureId           String?
+  provenance            Json     @default("{}")
+  locationType          String?
+  latitude              Float?
+  longitude             Float?
+  coordSource           String?
+  precision             String?
+  geocodeDate           String?
+  geocodeMethod         String?
+  waterbody             String?
+  catchment             String?
+  port                  String?
+  protectedSite         String?
+  planningAuthority     String?
+  nextAction            String?
+  clarificationQuestions Json    @default("[]")
+  seedLabel             String?
+  fetchedAt             DateTime? @db.Timestamptz(3)
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  events                OpportunityEvent[]
+  actions               OpportunityAction[]
+  @@index([workspaceId, status])
+}
+
+model OpportunityEvent {
+  id            String   @id
+  opportunityId String
+  kind          String   // CREATED, CORRECTION, STATUS_CHANGE, DEADLINE_CHANGE, SUPERSEDED
+  summary       String
+  changedFields Json     @default("{}")
+  previousValues Json    @default("{}")
+  emailedBefore Boolean  @default(false)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  @@index([opportunityId, createdAt])
+}
+
+model OpportunityAction {
+  id            String   @id
+  workspaceId   String
+  opportunityId String
+  userId        String
+  kind          String   // RELEVANT, NOT_RELEVANT, FOLLOW, UNFOLLOW, INVESTIGATION_REQUEST, DECISION
+  detail        String   @default("")
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  @@index([workspaceId, opportunityId])
+}
+
+model OpportunityAssessment {
+  id            String   @id
+  workspaceId   String
+  createdBy     String
+  title         String
+  decisionType  String   // BID, PARTNER, MONITOR, PASS, UNSURE
+  status        String   @default("EXTRACTED") // EXTRACTED, REVIEWED
+  documentName  String
+  documentHash  String
+  encryptedBytes Bytes
+  byteLength    Int
+  mediaType     String
+  parserVersion String
+  extraction    Json     @default("{}")
+  corrections   Json     @default("{}")
+  comments      Json     @default("[]")
+  reviewedAt    DateTime? @db.Timestamptz(3)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  @@index([workspaceId, createdBy])
+}
+
+model PartnerEmail {
+  id             String   @id
+  workspaceId    String
+  kind           String   // ACTIVATION, DIGEST, ALERT, CORRECTION, MIDPOINT, EXPIRY, TRIAL_SUMMARY
+  senderIdentity String
+  subject        String
+  recipient      String
+  renderedHtml   String
+  status         String   @default("RENDERED") // RENDERED, QUEUED, SENT, SUPPRESSED
+  dedupKey       String?
+  sandbox        Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  @@index([workspaceId, kind])
+  @@unique([workspaceId, dedupKey])
+}

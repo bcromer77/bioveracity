@@ -247,3 +247,71 @@
   .bv-header nav.bv-nav.is-open a:last-child{border-bottom:0}
   .bv-nav-backdrop{display:block;position:fixed;inset:0;z-index:55;background:rgba(15,48,40,.28);border:0;padding:0}
 }
+
+/* ===== Ellona Environmental Opportunity Watch (private partner area) ===== */
+.bv-ellona{--forest:#173d35;--gold:#dfc27a;--cream:#f7f4ec;background:var(--cream);min-height:100vh;color:#1c261f;font-size:15px}
+.bv-ellona a{color:#173d35}
+.bv-ellona-head{background:var(--forest);color:#f6f2e6;padding:18px max(5vw,20px);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.bv-ellona-head .bv-brand{color:#fff;font:600 22px Georgia,serif;text-decoration:none}
+.bv-ellona-head .bv-brand span{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-family:system-ui,sans-serif;font-weight:700}
+.bv-ellona-head nav{display:flex;gap:22px;align-items:center;flex-wrap:wrap;font-size:14px}
+.bv-ellona-head nav a{color:#e7ecdf;text-decoration:none}
+.bv-ellona-head nav a:hover{color:#fff;text-decoration:underline}
+.bv-ellona-wrap{max-width:1240px;margin:auto;padding:34px max(5vw,20px) 60px}
+.bv-ellona h1{font:400 clamp(30px,4vw,46px)/1.08 Georgia,serif;letter-spacing:-1px;margin:0 0 14px;max-width:900px}
+.bv-ellona h2{font:400 clamp(22px,2.6vw,30px)/1.15 Georgia,serif;letter-spacing:-.6px;margin:44px 0 16px}
+.bv-ellona h3{font:500 19px/1.3 Georgia,serif;margin:0 0 8px}
+.bv-ellona .bv-lead{font-size:17px;line-height:1.65;max-width:760px;color:#33433a}
+.bv-ellona-rep{font-size:12px;color:#5a6b60;border-left:3px solid var(--gold);padding:6px 0 6px 12px;margin:18px 0}
+.bv-ellona-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:26px 0}
+.bv-ellona-stat{background:#fff;border:1px solid #e2ddcb;border-radius:8px;padding:16px 18px}
+.bv-ellona-stat .k{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7d7148;font-weight:700}
+.bv-ellona-stat .v{font:400 27px/1.1 Georgia,serif;margin-top:8px;color:#173d35}
+.bv-ellona-stat .s{font-size:12px;color:#5a6b60;margin-top:6px}
+.bv-ellona-cta{display:flex;gap:16px;flex-wrap:wrap;margin:24px 0 8px}
+.bv-ellona-map{height:440px;border-radius:10px;overflow:hidden;border:1px solid #d8d3c1;background:#eceadd}
+.bv-ellona-map-loading{display:flex;align-items:center;justify-content:center;height:100%;color:#6b7166;font-size:14px}
+.bv-ellona-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:#5a6b60;margin:10px 0 0}
+.bv-ellona-legend span{display:inline-flex;align-items:center;gap:6px}
+.bv-ellona-legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.bv-ellona-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:6px}
+.bv-opp-card{background:#fff;border:1px solid #e2ddcb;border-radius:9px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.bv-opp-card h3{margin:0}
+.bv-opp-card .bv-opp-meta{font-size:13px;color:#54635a;line-height:1.6}
+.bv-opp-card .bv-opp-need{font-size:14px;line-height:1.6;color:#2b382f}
+.bv-opp-card .bv-opp-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.bv-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;border-radius:20px;padding:4px 11px;border:1px solid transparent}
+.bv-tag-status{background:#efe4c4;border-color:#dfc27a;color:#5a4a1e}
+.bv-tag-class{background:#e6ede4;border-color:#c4d3c6;color:#2f4a3c}
+.bv-tag-cat{background:#eef1ea;border:1px solid #d3dacb;color:#4a5748;font-size:10px}
+.bv-ellona-filters{background:#fff;border:1px solid #e2ddcb;border-radius:9px;padding:16px 18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:8px 0 26px}
+.bv-ellona-filters label{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#7d7148;display:block;margin-bottom:6px}
+.bv-ellona-filters select,.bv-ellona-filters input{width:100%;padding:9px;border:1px solid #b4bcae;border-radius:4px;background:#fafbf7;font-size:14px;color:#1c261f}
+.bv-ellona-count{font-size:13px;color:#5a6b60;margin:0 0 12px}
+.bv-ellona-panel{background:#fff;border:1px solid #e2ddcb;border-radius:9px;padding:22px;margin-bottom:18px}
+.bv-ellona-panel dl{display:grid;grid-template-columns:220px 1fr;gap:10px 20px;margin:0;font-size:14px}
+.bv-ellona-panel dt{font-weight:700;color:#3a4a40}
+.bv-ellona-panel dd{margin:0;color:#2b382f;line-height:1.6;overflow-wrap:anywhere}
+.bv-field{border-top:1px solid #ece7d7;padding:14px 0}
+.bv-field:first-child{border-top:0}
+.bv-field .bv-field-label{font-weight:700;font-size:14px;color:#33433a;display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.bv-field .bv-field-val{font-size:14px;line-height:1.65;margin:8px 0 6px;color:#2b382f;white-space:pre-wrap;overflow-wrap:anywhere}
+.bv-field .bv-locator{font-size:12px;color:#7a6a3b}
+.bv-field textarea{width:100%;padding:10px;border:1px solid #b4bcae;border-radius:4px;background:#fafbf7;font-size:14px;min-height:64px;color:#1c261f}
+.bv-field select{padding:7px;border:1px solid #b4bcae;border-radius:4px;background:#fafbf7;font-size:13px}
+.bv-notice{background:#fbf4dc;border:1px solid #e6d18f;border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.6;color:#5a4a1e;margin:16px 0}
+.bv-danger{background:#f7e4e0;border:1px solid #dcae9f;color:#7a2f1e}
+.bv-ok{background:#e2efdc;border:1px solid #b6d2a8;color:#2f5124}
+.bv-ellona-actions{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.bv-ellona-actions button{min-height:42px;border-radius:4px;border:1px solid #b4bcae;background:#fff;color:#173d35;font-weight:600;font-size:13px;padding:9px 16px;cursor:pointer}
+.bv-ellona-actions button:hover{background:#f0f3ec}
+.bv-ellona-actions button.is-active{background:#173d35;color:#fff;border-color:#173d35}
+.bv-ellona-actions button:disabled{opacity:.55;cursor:not-allowed}
+.bv-comment{background:#f6f4ea;border:1px solid #e4dcc4;border-radius:6px;padding:12px;font-size:13px;margin:8px 0}
+.bv-comment .bv-comment-meta{font-size:11px;color:#7d7148;margin-top:6px}
+@media(max-width:900px){.bv-ellona-stats,.bv-ellona-filters{grid-template-columns:repeat(2,1fr)}.bv-ellona-grid{grid-template-columns:1fr}.bv-ellona-panel dl{grid-template-columns:1fr}}
+@media(max-width:640px){.bv-ellona-stats,.bv-ellona-filters{grid-template-columns:1fr}.bv-ellona-map{height:340px}.bv-ellona-head{flex-direction:column;align-items:flex-start}}
+.bv-tag-cat.cat-source-fact{background:#e2efdc;border-color:#b6d2a8;color:#2f5124}
+.bv-tag-cat.cat-bioveracity-analysis{background:#e5ecf6;border-color:#adc2df;color:#274268}
+.bv-tag-cat.cat-ellona-input{background:#f6ecdc;border-color:#e0c79a;color:#6b4e17}
+.bv-tag-cat.cat-unknown{background:#efefe9;border-color:#d3d3c8;color:#6a6a5e}
