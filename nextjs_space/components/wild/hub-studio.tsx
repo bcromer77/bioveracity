@@ -151,7 +151,7 @@ export function HubStudio() {
   return (
     <section className="bv-section bv-studio">
       <p className="bv-eyebrow">Your venue. Your seasons. Your approval.</p>
-      <h1>Your ecology hubs</h1>
+      <h1>Your local guides</h1>
       <p>
         Build a guest guide and twelve months of content. Drafts are private.
         Publishing requires your approval and a BioVeracity editorial review; it does not purchase signage
@@ -195,7 +195,7 @@ export function HubStudio() {
               setAuthorised(false)
             }}
           >
-            New ecology hub
+            New local guide
           </button>
           {hub && (
             <button className="bv-text-link" onClick={() => open(hub.id)}>
@@ -278,7 +278,7 @@ export function HubStudio() {
                 onChange={(e) => update('story', e.target.value)}
               />
               <label htmlFor="hub-website">
-                Your website or booking link (HTTPS)
+                Your website or booking link
               </label>
               <input
                 id="hub-website"
@@ -353,8 +353,7 @@ export function HubStudio() {
               <fieldset disabled={busy}>
                 <legend>2. Add your photographs</legend>
                 <p>
-                  JPEG or PNG, up to 3 MB each. Twelve photos per hub. Location
-                  metadata is removed.
+                  JPEG or PNG, up to 3 MB each. Twelve photos per hub. We remove location details stored inside the photo.
                 </p>
                 <label htmlFor="hub-photo">Choose a photograph</label>
                 <input
@@ -656,7 +655,7 @@ export function HubStudio() {
                 </section>
               )}
               <section className="bv-form">
-                <h2>5. Submit your ecology hub for review</h2>
+                <h2>5. Send your guide for review</h2>
                 {hub.review && <p role="status">Editorial status: {hub.review.status}{hub.review.reason ? ' · ' + hub.review.reason : ''}. Saving changes requires a new submission.</p>}
                 <h3>{profile.name}</h3>
                 <p className="bv-preserve">{profile.story}</p>
@@ -681,7 +680,7 @@ export function HubStudio() {
                             setApproved(false)
                           }}
                         />
-                        Include on public hub
+                        Show in your public guide
                       </label>
                       <button
                         className="bv-text-link"
@@ -711,7 +710,7 @@ export function HubStudio() {
                     </figure>
                   ))}
                 </div>
-                <CountyNature county={profile.county}/><p>API records are county context and update separately from your approved words and photographs.</p>
+                <CountyNature county={profile.county}/><p>The county’s wildlife information updates separately from your own words and photographs. It does not confirm wildlife at your venue.</p>
                 <label className="bv-check">
                   <input
                     type="checkbox"
@@ -757,7 +756,7 @@ export function HubStudio() {
                       )}
                     </p>
                     <Link href={`/wild/places/${hub.id}`} target="_blank">
-                      Open public ecology hub ↗
+                      View your public guide ↗
                     </Link>
                     <p>
                       Use this QR only after checking the destination and
@@ -767,7 +766,7 @@ export function HubStudio() {
                       width={180}
                       height={180}
                       src={`/api/wild/qr/${hub.id}`}
-                      alt="Your ecology hub QR code"
+                      alt="Your local guide QR code"
                     />
                     <EvidenceLink href={`/api/wild/qr/${hub.id}?download=1`} download>
                       Download QR

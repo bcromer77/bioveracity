@@ -20,7 +20,7 @@ export function PublishedHub({
   return (
     <PublicShell>
       <section className="bv-hero">
-        <p className="bv-eyebrow">{county?.brandName} · Ecology hub</p>
+        <p className="bv-eyebrow">{county?.brandName} · Local guide</p>
         <h1>{profile.name}</h1>
         <p className="bv-intro">
           Your starting point for local stories and seasonal discoveries.
@@ -35,9 +35,7 @@ export function PublishedHub({
           </EvidenceLink>
         )}
         <p className="bv-small">
-          Venue content supplied and approved by the venue account.
-          Business identity and environmental performance are not certified by
-          BioVeracity.
+          The venue supplied and approved its story. Listing here is not a business identity check or an environmental certificate.
         </p>
       </section>
       <section className="bv-section">
@@ -80,7 +78,7 @@ export function PublishedHub({
           </div>
         </section>
       )}
-      <section className="bv-section"><CountyNature county={profile.county}/><p className="bv-small">County records update separately from the venue-approved edition.</p></section>
+      <section className="bv-section"><CountyNature county={profile.county}/><p className="bv-small">Wildlife information for the wider county updates separately from this venue’s story.</p></section>
       <section className="bv-section">
         <p className="bv-small">
           Venue-approved edition {snapshot.version} ·{' '}
@@ -88,7 +86,7 @@ export function PublishedHub({
             timeZone: 'Europe/Dublin',
           })}
         </p>
-        {snapshot.reviewedAt && <p className="bv-small">Editorial review completed {new Date(snapshot.reviewedAt).toLocaleDateString('en-GB', {timeZone:'Europe/Dublin'})}. This is content review, not environmental certification.</p>}
+        {snapshot.reviewedAt && <p className="bv-small">Editorial review completed {new Date(snapshot.reviewedAt).toLocaleDateString('en-GB', {timeZone:'Europe/Dublin'})}. This review covers the content; it is not an environmental certificate.</p>}
         <Link href={`/wild/${profile.county}`}>
           Discover {county?.brandName} →
         </Link>

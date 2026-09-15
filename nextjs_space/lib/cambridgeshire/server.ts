@@ -6,9 +6,9 @@ import { parseSnapshot } from './snapshot'
  * requests on the public search route. No access to private case evidence. */
 export async function loadSnapshot(): Promise<{ snapshot: Snapshot | null; status: string }> {
   const path = process.env.CAMBRIDGESHIRE_SNAPSHOT_PATH
-  if (!path) return { snapshot: null, status: 'Countywide occurrence import has not been configured. Sourced place accounts are available.' }
+  if (!path) return { snapshot: null, status: 'Explore the place stories below. The wider wildlife records aren’t available here yet.' }
   try {
     if ((await stat(path)).size > SNAPSHOT_LIMIT) throw new Error('Snapshot too large')
-    return { snapshot: parseSnapshot(JSON.parse(await readFile(path, 'utf8'))), status: 'Loaded regional occurrence snapshot. Check coverage and collection date below.' }
-  } catch { return { snapshot: null, status: 'Occurrence snapshot unavailable or invalid. Sourced place accounts remain available.' } }
+    return { snapshot: parseSnapshot(JSON.parse(await readFile(path, 'utf8'))), status: 'Place stories and published wildlife records are available below.' }
+  } catch { return { snapshot: null, status: 'The wider wildlife records couldn’t be loaded. You can still explore the place stories.' } }
 }

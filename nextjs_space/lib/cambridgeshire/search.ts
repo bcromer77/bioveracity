@@ -44,13 +44,13 @@ export function searchRegion(query: string, district: District | '', snapshot: S
   }))
   return { query, district: area || '', claims, groups, coverage, lnrs: LNRS, gaps: SOURCE_GAPS,
     generatedAt: snapshot?.generatedAt || null,
-    explanation: 'Matching evidence in this collection, not every occurrence in the region. Manager accounts and dated records are separate. No current sighting, open-now status or ecological absence is established.',
+    explanation: 'Place stories come from the people who care for these places; wildlife records describe past observations. Neither guarantees a sighting today. Check opening times before setting off.',
   }
 }
 
 export function connections(claim: Claim) {
   return claim.relatedSlugs.flatMap(slug => {
     const target = CLAIMS.find(c => c.placeSlug === slug)
-    return target ? [{ id: target.id, title: target.title, href: `/wild/cambridgeshire#${slug}`, relation: 'Editorial connection; not a surveyed route or shared-species claim' }] : []
+    return target ? [{ id: target.id, title: target.title, href: `/wild/cambridgeshire#${slug}`, relation: 'Another story to explore. Check your route separately; nearby places may have different wildlife.' }] : []
   })
 }

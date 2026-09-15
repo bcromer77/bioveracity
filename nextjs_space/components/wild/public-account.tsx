@@ -7,7 +7,7 @@ export function PublicAccount() {
     return <span aria-label="Loading account" style={{ minWidth: 65 }} />
   return session?.user ? (
     <>
-      <Link href="/wild/studio">My ecology hubs</Link>
+      <Link href="/wild/studio">My local guides</Link>
       <Link href="/workspace">My workspace</Link>
     </>
   ) : (

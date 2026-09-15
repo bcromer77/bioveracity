@@ -29,7 +29,7 @@ const SEASONS = [
     detail:
       'Seasonal inspiration and ready-to-edit copy for guests looking beyond the summer rush.',
     prompt:
-      'Notice what has changed. What can a dated source help you understand?',
+      'What looks different from your last visit? Pick one small change and follow its story.',
     label: 'A quieter escape',
     month: 'OCTOBER',
   },
@@ -63,23 +63,22 @@ export function SeasonalLanding() {
           </h1>
           <p className="bv-intro">
             Turn your photographs and the nature around you into your own
-            ecology hub: a beautiful guest guide, a seasonal content plan and
+            local guide: a beautiful guest guide, a seasonal content plan and
             one QR code that brings it together.
           </p>
           <div className="bv-actions">
             <Link className="bv-button" href="/wild/studio">
-              Create your ecology hub
+              Create your local guide
             </Link>
             <EvidenceLink className="bv-text-link" href="#seasons">
               See the seasonal approach ↗
             </EvidenceLink>
           </div>
           <p className="bv-small">
-            Your venue story and seasonal experiences stay at the centre. You approve what
-            guests see.
+            Your place stays at the heart of the story. You approve your content before we review it for publication.
           </p>
         </div>
-        <aside className="bv-hub-preview" aria-label="Illustrative ecology hub">
+        <aside className="bv-hub-preview" aria-label="Illustrative local guide">
           <div className="bv-preview-top">
             <span>BIOVERACITY</span>
             <span>Illustrative example</span>
@@ -92,7 +91,7 @@ export function SeasonalLanding() {
           </div>
           <div className="bv-preview-body">
             <p className="bv-eyebrow">Your place. A wider world.</p>
-            <h2>Your ecology hub</h2>
+            <h2>Your local guide</h2>
             <p>
               Your rooms, food, craft or experiences. The local stories that
               make a visit memorable.
@@ -116,9 +115,7 @@ export function SeasonalLanding() {
           <em>deserves a better story.</em>
         </h2>
         <p>
-          Build around the experiences you actually offer and the guests you
-          want to reach. Use search-interest data, when available, to inform
-          your planning alongside sourced local material.
+          Start with what makes your place worth a visit. Then give each season its own invitation: a spring wander, a summer discovery or something to look forward to when the evenings draw in.
         </p>
         <div
           className="bv-season-tabs"
@@ -148,8 +145,7 @@ export function SeasonalLanding() {
           </div>
         </div>
         <p className="bv-small">
-          These are editorial examples, not measured demand, a booking forecast
-          or a promise of wildlife sightings.
+          These are ideas to adapt to your place. They don’t predict bookings, and wildlife keeps its own diary.
         </p>
       </section>
       <section className="bv-section bv-tinted">
@@ -176,7 +172,7 @@ export function SeasonalLanding() {
             [
               '03',
               'Submit for review',
-              'Approve your annual plan and submit it. BioVeracity reviews the content before your ecology hub and QR address go live.',
+              'Approve your annual plan and submit it. BioVeracity reviews the content before your local guide and QR address go live.',
             ],
             [
               '04',
@@ -212,7 +208,7 @@ export function SeasonalLanding() {
             className="bv-button bv-green"
             href="/wild/places/example-woodland-venue"
           >
-            Explore the example ecology hub ↗
+            Explore the example local guide ↗
           </Link>
         </div>
         <div className="bv-topic">
@@ -223,8 +219,7 @@ export function SeasonalLanding() {
           </p>
           <p>
             Local sources add context. Your own approved material tells your
-            story. Participation makes no claim about environmental
-            certification.
+            story. Membership is not an environmental certificate.
           </p>
           <Link href="/wild">Explore Wild Counties →</Link>
         </div>
@@ -261,9 +256,9 @@ export function SeasonalLanding() {
             <em>the evidence behind a site?</em>
           </h2>
           <p>
-            Bring planning records, environmental data and private documents
-            into a source-linked chronology. Follow dates, compare statements
-            and prepare reviewed reports.
+            Bring planning records, environmental information and your own documents
+            into one timeline. See what happened when, check the original sources
+            and prepare a report for review.
           </p>
         </div>
         <Link className="bv-button bv-green" href="/professionals">

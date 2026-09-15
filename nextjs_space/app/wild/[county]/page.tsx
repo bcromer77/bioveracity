@@ -12,16 +12,16 @@ export const revalidate = 300
 export function generateStaticParams() { return WILD_COUNTIES.map(({slug}) => ({county:slug})) }
 export async function generateMetadata({params}:{params:Promise<{county:string}>}):Promise<Metadata> {
  const county=getWildCounty((await params).county)
- return county ? {title:county.brandName+' | BioVeracity',description:county.jurisdiction === 'England' ? 'Search sourced wildlife, seasonal displays and visitor places across Cambridgeshire and Peterborough.' : 'Explore API-sourced county biodiversity records inside BioVeracity.'} : {}
+ return county ? {title:county.brandName+' | BioVeracity',description:county.jurisdiction === 'England' ? 'Search sourced wildlife, seasonal displays and visitor places across Cambridgeshire and Peterborough.' : 'Discover the county’s wildlife and follow the stories behind the records.'} : {}
 }
 export default async function WildCountyPage({params}:{params:Promise<{county:string}>}) {
  const county=getWildCounty((await params).county);if(!county)notFound()
  const regional = county.jurisdiction === 'England' ? await loadSnapshot() : null
  return <PublicShell>
-  <section className="bv-hero"><Link href="/wild">All Wild Counties</Link><p className="bv-eyebrow">{county.province} · {county.jurisdiction}</p><h1>{county.brandName}</h1><p className="bv-intro">Discover the wider story through recorded wildlife, with its source and date kept in view.</p></section>
+  <section className="bv-hero"><Link href="/wild">All Wild Counties</Link><p className="bv-eyebrow">{county.province} · {county.jurisdiction}</p><h1>{county.brandName}</h1><p className="bv-intro">There’s more to a place when you know what to look for. Start with its wildlife and follow your curiosity.</p></section>
   {regional && <RegionalSearch snapshot={regional.snapshot} status={regional.status} />}
   {county.jurisdiction === 'England' ? <section className="bv-section">
-   <h2>Places and their connections</h2>
+   <h2>Where will your curiosity take you?</h2>
    <p>Source pages checked 15 September 2026. Seasonal descriptions are not current sightings. Check the manager’s latest access information before travelling. These places are not listed as BioVeracity partners.</p>
    <nav aria-label="Places in this collection" className="my-6 flex flex-wrap gap-4">{county.topics.map(topic => <Link key={topic.slug} href={`#${topic.slug}`} className="underline">{topic.title}</Link>)}</nav>
    {county.topics.map(topic => <article key={topic.slug} id={topic.slug} className="border-t border-current/20 py-8 scroll-mt-24">
@@ -34,9 +34,9 @@ export default async function WildCountyPage({params}:{params:Promise<{county:st
     <p className="mt-4"><strong>Follow the connection: </strong>{topic.connectionNote}</p>
     <div className="mt-2 flex gap-4">{topic.relatedSlugs?.map(slug => <Link key={slug} className="underline" href={`#${slug}`}>{county.topics.find(item => item.slug === slug)?.title}</Link>)}</div>
    </article>)}
-   <p className="mt-6">Connections are editorial suggestions, not surveyed routes, travel-time estimates or proof of ecological effects between sites.</p>
+   <p className="mt-6">These links suggest another place to explore. Check routes and journey times separately; a connection here does not mean the places share the same wildlife.</p>
    <Link className="underline" href="/regions/cambridgeshire-peterborough">Explore the separate regional environmental evidence collection</Link>
   </section> : <section className="bv-section"><CountyNature county={county.slug}/></section>}
-  <section className="bv-section bv-tinted"><h2>Your place in this Wild County</h2><p>Your story, seasonal discoveries and a QR code that starts at your door.</p><Link href="/wild/studio" className="bv-button bv-green">Create your ecology hub</Link></section>
+  <section className="bv-section bv-tinted"><h2>Your place in this Wild County</h2><p>Your story, seasonal discoveries and a QR code that starts at your door.</p><Link href="/wild/studio" className="bv-button bv-green">Create your local guide</Link></section>
  </PublicShell>
 }
