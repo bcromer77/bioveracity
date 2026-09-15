@@ -25,8 +25,13 @@ export default async function EllonaDashboardPage() {
   if (!membership) redirect('/professionals')
   const workspaceId = membership.workspaceId
 
-  // Start the 14-day trial atomically on first login; refresh lastLoginAt.
-  await onPartnerLogin(workspaceId)
+  // Start the 14-day trial atomically on the first CUSTOMER login only, and
+  // refresh lastLoginAt. The originator (Bazil) must never start or shorten the
+  // trial — even if he holds membership for oversight — so his visits are excluded.
+  const callerEmail = (session?.user?.email || '').toLowerCase()
+  if (callerEmail !== BAZIL_EMAIL) {
+    await onPartnerLogin(workspaceId)
+  }
 
   const tenant = await prisma.partnerTenant.findUnique({ where: { workspaceId } })
   if (!tenant) redirect('/professionals')
