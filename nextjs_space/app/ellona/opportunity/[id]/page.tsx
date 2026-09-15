@@ -7,6 +7,7 @@ import { resolveEllonaView, trialAllowsWrites } from '@/lib/ellona/access'
 import { EllonaShell } from '@/components/ellona/ellona-shell'
 import { EllonaMap } from '@/components/ellona/ellona-map'
 import { OpportunityActions } from '@/components/ellona/opportunity-actions'
+import { EvidenceLink } from '@/components/evidence-link'
 import type { MapPoint } from '@/components/ellona/ellona-map-inner'
 import { workspaceOpportunity } from '@/lib/ellona/routing'
 
@@ -93,9 +94,9 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
       <p className="bv-ellona-rep">{REPRESENTATION_LINE}</p>
 
       <div className="bv-ellona-cta">
-        <a className="bv-button bv-green" href={`/api/ellona/opportunity/${opp.id}/pdf`}>
+        <Link className="bv-button bv-green" href={`/api/ellona/opportunity/${opp.id}/pdf`}>
           Download opportunity brief (PDF)
-        </a>
+        </Link>
       </div>
 
       <h2>Record</h2>
@@ -112,9 +113,9 @@ export default async function OpportunityRecordPage({ params }: { params: Promis
           <Row label="Supported source claim">{opp.supportedClaim}</Row>
           <Row label="Supporting passage">{opp.supportingPassage}</Row>
           <Row label="Primary source">
-            <a href={opp.sourceUrl} target="_blank" rel="noreferrer">
+            <EvidenceLink href={opp.sourceUrl} target="_blank" rel="noreferrer">
               {opp.sourceName} ↗
-            </a>
+            </EvidenceLink>
           </Row>
           <Row label="Official reference">{opp.officialId}</Row>
           <Row label="Procedure id">{opp.procedureId}</Row>

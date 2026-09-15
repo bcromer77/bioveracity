@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { EllonaMap } from './ellona-map'
 import type { MapPoint } from './ellona-map-inner'
 import type { OpportunityDTO } from './types'
@@ -16,7 +17,7 @@ function OppCard({ o }: { o: OpportunityDTO }) {
         {o.accessLimited ? <span className="bv-tag bv-tag-warn">Source access limited</span> : null}
       </div>
       <h3>
-        <a href={`/ellona/opportunity/${o.id}`}>{o.title}</a>
+        <Link href={`/ellona/opportunity/${o.id}`}>{o.title}</Link>
       </h3>
       <div className="bv-opp-meta">
         {o.buyer}
@@ -28,9 +29,9 @@ function OppCard({ o }: { o: OpportunityDTO }) {
         <span className="bv-opp-meta">
           {o.tenderDeadline ? `Submission: ${o.tenderDeadline}` : o.clarificationDeadline ? `Clarification: ${o.clarificationDeadline}` : 'No dated deadline'}
         </span>
-        <a href={`/ellona/opportunity/${o.id}`} style={{ fontWeight: 700, fontSize: 13 }}>
+        <Link href={`/ellona/opportunity/${o.id}`} style={{ fontWeight: 700, fontSize: 13 }}>
           Open record →
-        </a>
+        </Link>
       </div>
     </article>
   )

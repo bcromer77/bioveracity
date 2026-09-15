@@ -8,6 +8,7 @@
 // deadline and one action, and links to the full record.
 
 import { AttributionControl, MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet'
+import Link from 'next/link'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 
@@ -75,9 +76,9 @@ export default function EllonaMapInner({ points }: { points: MapPoint[] }) {
               <div style={{ color: '#8a6d1f', marginTop: 2 }}>{precisionLabel(p.precision)}</div>
               {p.deadline ? <div style={{ marginTop: 6 }}>Deadline: {p.deadline}</div> : null}
               <div style={{ marginTop: 6, color: '#333' }}>{p.nextAction}</div>
-              <a href={`/ellona/opportunity/${p.id}`} style={{ display: 'inline-block', marginTop: 8, fontWeight: 700 }}>
+              <Link href={`/ellona/opportunity/${p.id}`} style={{ display: 'inline-block', marginTop: 8, fontWeight: 700 }}>
                 Open full record →
-              </a>
+              </Link>
             </div>
           </Popup>
         )
