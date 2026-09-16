@@ -42,7 +42,9 @@ export type ContractsFinderOptions = Options & {
 /** Bounded JSON fetch mirroring the shared source reader (size-capped, timed out, no redirects). */
 async function fetchJson(url: string, options: Options): Promise<Record<string, unknown>> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 15000)
+  // Contracts Finder's OCDS Search endpoint is legitimately slow (observed ~22s
+  // for a small page), so allow a generous ceiling before aborting.
+  const timer = setTimeout(() => controller.abort(), 30000)
   try {
     const res = await (options.fetcher ?? fetch)(url, {
       headers: { Accept: 'application/json' },
@@ -181,9 +183,13 @@ export async function fetchContractsFinderOcds(options: ContractsFinderOptions =
     const data = await fetchJson(`${CONTRACTS_FINDER_SEARCH}?${params}`, options)
     if (data.error || data.errors) throw new Error('Upstream API error')
 
-    // The search returns an array of release packages (each { releases: [...] });
-    // some responses embed releases directly. Handle both shapes defensively.
-    const results = Array.isArray(data.results) ? data.results : []
+    // The OCDS Search endpoint returns a single release package with a top-level
+    // `releases` array. Some mirrors/older shapes instead return `results` as an
+    // array of packages (each { releases: [...] }) or of bare releases. Handle all
+    // three defensively so live and archived responses both extract correctly.
+    const results = Array.isArray(data.results) ? data.results
+      : Array.isArray(data.releases) ? [data]
+      : []
     const now = (options.now?.() ?? new Date()).toISOString()
     const records: EvidenceInput[] = []
     let rejected = 0

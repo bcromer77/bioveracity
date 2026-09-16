@@ -35,7 +35,7 @@ export type ModGovOptions = Options & {
 /** Bounded text fetch (size-capped, timed out, no redirects) for XML feeds. */
 async function fetchText(url: string, options: Options): Promise<string> {
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 15000)
+  const timer = setTimeout(() => controller.abort(), 30000)
   try {
     const res = await (options.fetcher ?? fetch)(url, {
       headers: { Accept: 'application/rss+xml, application/xml, text/xml' },
