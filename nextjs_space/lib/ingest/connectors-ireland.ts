@@ -37,6 +37,45 @@ export const IRISH_PLANNING='https://services.arcgis.com/NzlPQPKn5QF9v2US/arcgis
 // "IrishPlanningApplications" dataset by the Department of Housing, Local Government
 // and Heritage under CC-BY-4.0. Not invented from the ArcGIS metadata (which is empty).
 export const PLANNING_LICENCE='CC-BY-4.0'
+
+// ---------------------------------------------------------------------------
+// Canonical Irish statutory publishers (reference registry).
+//
+// These identify the authoritative publisher of a statutory record so that an
+// ingested MARA or EPA record can be resolved to a source-register template
+// (see resolveSourceRegister in ./source-register). They are publisher-identity
+// facts only — official name, statutory remit and canonical domain — verified
+// against each authority's own site on 2026-09-16. No connector here fabricates
+// a consent, licence, reference or reading: a MARA/EPA record only becomes
+// registrable when a genuine record carrying a redistributable licence is
+// ingested, and its licence and reference are always taken from that record.
+// ---------------------------------------------------------------------------
+export type IrishStatutoryPublisher = {
+  authorityId: string
+  name: string
+  domain: string
+  remit: string
+}
+// Maritime Area Regulatory Authority — statutory consent authority for the
+// Irish maritime area since 2023 (Maritime Area Planning Act 2021).
+export const MARA_PUBLISHER: IrishStatutoryPublisher = {
+  authorityId: 'ie:mara',
+  name: 'Maritime Area Regulatory Authority (MARA)',
+  domain: 'maritimeregulator.ie',
+  remit: 'Maritime area consents, foreshore authorisations, offshore wind and marine usage licensing in the Republic of Ireland.',
+}
+// Environmental Protection Agency — statutory environmental regulator for the
+// Republic of Ireland.
+export const EPA_PUBLISHER: IrishStatutoryPublisher = {
+  authorityId: 'ie:epa',
+  name: 'Environmental Protection Agency (EPA)',
+  domain: 'epa.ie',
+  remit: 'Industrial emissions, discharge and dumping-at-sea permitting, water quality and environmental licensing in the Republic of Ireland.',
+}
+// The canonical statutory publishers registered for Irish maritime and
+// environmental sources. Extend this list as further authorities are verified.
+export const IRISH_STATUTORY_PUBLISHERS: IrishStatutoryPublisher[] = [MARA_PUBLISHER, EPA_PUBLISHER]
+
 export function countyName(value: unknown): string {return typeof value==='string'?value.toLowerCase().trim().replace(/^(county|co\.)\s+/,'').replace(/\s+county$/,''):''}
 function countyCheck(county: County){if(!COUNTIES.includes(county))throw Error('Unsupported county')}
 export async function fetchNBDCEcologySouthEast(county: County, options: Options = {}): Promise<ConnectorResult>{

@@ -17,6 +17,18 @@
 //    the identical service is published on data.gov.ie as the national
 //    "IrishPlanningApplications" dataset by the Department of Housing, Local
 //    Government and Heritage under CC-BY-4.0. The connector sets that licence.
+//
+// Canonical statutory publishers (added 2026-09-16): the Maritime Area
+// Regulatory Authority (MARA, maritimeregulator.ie) and the Environmental
+// Protection Agency (EPA, epa.ie) are registered as the authoritative Irish
+// publishers for maritime/foreshore consents and environmental licensing
+// respectively. Their publisher identity is fixed here, but — exactly as with
+// the families above — the licence is still read from each ingested record and
+// never assumed: a MARA/EPA record without a redistributable licence returns
+// null and stays out of public search. The publisher constants live in
+// ./connectors-ireland so identity is defined once.
+
+import { MARA_PUBLISHER, EPA_PUBLISHER } from './connectors-ireland'
 
 export type SourceRegisterTemplate = {
   publisher: string
@@ -106,6 +118,42 @@ export function resolveSourceRegister(opts: {
       permittedUses: 'display,export',
       spatialResolution: 'Application metadata only (authority, reference, status, type); no geometry, applicant names or addresses.',
       specificPermissions: 'National planning-application dataset; authority match is explicit per county.',
+    }
+  }
+
+  // Maritime Area Regulatory Authority (MARA) statutory records (authority_id
+  // 'ie:mara'): maritime area consents, foreshore authorisations and marine
+  // usage licences. Registrable only when the ingested record carries a
+  // redistributable licence; the licence and reference are taken from the
+  // record, never assumed or invented here.
+  if (authority === MARA_PUBLISHER.authorityId) {
+    return {
+      publisher: MARA_PUBLISHER.name,
+      datasetIdentifier: 'mara:maritime-area-consents',
+      licence: norm.code,
+      licenceVersion: norm.version ?? undefined,
+      link: `https://www.${MARA_PUBLISHER.domain}`,
+      requiredAttribution: `Maritime Area Regulatory Authority (MARA) (${norm.code})`,
+      permittedUses: 'display,export',
+      specificPermissions: 'Statutory maritime area consents, foreshore authorisations and marine usage licences; each record is registered under its own published reference.',
+    }
+  }
+
+  // Environmental Protection Agency (EPA) Ireland statutory records (authority_id
+  // 'ie:epa'): industrial emissions, discharge and dumping-at-sea permits and
+  // water-quality baselines. Registrable only when the ingested record carries a
+  // redistributable licence; the licence and reference are taken from the
+  // record, never assumed or invented here.
+  if (authority === EPA_PUBLISHER.authorityId) {
+    return {
+      publisher: EPA_PUBLISHER.name,
+      datasetIdentifier: 'epa:environmental-licensing',
+      licence: norm.code,
+      licenceVersion: norm.version ?? undefined,
+      link: `https://www.${EPA_PUBLISHER.domain}`,
+      requiredAttribution: `Environmental Protection Agency (EPA) (${norm.code})`,
+      permittedUses: 'display,export',
+      specificPermissions: 'Statutory environmental licences, discharge and dumping-at-sea permits and water-quality baselines; each record is registered under its own published reference.',
     }
   }
 
