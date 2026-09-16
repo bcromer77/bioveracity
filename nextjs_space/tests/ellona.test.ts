@@ -634,3 +634,202 @@ dbTest('canonical routing and correction lifecycle (DB)', () => {
     }
   })
 })
+
+// ---------------------------------------------------------------------------
+// Shared deterministic portfolio filter (lib/ellona/filter-opportunities.ts).
+// These are pure-function tests with fixtures — NO database, NO PDF byte
+// comparisons. They assert on the exact set of opportunity IDs each filter
+// returns, which is the only thing that guarantees the dashboard and the PDF
+// route can never drift apart.
+// ---------------------------------------------------------------------------
+import {
+  CLOSED_STATUSES,
+  normalizeFilters,
+  filterOpportunities,
+  buildScopeLabel,
+  buildPortfolioPdfQuery,
+  parseFiltersFromParams,
+  type FilterableOpportunity,
+  type EllonaFilters,
+} from '../lib/ellona/filter-opportunities'
+
+describe('shared ellona portfolio filter', () => {
+  const FILTER_NOW = Date.UTC(2026, 8, 16, 12, 0, 0)
+  const DAY = 24 * 60 * 60 * 1000
+  const inDays = (n: number) => FILTER_NOW + n * DAY
+
+  function fx(over: Partial<FilterableOpportunity> & { id: string }): FilterableOpportunity {
+    return {
+      status: 'OPEN',
+      classification: 'Tender',
+      buyer: 'Public body',
+      title: 'Opportunity',
+      country: 'Ireland',
+      region: null,
+      themes: [],
+      capabilities: [],
+      measurementNeed: null,
+      nextAction: null,
+      supportedClaim: null,
+      deadlineEpoch: null,
+      following: false,
+      ...over,
+    }
+  }
+
+  const FIXTURES: FilterableOpportunity[] = [
+    fx({
+      id: 'air-epa',
+      title: 'Ambient air quality monitoring',
+      buyer: 'Environmental Protection Agency',
+      country: 'Ireland',
+      region: 'Leinster',
+      themes: ['Air quality', 'Odour'],
+      capabilities: ['Air monitoring'],
+      measurementNeed: 'Continuous ambient air measurement',
+      status: 'OPEN',
+      deadlineEpoch: inDays(10),
+    }),
+    fx({
+      id: 'air-defra',
+      title: 'Air quality sensor network',
+      buyer: 'Defra',
+      country: 'United Kingdom',
+      region: 'England',
+      themes: ['Air quality'],
+      capabilities: ['Air monitoring', 'Sensor calibration'],
+      status: 'OPEN',
+      deadlineEpoch: inDays(25),
+      following: true,
+    }),
+    fx({
+      id: 'wastewater-uisce',
+      title: 'Wastewater effluent programme',
+      buyer: 'Uisce Eireann',
+      country: 'Ireland',
+      themes: ['Water', 'Wastewater'],
+      capabilities: ['Effluent monitoring'],
+      status: 'OPEN',
+      deadlineEpoch: inDays(5),
+    }),
+    fx({
+      id: 'wastewater-scottish',
+      title: 'Treatment works assessment',
+      buyer: 'Scottish Water',
+      country: 'United Kingdom',
+      themes: ['Water', 'Odour'],
+      capabilities: ['Odour monitoring'],
+      status: 'CLOSED',
+      deadlineEpoch: inDays(40),
+      supportedClaim: 'wastewater odour nuisance abatement',
+    }),
+    fx({
+      id: 'noise-super',
+      title: 'Environmental noise survey',
+      buyer: 'City Council',
+      country: 'Ireland',
+      themes: ['Noise'],
+      capabilities: ['Noise monitoring'],
+      status: 'SUPERSEDED',
+      deadlineEpoch: null,
+    }),
+  ]
+
+  const ALL_IDS = ['air-defra', 'air-epa', 'noise-super', 'wastewater-scottish', 'wastewater-uisce']
+
+  const run = (filters: EllonaFilters) =>
+    filterOpportunities(FIXTURES, (o) => o, filters, FILTER_NOW)
+      .map((o) => o.id)
+      .sort()
+
+  // The headline regression guard: two different searches must produce two
+  // different, genuinely filtered portfolios — never the same full list.
+  test('different Ellona searches must not generate the same unfiltered portfolio', () => {
+    const air = run({ q: 'air' })
+    const wastewater = run({ q: 'wastewater' })
+    assert.deepEqual(air, ['air-defra', 'air-epa'])
+    assert.deepEqual(wastewater, ['wastewater-scottish', 'wastewater-uisce'])
+    assert.notDeepEqual(air, wastewater)
+    assert.notDeepEqual(air, ALL_IDS)
+    assert.notDeepEqual(wastewater, ALL_IDS)
+    assert.ok(air.length < FIXTURES.length)
+    assert.ok(wastewater.length < FIXTURES.length)
+  })
+
+  test('country / theme / capability filters select the right records', () => {
+    assert.deepEqual(run({ country: 'Ireland' }), ['air-epa', 'noise-super', 'wastewater-uisce'])
+    assert.deepEqual(run({ country: 'United Kingdom' }), ['air-defra', 'wastewater-scottish'])
+    assert.deepEqual(run({ theme: 'Odour' }), ['air-epa', 'wastewater-scottish'])
+    assert.deepEqual(run({ capability: 'Air monitoring' }), ['air-defra', 'air-epa'])
+  })
+
+  test('open vs closed uses the authoritative CLOSED_STATUSES set', () => {
+    assert.deepEqual([...CLOSED_STATUSES].sort(), ['CLOSED', 'NOT RELEVANT', 'SUPERSEDED'])
+    assert.deepEqual(run({ status: 'open' }), ['air-defra', 'air-epa', 'wastewater-uisce'])
+    assert.deepEqual(run({ status: 'closed' }), ['noise-super', 'wastewater-scottish'])
+  })
+
+  test('deadline windows honour only 14 and 30 days', () => {
+    assert.deepEqual(run({ deadlineWindow: '14' }), ['air-epa', 'wastewater-uisce'])
+    assert.deepEqual(run({ deadlineWindow: '30' }), ['air-defra', 'air-epa', 'wastewater-uisce'])
+  })
+
+  test('followed-only uses the authoritative follow state', () => {
+    assert.deepEqual(run({ followedOnly: true }), ['air-defra'])
+  })
+
+  test('combined filters are ANDed together', () => {
+    assert.deepEqual(run({ country: 'Ireland', theme: 'Odour', status: 'open' }), ['air-epa'])
+    assert.deepEqual(run({ q: 'odour', country: 'United Kingdom' }), ['wastewater-scottish'])
+  })
+
+  test('zero results stay zero — never fall back to the full portfolio', () => {
+    assert.deepEqual(run({ country: 'Narnia' }), [])
+    assert.deepEqual(run({ status: 'closed', deadlineWindow: '14' }), [])
+  })
+
+  test('no filters returns the whole portfolio', () => {
+    assert.deepEqual(run({}), ALL_IDS)
+  })
+
+  test('invalid filter values never bypass the filter or leak arbitrary state', () => {
+    // Unknown status / deadline collapse to "not applied" — never interpreted.
+    assert.deepEqual(run({ status: 'banana' }), ALL_IDS)
+    assert.deepEqual(run({ deadlineWindow: '7' }), ALL_IDS)
+    assert.deepEqual(run({ status: "garbage-value-123'--" }), ALL_IDS)
+    // A bad value on one dimension must not disable the other, valid dimensions.
+    assert.deepEqual(run({ status: 'banana', country: 'Ireland' }), ['air-epa', 'noise-super', 'wastewater-uisce'])
+    const n = normalizeFilters({ status: 'banana', deadlineWindow: '7' })
+    assert.equal(n.status, '')
+    assert.equal(n.deadlineWindow, '')
+  })
+
+  test('scope label describes the active filters', () => {
+    assert.equal(buildScopeLabel({ country: 'Ireland', theme: 'Odour', status: 'open' }), 'Filtered to: Ireland \u00b7 Odour \u00b7 Open opportunities')
+    assert.equal(buildScopeLabel({ q: 'wastewater', deadlineWindow: '30' }), 'Search: wastewater \u00b7 Next 30 days')
+    assert.equal(buildScopeLabel({}), 'All routed opportunities')
+  })
+
+  test('snapshot metadata carries only the filtered ids plus filters and scope label', () => {
+    const filters: EllonaFilters = { q: 'air' }
+    const snapshot = {
+      filters: normalizeFilters(filters),
+      scopeLabel: buildScopeLabel(filters),
+      ids: run(filters),
+    }
+    assert.deepEqual(snapshot.ids, ['air-defra', 'air-epa'])
+    assert.ok(snapshot.ids.length < ALL_IDS.length)
+    assert.equal(snapshot.scopeLabel, 'Search: air')
+    assert.equal(snapshot.filters.q, 'air')
+  })
+
+  test('URL builder and parser round-trip the normalised filters', () => {
+    const filters: EllonaFilters = { q: 'air', country: 'Ireland', status: 'open', deadlineWindow: '30', followedOnly: true }
+    const url = buildPortfolioPdfQuery(filters)
+    const qs = url.split('?')[1] || ''
+    const parsed = parseFiltersFromParams(new URLSearchParams(qs))
+    assert.deepEqual(parsed, normalizeFilters(filters))
+    // Invalid-only filters produce the bare path (no query string).
+    assert.equal(buildPortfolioPdfQuery({ status: 'banana', deadlineWindow: '7' }), '/api/ellona/portfolio/pdf')
+  })
+})

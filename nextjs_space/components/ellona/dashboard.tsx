@@ -5,6 +5,14 @@ import Link from 'next/link'
 import { EllonaMap } from './ellona-map'
 import type { MapPoint } from './ellona-map-inner'
 import type { OpportunityDTO } from './types'
+import {
+  CLOSED_STATUSES as CLOSED,
+  filterOpportunities,
+  buildScopeLabel,
+  buildPortfolioPdfQuery,
+  type EllonaFilters,
+  type FilterableOpportunity,
+} from '@/lib/ellona/filter-opportunities'
 
 function OppCard({ o }: { o: OpportunityDTO }) {
   return (
@@ -53,7 +61,26 @@ function Section({ title, items }: { title: string; items: OpportunityDTO[] }) {
   )
 }
 
-const CLOSED = new Set(['CLOSED', 'NOT RELEVANT', 'SUPERSEDED'])
+// Adapt the client DTO onto the shared filter shape so the dashboard and the
+// PDF route filter with identical semantics.
+function toFilterable(o: OpportunityDTO): FilterableOpportunity {
+  return {
+    id: o.id,
+    status: o.status,
+    classification: o.classification,
+    buyer: o.buyer,
+    title: o.title,
+    country: o.country,
+    region: o.region,
+    themes: o.themes,
+    capabilities: o.capabilities,
+    measurementNeed: o.measurementNeed,
+    nextAction: o.nextAction,
+    supportedClaim: null,
+    deadlineEpoch: o.deadlineSort,
+    following: o.following,
+  }
+}
 
 export function EllonaDashboard({ opportunities }: { opportunities: OpportunityDTO[] }) {
   const [q, setQ] = useState('')
@@ -74,28 +101,23 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
   )
 
   const now = Date.now()
-  const filtered = useMemo(() => {
-    return opportunities.filter((o) => {
-      if (q) {
-        const hay = `${o.title} ${o.buyer} ${o.measurementNeed || ''}`.toLowerCase()
-        if (!hay.includes(q.toLowerCase())) return false
-      }
-      if (country && o.country !== country) return false
-      if (classification && o.classification !== classification) return false
-      if (theme && !o.themes.includes(theme)) return false
-      if (capability && !o.capabilities.includes(capability)) return false
-      if (status === 'open' && CLOSED.has(o.status)) return false
-      if (status === 'closed' && !CLOSED.has(o.status)) return false
-      if (followedOnly && !o.following) return false
-      if (deadlineWindow) {
-        if (o.deadlineSort == null) return false
-        const days = (o.deadlineSort - now) / (24 * 60 * 60 * 1000)
-        if (deadlineWindow === '14' && (days < 0 || days > 14)) return false
-        if (deadlineWindow === '30' && (days < 0 || days > 30)) return false
-      }
-      return true
-    })
-  }, [opportunities, q, country, classification, theme, capability, status, followedOnly, deadlineWindow, now])
+  const filters: EllonaFilters = { q, country, classification, theme, capability, status, deadlineWindow, followedOnly }
+  const filtered = useMemo(
+    () => filterOpportunities(opportunities, toFilterable, filters, now),
+    [opportunities, q, country, classification, theme, capability, status, followedOnly, deadlineWindow, now],
+  )
+
+  // Build the portfolio PDF URL from the exact current filter state so the
+  // generated document matches what is on screen. The scope label mirrors the
+  // heading the PDF will carry.
+  const portfolioPdfUrl = useMemo(
+    () => buildPortfolioPdfQuery(filters),
+    [q, country, classification, theme, capability, status, deadlineWindow, followedOnly],
+  )
+  const scopeLabel = useMemo(
+    () => buildScopeLabel(filters),
+    [q, country, classification, theme, capability, status, deadlineWindow, followedOnly],
+  )
 
   const points: MapPoint[] = filtered
     .filter((o) => o.latitude != null && o.longitude != null)
@@ -132,8 +154,8 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
     <>
       <div className="bv-ellona-filters">
         <div style={{ gridColumn: '1 / -1' }}>
-          <label htmlFor="f-q">Search buyer, title or measurement need</label>
-          <input id="f-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. air emissions, EPA, catchment" />
+          <label htmlFor="f-q">Search buyer, title, need, region, theme, capability or action</label>
+          <input id="f-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. air emissions, EPA, catchment, odour, wastewater" />
         </div>
         <div>
           <label htmlFor="f-country">Country</label>
@@ -223,6 +245,18 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
       <p className="bv-ellona-count" style={{ marginTop: 20 }}>
         Showing {filtered.length} of {opportunities.length} opportunities.
       </p>
+
+      <div
+        className="bv-ellona-portfolio-action"
+        style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', margin: '4px 0 8px' }}
+      >
+        <a className="bv-button bv-green" href={portfolioPdfUrl}>
+          Generate opportunity portfolio (PDF)
+        </a>
+        <span className="bv-opp-meta" aria-live="polite">
+          {scopeLabel}
+        </span>
+      </div>
 
       <Section title="Corrections and changes" items={corrections} />
       <Section title="Newly routed opportunities" items={newlyRouted} />

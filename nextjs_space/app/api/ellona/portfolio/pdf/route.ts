@@ -9,6 +9,13 @@ import { renderPortfolio, type PortfolioItem } from '@/lib/ellona/pdf'
 import { ELLONA } from '@/lib/ellona/config'
 import { workspaceOpportunities, type ComposedOpportunity } from '@/lib/ellona/routing'
 import { formatDublin } from '@/lib/ellona/trial'
+import { parseDisplayDate } from '@/lib/ellona/display-date'
+import {
+  parseFiltersFromParams,
+  filterOpportunities,
+  buildScopeLabel,
+  type FilterableOpportunity,
+} from '@/lib/ellona/filter-opportunities'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -83,10 +90,36 @@ function jsonSnapshot(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
 }
 
-export async function GET() {
+// Map a tenant-isolated ComposedOpportunity onto the shared filter shape. The
+// authoritative current follow-state comes from reportContext.followedIds
+// (latest FOLLOW/UNFOLLOW per opportunity) — never an invented DB field. The
+// deadline is normalised with the same parser the dashboard uses.
+function toFilterable(opportunity: ComposedOpportunity, followedIds: Set<string>): FilterableOpportunity {
+  const deadline = parseDisplayDate(opportunity.tenderDeadline) || parseDisplayDate(opportunity.clarificationDeadline)
+  return {
+    id: opportunity.id,
+    status: opportunity.status,
+    classification: opportunity.classification,
+    buyer: opportunity.buyer,
+    title: opportunity.title,
+    country: opportunity.country,
+    region: opportunity.region,
+    themes: Array.isArray(opportunity.themes) ? (opportunity.themes as string[]) : [],
+    capabilities: Array.isArray(opportunity.capabilities) ? (opportunity.capabilities as string[]) : [],
+    measurementNeed: opportunity.measurementNeed,
+    nextAction: opportunity.nextAction,
+    supportedClaim: opportunity.supportedClaim,
+    deadlineEpoch: deadline ? deadline.getTime() : null,
+    following: followedIds.has(opportunity.id),
+  }
+}
+
+export async function GET(request: Request) {
   try {
     const { userId, membership, preview } = await requireReader()
     const base = process.env.NEXTAUTH_URL || 'https://bioveracity.com'
+    const filters = parseFiltersFromParams(new URL(request.url).searchParams)
+    const scopeLabel = buildScopeLabel(filters)
     const snapshotAt = new Date()
     const [opportunities, profile, previousReport] = await Promise.all([
       workspaceOpportunities(membership.workspaceId),
@@ -101,7 +134,15 @@ export async function GET() {
       }),
     ])
     const context = await reportContext(membership.workspaceId, opportunities.map((item) => item.id), previousReport?.createdAt ?? null)
-    const items = asPortfolioItems(opportunities, context, base)
+    // Apply the SHARED deterministic filter to the tenant-isolated result BEFORE
+    // building portfolio items. When the filters match nothing we render an
+    // honest empty portfolio — we never fall back to the full workspace.
+    const filteredOpportunities = filterOpportunities(
+      opportunities,
+      (opportunity) => toFilterable(opportunity, context.followedIds),
+      filters,
+    )
+    const items = asPortfolioItems(filteredOpportunities, context, base)
     const evidenceRefreshedAt = profile?.lastEvidenceRefreshAt ?? null
     const notes = coverageNotes(profile)
 
@@ -112,6 +153,7 @@ export async function GET() {
         snapshotLabel: formatDublin(snapshotAt, true),
         evidenceRefreshedLabel: evidenceRefreshedAt ? formatDublin(evidenceRefreshedAt, true) : 'Not yet recorded',
         versionLabel: 'PREVIEW — not issued',
+        scopeLabel,
         coverageNotes: notes,
         items,
       })
@@ -132,6 +174,7 @@ export async function GET() {
         snapshotLabel: formatDublin(snapshotAt, true),
         evidenceRefreshedLabel: evidenceRefreshedAt ? formatDublin(evidenceRefreshedAt, true) : 'Not yet recorded',
         versionLabel: `v${version}`,
+        scopeLabel,
         coverageNotes: notes,
         items,
       })
@@ -143,7 +186,7 @@ export async function GET() {
           version,
           generatedBy: userId,
           evidenceRefreshedAt,
-          snapshot: jsonSnapshot({ snapshotAt, evidenceRefreshedAt, items, coverageNotes: notes }),
+          snapshot: jsonSnapshot({ snapshotAt, evidenceRefreshedAt, filters, scopeLabel, items, coverageNotes: notes }),
           contentHash: createHash('sha256').update(pdf).digest('hex'),
           pdfBytes: pdf,
         },

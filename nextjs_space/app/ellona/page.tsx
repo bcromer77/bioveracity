@@ -188,7 +188,7 @@ export default async function EllonaDashboardPage() {
         <Link className="bv-button bv-green" href="#opportunities">
           View current opportunities
         </Link>
-        <Link className="bv-button" href="/api/ellona/portfolio/pdf">
+        <Link className="bv-button" href="#opportunities">
           Generate opportunity portfolio (PDF)
         </Link>
         {preview ? null : (

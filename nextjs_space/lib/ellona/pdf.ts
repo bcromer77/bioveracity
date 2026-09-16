@@ -263,6 +263,7 @@ export async function renderPortfolio(input: {
   snapshotLabel: string
   evidenceRefreshedLabel: string
   versionLabel: string
+  scopeLabel?: string
   coverageNotes: string[]
   items: PortfolioItem[]
 }): Promise<Buffer> {
@@ -275,6 +276,7 @@ export async function renderPortfolio(input: {
 
   draw(ctx, safe, ELLONA.workspaceName, { size: 11, font: bold, color: [0.09, 0.24, 0.21] })
   draw(ctx, safe, 'Opportunity portfolio', { size: 17, font: bold })
+  if (input.scopeLabel) draw(ctx, safe, input.scopeLabel, { size: 10, font: italic, color: [0.4, 0.34, 0.05] })
   draw(ctx, safe, input.generatedForLabel, { size: 10, color: [0.35, 0.38, 0.34] })
   draw(ctx, safe, `Report version: ${input.versionLabel}`, { size: 9 })
   draw(ctx, safe, `Evidence last refreshed: ${input.evidenceRefreshedLabel}`, { size: 9 })
