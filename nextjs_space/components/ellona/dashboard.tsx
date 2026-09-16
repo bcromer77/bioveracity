@@ -231,7 +231,7 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
       </div>
 
       <h2>Opportunities across the United Kingdom and Ireland</h2>
-      <EllonaMap points={points} />
+      <EllonaMap points={points} matchingCount={filtered.length} />
       <div className="bv-ellona-legend">
         <span>
           <i style={{ background: '#1d6fb8' }} /> Exact coordinate (pin)
