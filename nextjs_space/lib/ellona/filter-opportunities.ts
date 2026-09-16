@@ -110,7 +110,15 @@ export function matchesFilters(o: FilterableOpportunity, filters: EllonaFilters,
   const f = normalizeFilters(filters)
 
   if (f.q) {
-    if (!searchHaystack(o).includes(f.q.toLowerCase())) return false
+    // Tokenised AND search: split the query into whitespace-delimited words and
+    // require EVERY token to appear somewhere in the haystack. This lets natural
+    // multi-word searches (e.g. "air quality Ireland", where "air quality" is a
+    // theme and "Ireland" is the country) match, instead of demanding the whole
+    // phrase be one contiguous substring. A single-word query behaves exactly as
+    // before.
+    const haystack = searchHaystack(o)
+    const tokens = f.q.toLowerCase().split(/\s+/).filter(Boolean)
+    if (!tokens.every((token) => haystack.includes(token))) return false
   }
   if (f.country && o.country !== f.country) return false
   if (f.classification && o.classification !== f.classification) return false

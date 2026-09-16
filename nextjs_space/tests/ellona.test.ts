@@ -756,6 +756,21 @@ describe('shared ellona portfolio filter', () => {
     assert.ok(wastewater.length < FIXTURES.length)
   })
 
+  test('multi-word searches match across fields (tokenised AND, not one contiguous phrase)', () => {
+    // "air quality" lives in the themes and "Ireland" is the country — these are
+    // never a single contiguous substring, yet a natural search for all three
+    // words must find the EPA record. This is the 0-results regression guard.
+    assert.deepEqual(run({ q: 'air quality ireland' }), ['air-epa'])
+    // Word order is irrelevant; every token simply has to appear somewhere.
+    assert.deepEqual(run({ q: 'ireland quality air' }), ['air-epa'])
+    // Extra whitespace between tokens is ignored.
+    assert.deepEqual(run({ q: '  air    quality  ' }), ['air-defra', 'air-epa'])
+    // A token that appears in no record still narrows the result to nothing.
+    assert.deepEqual(run({ q: 'air quality mongolia' }), [])
+    // Words spread across buyer + theme ("Scottish" buyer, "Odour" theme).
+    assert.deepEqual(run({ q: 'scottish odour' }), ['wastewater-scottish'])
+  })
+
   test('country / theme / capability filters select the right records', () => {
     assert.deepEqual(run({ country: 'Ireland' }), ['air-epa', 'noise-super', 'wastewater-uisce'])
     assert.deepEqual(run({ country: 'United Kingdom' }), ['air-defra', 'wastewater-scottish'])
