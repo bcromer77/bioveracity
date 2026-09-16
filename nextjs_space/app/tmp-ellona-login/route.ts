@@ -52,7 +52,12 @@ export async function GET(req: NextRequest) {
     maxAge: 60 * 60, // 1 hour
   })
 
-  const url = new URL('/ellona', req.url)
+  // Use x-forwarded-host so the redirect lands on the external preview domain,
+  // not on localhost (which the user's browser can't reach).
+  const fwdHost = req.headers.get('x-forwarded-host')
+  const fwdProto = req.headers.get('x-forwarded-proto') || 'http'
+  const base = fwdHost ? `${fwdProto}://${fwdHost}` : req.url
+  const url = new URL('/ellona', base)
   const res = NextResponse.redirect(url, 303)
   res.cookies.set(cookieName, token, {
     httpOnly: true,
