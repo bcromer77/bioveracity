@@ -572,8 +572,8 @@ dbTest('canonical routing and correction lifecycle (DB)', () => {
     const base: CanonicalOpportunityInput = {
       verificationState: 'VERIFIED', sourceName: 'Official test portal', sourceUrl: `https://example.test/notices/${officialId}`,
       publisher: 'Test Authority', officialId, buyer: 'Test Council', title: 'Test air and port monitoring tender',
-      country: 'United Kingdom', region: 'Cambridge', classification: 'OPEN TENDER', sourceStatus: 'OPEN',
-      themes: ['air quality', 'marine'], capabilities: ['air quality monitoring', 'marine monitoring'],
+      country: 'Synthetica', region: 'Test Region Alpha', classification: 'OPEN TENDER', sourceStatus: 'OPEN',
+      themes: ['synthetic air lens', 'synthetic marine lens'], capabilities: ['synthetic air capability', 'synthetic marine capability'],
       measurementNeed: 'Continuous environmental measurement.', publicationDate: '15 September 2026',
       tenderDeadline: '30 September 2026 12:00 (Europe/Dublin)', supportedClaim: 'The authority is procuring monitoring.',
       supportingPassage: 'The authority invites tenders for environmental monitoring.', sourceReadable: true,
@@ -581,11 +581,11 @@ dbTest('canonical routing and correction lifecycle (DB)', () => {
     }
     try {
       for (const [workspaceId, orgName, contactEmail, themes, capabilities] of [
-        [wsA, 'Ellona Test', `ellona-${suffix}@example.invalid`, ['air quality'], ['air quality monitoring']],
-        [wsB, 'Mara Test', `mara-${suffix}@example.invalid`, ['marine'], ['marine monitoring']],
+        [wsA, 'Ellona Test', `ellona-${suffix}@example.invalid`, ['synthetic air lens'], ['synthetic air capability']],
+        [wsB, 'Mara Test', `mara-${suffix}@example.invalid`, ['synthetic marine lens'], ['synthetic marine capability']],
       ] as const) {
         await prisma.partnerTenant.create({ data: { workspaceId, orgName, workspaceName: `${orgName} Watch`, contactName: orgName, contactEmail, originatorName: 'Test', originatorOrg: 'Test', trialState: 'ACTIVE', trialEndsAt: new Date(Date.now() + 86_400_000) } })
-        await prisma.partnerMonitoringProfile.create({ data: { workspaceId, territories: ['United Kingdom'], themes: [...themes], capabilities: [...capabilities], immediateClassifications: ['OPEN TENDER'] } })
+        await prisma.partnerMonitoringProfile.create({ data: { workspaceId, territories: ['Synthetica'], themes: [...themes], capabilities: [...capabilities], immediateClassifications: ['OPEN TENDER'] } })
       }
       const interpretations = {
         [wsA]: { relevance: 'Ellona air-quality lens.', nextAction: 'Assess sensor fit.' },
