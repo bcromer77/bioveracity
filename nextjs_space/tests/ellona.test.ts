@@ -757,18 +757,24 @@ describe('shared ellona portfolio filter', () => {
   })
 
   test('multi-word searches match across fields (tokenised AND, not one contiguous phrase)', () => {
-    // "air quality" lives in the themes and "Ireland" is the country — these are
-    // never a single contiguous substring, yet a natural search for all three
-    // words must find the EPA record. This is the 0-results regression guard.
-    assert.deepEqual(run({ q: 'air quality ireland' }), ['air-epa'])
+    // Tokens spread across title + buyer must all match, though they are never a
+    // single contiguous substring: "monitoring" is in the EPA title, "protection"
+    // in its buyer ("Environmental Protection Agency"). This is the 0-results
+    // regression guard.
+    assert.deepEqual(run({ q: 'monitoring protection' }), ['air-epa'])
     // Word order is irrelevant; every token simply has to appear somewhere.
-    assert.deepEqual(run({ q: 'ireland quality air' }), ['air-epa'])
+    assert.deepEqual(run({ q: 'protection monitoring' }), ['air-epa'])
     // Extra whitespace between tokens is ignored.
     assert.deepEqual(run({ q: '  air    quality  ' }), ['air-defra', 'air-epa'])
     // A token that appears in no record still narrows the result to nothing.
     assert.deepEqual(run({ q: 'air quality mongolia' }), [])
-    // Words spread across buyer + theme ("Scottish" buyer, "Odour" theme).
+    // Words spread across buyer + supported-claim scope text ("Scottish" buyer,
+    // "odour" in the supported claim). Structured facets (country/theme) are NOT
+    // part of the free-text haystack — they have their own dropdowns.
     assert.deepEqual(run({ q: 'scottish odour' }), ['wastewater-scottish'])
+    // A country name typed into the search box does NOT match: country is a
+    // structured dropdown facet, never a free-text keyword.
+    assert.deepEqual(run({ q: 'ireland' }), [])
   })
 
   test('country / theme / capability filters select the right records', () => {

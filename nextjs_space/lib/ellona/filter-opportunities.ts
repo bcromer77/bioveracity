@@ -85,8 +85,11 @@ export function normalizeFilters(filters: EllonaFilters): NormalizedFilters {
 
 /**
  * Deterministic, case-insensitive free-text haystack for one opportunity.
- * Expanded (per the brief) beyond title/buyer/measurement need to also cover
- * region, country, themes, capabilities, next action and supported claim.
+ * Scoped to the DESCRIPTIVE text a user would type into the search box: the
+ * title, buyer and scope-of-work text (measurement need, region, next action,
+ * supported claim). Structured facets (country, classification, theme,
+ * capability) are deliberately EXCLUDED here — each is matched exactly via its
+ * own dropdown, never folded into the typed keyword search.
  */
 function searchHaystack(o: FilterableOpportunity): string {
   return [
@@ -94,9 +97,6 @@ function searchHaystack(o: FilterableOpportunity): string {
     o.buyer,
     o.measurementNeed,
     o.region,
-    o.country,
-    ...(o.themes || []),
-    ...(o.capabilities || []),
     o.nextAction,
     o.supportedClaim,
   ]
@@ -110,12 +110,13 @@ export function matchesFilters(o: FilterableOpportunity, filters: EllonaFilters,
   const f = normalizeFilters(filters)
 
   if (f.q) {
-    // Tokenised AND search: split the query into whitespace-delimited words and
-    // require EVERY token to appear somewhere in the haystack. This lets natural
-    // multi-word searches (e.g. "air quality Ireland", where "air quality" is a
-    // theme and "Ireland" is the country) match, instead of demanding the whole
-    // phrase be one contiguous substring. A single-word query behaves exactly as
-    // before.
+    // Tokenised AND search across the descriptive text only (title, buyer, scope
+    // of work). Split the query into whitespace-delimited words and require EVERY
+    // token to appear somewhere in the haystack, so natural multi-word searches
+    // (e.g. "monitoring protection", spread across title and buyer) match without
+    // demanding the whole phrase be one contiguous substring. Structured facets
+    // (country, classification, theme, capability) are NOT searched here — they
+    // are exact dropdown matches below.
     const haystack = searchHaystack(o)
     const tokens = f.q.toLowerCase().split(/\s+/).filter(Boolean)
     if (!tokens.every((token) => haystack.includes(token))) return false

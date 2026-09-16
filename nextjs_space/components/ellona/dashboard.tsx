@@ -154,8 +154,8 @@ export function EllonaDashboard({ opportunities }: { opportunities: OpportunityD
     <>
       <div className="bv-ellona-filters">
         <div style={{ gridColumn: '1 / -1' }}>
-          <label htmlFor="f-q">Search buyer, title, need, region, theme, capability or action</label>
-          <input id="f-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. air emissions, EPA, catchment, odour, wastewater" />
+          <label htmlFor="f-q">Search title, buyer, need, region or action</label>
+          <input id="f-q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. air emissions, EPA, catchment, wastewater" />
         </div>
         <div>
           <label htmlFor="f-country">Country</label>
