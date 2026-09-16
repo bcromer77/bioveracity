@@ -531,15 +531,18 @@ dbTest('originator read-only preview access (DB)', () => {
       await prisma.user.create({ data: { id: memberId, email: `member-${randomUUID()}@example.invalid`, name: 'Test Member', role: 'partner_member' } })
       await prisma.privateWorkspaceMember.create({ data: { workspaceId: ws, userId: memberId, role: 'CONTRIBUTOR' } })
 
-      // Membership of a different partner tenant never resolves /ellona.
+      // A member of a *different* partner tenant resolves to their OWN tenant
+      // and is never routed to the real Ellona workspace.
+      const ellona = await prisma.partnerTenant.findFirst({ where: { contactEmail: ELLONA.contactEmail }, select: { workspaceId: true } })
       const memberView = await resolveEllonaView(memberId, 'anything@example.invalid')
-      assert.equal(memberView, null)
+      assert.equal(memberView?.workspaceId, ws)
+      if (ellona) assert.notEqual(memberView?.workspaceId, ellona.workspaceId)
       const memberWs = await findEllonaWorkspace(memberId)
-      assert.equal(memberWs, null)
+      assert.equal(memberWs?.workspaceId, ws)
+      if (ellona) assert.notEqual(memberWs?.workspaceId, ellona.workspaceId)
 
       // 2) The originator (Bazil) is NOT a member anywhere, so he resolves to a
       //    READ-ONLY preview that targets the real Ellona tenant only.
-      const ellona = await prisma.partnerTenant.findFirst({ where: { contactEmail: ELLONA.contactEmail }, select: { workspaceId: true } })
       const originatorView = await resolveEllonaView(strangerId, ORIGINATOR_EMAIL)
       if (ellona) {
         assert.ok(originatorView, 'originator should resolve a preview view when the Ellona tenant exists')
