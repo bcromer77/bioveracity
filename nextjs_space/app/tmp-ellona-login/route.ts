@@ -20,22 +20,39 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'user not found' }, { status: 404 })
 
   const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || ''
-  const token = await encode({
-    token: { sub: user.id, email: user.email, name: user.name },
-    secret,
-    maxAge: 3600,
-  })
 
-  const isSecure = request.nextUrl.protocol === 'https:'
-  const cookieName = isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token'
+  // Build an absolute redirect target from the forwarded host so we land back on
+  // the public preview domain, not the internal localhost the server sees.
+  const fwdHost = request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host
+  const fwdProto = request.headers.get('x-forwarded-proto') || 'https'
+  const target = `${fwdProto}://${fwdHost}/ellona`
+  const res = NextResponse.redirect(target, 303)
 
-  const res = NextResponse.redirect(new URL('/ellona', request.url), 303)
-  res.cookies.set(cookieName, token, {
-    path: '/',
-    httpOnly: true,
-    secure: isSecure,
-    sameSite: 'lax',
-    maxAge: 3600,
-  })
+  // The session-token cookie name (and its decode salt) depend on whether the
+  // app is running with secure cookies. To be robust we mint a token for BOTH
+  // the secure and non-secure names, each salted with its own name; the app
+  // reads whichever one it is configured for and ignores the other.
+  for (const cookieName of ['authjs.session-token', '__Secure-authjs.session-token']) {
+    const token = await encode({
+      token: {
+        sub: user.id,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: (user as any).role ?? 'user',
+        accessState: (user as any).accessState ?? 'REGISTERED',
+      },
+      secret,
+      salt: cookieName,
+      maxAge: 3600,
+    })
+    res.cookies.set(cookieName, token, {
+      path: '/',
+      httpOnly: true,
+      secure: cookieName.startsWith('__Secure-'),
+      sameSite: 'lax',
+      maxAge: 3600,
+    })
+  }
   return res
 }
