@@ -286,6 +286,12 @@
 .bv-tag-class{background:#e6ede4;border-color:#c4d3c6;color:#2f4a3c}
 .bv-tag-cat{background:#eef1ea;border:1px solid #d3dacb;color:#4a5748;font-size:10px}
 .bv-tag-warn{background:#fff0dc;border-color:#dfb36f;color:#704514}
+.bv-tag-award{background:#173d35;border-color:#173d35;color:#dfc27a}
+.bv-award-block{margin:12px 0 4px;padding:12px 14px;background:#f2f6f1;border:1px solid #cfe0cf;border-left:4px solid #173d35;border-radius:8px}
+.bv-award-head{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#173d35;margin-bottom:6px}
+.bv-award-row{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;line-height:1.5;color:#2b382f;padding:2px 0}
+.bv-award-label{min-width:120px;font-weight:600;color:#5a6b60}
+.bv-award-row a{color:#1a5a4c;font-weight:600;word-break:break-all}
 .bv-ellona-refresh{font-size:12px;color:#5a6b60;margin:-12px 0 24px}
 .bv-ellona-filters{background:#fff;border:1px solid #e2ddcb;border-radius:9px;padding:16px 18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:8px 0 26px}
 .bv-ellona-filters label{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#7d7148;display:block;margin-bottom:6px}
@@ -318,3 +324,37 @@
 .bv-tag-cat.cat-bioveracity-analysis{background:#e5ecf6;border-color:#adc2df;color:#274268}
 .bv-tag-cat.cat-ellona-input{background:#f6ecdc;border-color:#e0c79a;color:#6b4e17}
 .bv-tag-cat.cat-unknown{background:#efefe9;border-color:#d3d3c8;color:#6a6a5e}
+
+/* Public venue audit ledger (QR-plaque scan target) — Ellona palette, mobile-first */
+.bv-venue{min-height:100vh;background:#f7f4ec;padding:20px 14px 56px;color:#1c261f}
+.bv-venue-shell{max-width:560px;margin:0 auto}
+.bv-venue-head{background:#173d35;color:#f7f4ec;border-radius:14px;padding:22px 20px;margin-bottom:16px}
+.bv-venue-brand{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.5px;color:#dfc27a;text-decoration:none}
+.bv-venue-kicker{display:block;margin-top:10px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#bcd0c4}
+.bv-venue-head h1{margin:6px 0 4px;font-size:24px;line-height:1.2;color:#fff}
+.bv-venue-sub{margin:0;font-size:14px;color:#cfe0cf}
+.bv-venue-meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:#dfe8df}
+.bv-venue-meta span{background:rgba(255,255,255,.08);border:1px solid rgba(223,194,122,.4);border-radius:20px;padding:4px 11px}
+.bv-venue-status{background:#dfc27a!important;border-color:#dfc27a!important;color:#3a2f0c!important;font-weight:700}
+.bv-venue-download{display:block;text-align:center;background:#dfc27a;color:#3a2f0c;font-weight:700;font-size:15px;text-decoration:none;border-radius:10px;padding:15px 18px;margin-bottom:22px;border:1px solid #cfae5f}
+.bv-venue-download:active{background:#d4b866}
+.bv-venue-section{margin-bottom:24px}
+.bv-venue-section h2{font-size:16px;font-weight:700;color:#173d35;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #dfc27a}
+.bv-venue-empty{font-size:14px;line-height:1.6;color:#5a6b60;font-style:italic;background:#fff;border:1px dashed #c4d3c6;border-radius:10px;padding:16px}
+.bv-venue-list,.bv-venue-readings{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.bv-venue-card,.bv-venue-reading{background:#fff;border:1px solid #e2ddcb;border-radius:12px;padding:16px 16px 14px;box-shadow:0 1px 2px rgba(23,61,53,.05)}
+.bv-venue-card{border-left:4px solid #173d35}
+.bv-venue-card-head,.bv-venue-reading-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.bv-venue-card-title,.bv-venue-param{font-size:15px;font-weight:700;color:#1c261f}
+.bv-venue-badge{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border-radius:20px;padding:4px 10px;white-space:nowrap}
+.bv-venue-badge-active{background:#e6ede4;border:1px solid #7fae8c;color:#245c3c}
+.bv-venue-badge-validated{background:#e6ede4;border:1px solid #7fae8c;color:#245c3c}
+.bv-venue-badge-pending{background:#fff0dc;border:1px solid #dfb36f;color:#704514}
+.bv-venue-ref{margin:2px 0;font-size:13px;font-weight:600;color:#3a4a3f}
+.bv-venue-line{margin:2px 0;font-size:13px;line-height:1.55;color:#54635a}
+.bv-venue-cond{margin:8px 0 4px;font-size:13px;line-height:1.6;color:#2b382f;background:#f2f6f1;border-radius:8px;padding:9px 11px}
+.bv-venue-src{display:inline-block;margin-top:8px;font-size:13px;font-weight:600;color:#1a5a4c;word-break:break-all}
+.bv-venue-value{margin:2px 0 4px;font-size:22px;font-weight:700;color:#173d35}
+.bv-venue-foot{margin-top:30px;border-top:1px solid #ddd6c4;padding-top:16px}
+.bv-venue-foot p{font-size:12px;line-height:1.6;color:#6a7a6f;margin:0 0 10px}
+.bv-venue-full{font-size:13px;font-weight:600;color:#173d35}

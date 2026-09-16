@@ -11,7 +11,7 @@
 
 // Closed-status set — authoritative for the `status` filter. Preserved exactly
 // from the dashboard so the on-screen "Open"/"Closed" toggle and the PDF agree.
-export const CLOSED_STATUSES = new Set(['CLOSED', 'NOT RELEVANT', 'SUPERSEDED'])
+export const CLOSED_STATUSES = new Set(['CLOSED', 'NOT RELEVANT', 'SUPERSEDED', 'AWARDED'])
 
 // Only these two deadline windows and two statuses are ever honoured. Anything
 // else is treated as "not filtered on this dimension".

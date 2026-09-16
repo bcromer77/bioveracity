@@ -16,6 +16,11 @@ export type OpportunityDTO = {
   latitude: number | null
   longitude: number | null
   precision: string | null
+  awardedSupplierName: string | null
+  awardedSupplierId: string | null
+  awardedValue: number | null
+  buyerContactName: string | null
+  buyerContactEmail: string | null
   following: boolean
   hasCorrection: boolean
   deadlineSort: number | null

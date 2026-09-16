@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Opportunity Watch | BioVeracity', robots: { index: false, follow: false } }
 
 const BAZIL_EMAIL = 'bazil.cromer@ripplexn.com'
-const CLOSED = new Set(['CLOSED', 'NOT RELEVANT', 'SUPERSEDED'])
+const CLOSED = new Set(['CLOSED', 'NOT RELEVANT', 'SUPERSEDED', 'AWARDED'])
 
 export default async function EllonaDashboardPage() {
   if (!ellonaEnabled()) notFound()
@@ -87,6 +87,11 @@ export default async function EllonaDashboardPage() {
       latitude: o.latitude,
       longitude: o.longitude,
       precision: o.precision,
+      awardedSupplierName: o.awardedSupplierName ?? null,
+      awardedSupplierId: o.awardedSupplierId ?? null,
+      awardedValue: o.awardedValue ?? null,
+      buyerContactName: o.buyerContactName ?? null,
+      buyerContactEmail: o.buyerContactEmail ?? null,
       following: followState.get(o.id) ?? o.status === 'FOLLOWING',
       hasCorrection: corrected.has(o.id),
       deadlineSort: deadlineDate ? deadlineDate.getTime() : null,

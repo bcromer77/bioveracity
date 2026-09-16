@@ -49,6 +49,7 @@ import {
   opportunityVersionHash,
   classifyChange,
   parseCanonicalOpportunityInput,
+  canonicalSnapshot,
   routeCanonicalOpportunity,
   type CanonicalOpportunityInput,
 } from '../lib/ellona/routing'
@@ -306,6 +307,31 @@ describe('canonical opportunity routing', () => {
     assert.throws(() => parseCanonicalOpportunityInput({ ...wire, verificationState: 'PENDING_REVIEW' }))
     assert.throws(() => parseCanonicalOpportunityInput({ ...wire, supportedClaim: '' }))
     assert.throws(() => parseCanonicalOpportunityInput({ ...wire, customerWorkspaceId: 'ellona-test' }))
+  })
+
+  test('award notice and buyer-contact fields parse, snapshot and mark status AWARDED', () => {
+    const wire = {
+      ...input,
+      retrievedAt: input.retrievedAt.toISOString(),
+      evidenceDocumentId: 'verified-evidence-test',
+      sourceStatus: 'Awarded',
+      awardedSupplierName: 'Riverbank Environmental Ltd',
+      awardedSupplierId: 'GB-COH-04567890',
+      awardedValue: 128500,
+      buyerContactName: 'Procurement Team',
+      buyerContactEmail: 'procurement@example.test',
+    }
+    const parsed = parseCanonicalOpportunityInput(wire)
+    assert.equal(parsed.awardedSupplierName, 'Riverbank Environmental Ltd')
+    assert.equal(parsed.awardedValue, 128500)
+    assert.equal(parsed.buyerContactEmail, 'procurement@example.test')
+    const snapshot = canonicalSnapshot(parsed)
+    assert.equal(snapshot.awardedSupplierName, 'Riverbank Environmental Ltd')
+    assert.equal(snapshot.awardedValue, 128500)
+    assert.equal(snapshot.buyerContactName, 'Procurement Team')
+    // A negative award value and a malformed contact email must be rejected.
+    assert.throws(() => parseCanonicalOpportunityInput({ ...wire, awardedValue: -5 }))
+    assert.throws(() => parseCanonicalOpportunityInput({ ...wire, buyerContactEmail: 'not-an-email' }))
   })
 
   test('retrieval alone does not create a new version; a deadline correction does', () => {
@@ -785,7 +811,7 @@ describe('shared ellona portfolio filter', () => {
   })
 
   test('open vs closed uses the authoritative CLOSED_STATUSES set', () => {
-    assert.deepEqual([...CLOSED_STATUSES].sort(), ['CLOSED', 'NOT RELEVANT', 'SUPERSEDED'])
+    assert.deepEqual([...CLOSED_STATUSES].sort(), ['AWARDED', 'CLOSED', 'NOT RELEVANT', 'SUPERSEDED'])
     assert.deepEqual(run({ status: 'open' }), ['air-defra', 'air-epa', 'wastewater-uisce'])
     assert.deepEqual(run({ status: 'closed' }), ['noise-super', 'wastewater-scottish'])
   })

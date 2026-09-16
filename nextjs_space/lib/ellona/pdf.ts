@@ -255,6 +255,10 @@ export type PortfolioItem = {
   bucket: 'NEW' | 'CORRECTION' | 'OPEN' | 'FOLLOWING' | 'CLOSED' | 'SEED'
   accessLimitation: string | null
   nextAction: string | null
+  awardedSupplierName?: string | null
+  awardedValue?: number | null
+  buyerContactName?: string | null
+  buyerContactEmail?: string | null
 }
 
 export async function renderPortfolio(input: {
@@ -305,6 +309,17 @@ export async function renderPortfolio(input: {
       color: [0.4, 0.34, 0.05],
       indent: 4,
     })
+    if (it.awardedSupplierName || it.awardedValue != null) {
+      const val = it.awardedValue != null && Number.isFinite(it.awardedValue)
+        ? `£${String(Math.round(it.awardedValue)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+        : null
+      const parts = [it.awardedSupplierName, val].filter(Boolean).join(' — ')
+      draw(ctx, safe, `Awarded to: ${parts}`, { size: 10, font: bold, color: [0.09, 0.24, 0.21], indent: 4 })
+    }
+    if (it.buyerContactName || it.buyerContactEmail) {
+      const contact = [it.buyerContactName, it.buyerContactEmail].filter(Boolean).join(' — ')
+      draw(ctx, safe, `Buyer contact: ${contact}`, { size: 9, indent: 4 })
+    }
     if (it.measurementNeed) draw(ctx, safe, `Measurement need: ${it.measurementNeed}`, { size: 10, indent: 4 })
     if (it.location) draw(ctx, safe, `Location: ${it.location}`, { size: 10, indent: 4 })
     draw(ctx, safe, `Deadline: ${it.deadline || 'no stated deadline'}`, { size: 10, indent: 4 })
@@ -331,5 +346,123 @@ export async function renderPortfolio(input: {
   gap(ctx, 6)
   await drawQr(ctx, input.dashboardUrl, 'Scan to open your live opportunity watch.', safe)
   footer(ctx, safe, input.dashboardUrl)
+  return Buffer.from(await pdf.save())
+}
+
+// ---- Venue audit ledger ----------------------------------------------------
+// A public "Official BioVeracity Audit Report" for a single physical asset,
+// intended to be reached from a QR plaque at the venue. It renders ONLY real
+// stored data — active statutory permits and the latest sensor readings — with
+// honest empty states. Nothing is inferred or invented.
+
+export type VenueAuthItem = {
+  permitRef: string | null
+  type: string
+  authority: string | null
+  status: string
+  grantedDate: Date | null
+  expiryDate: Date | null
+  conditions: string | null
+  sourceUrl: string | null
+}
+
+export type VenueMeasurementItem = {
+  parameter: string
+  value: number | null
+  unit: string | null
+  date: Date | null
+  station: string | null
+  validated: boolean
+}
+
+export type VenueAuditInput = {
+  venueName: string
+  venueTypeLabel: string
+  location: string | null
+  operatorName: string | null
+  regulatorName: string | null
+  jurisdiction: string | null
+  statusLabel: string
+  permits: VenueAuthItem[]
+  measurements: VenueMeasurementItem[]
+  recordUrl: string
+}
+
+function auditDate(value: Date | null): string {
+  if (!value) return 'not stated'
+  return new Intl.DateTimeFormat('en-IE', { timeZone: 'Europe/Dublin', dateStyle: 'medium' }).format(value)
+}
+
+function titleCase(value: string): string {
+  return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+export async function renderVenueAudit(input: VenueAuditInput): Promise<Buffer> {
+  const pdf = await PDFDocument.create()
+  const { font, bold, italic } = await loadFonts(pdf)
+  const safe = safeFactory(font)
+  pdf.setTitle(`BioVeracity audit report — ${input.venueName}`)
+  pdf.setProducer(`BioVeracity ${PDF_VERSION}`)
+  const ctx = newCtx(pdf, font, bold, italic)
+
+  draw(ctx, safe, 'Official BioVeracity Audit Report', { size: 11, font: bold, color: [0.09, 0.24, 0.21] })
+  draw(ctx, safe, input.venueName, { size: 18, font: bold })
+  draw(ctx, safe, `${input.venueTypeLabel}${input.location ? ` • ${input.location}` : ''}`, {
+    size: 10, font: italic, color: [0.4, 0.34, 0.05],
+  })
+  draw(ctx, safe, `Current status: ${input.statusLabel}`, { size: 10, color: [0.35, 0.38, 0.34] })
+  if (input.operatorName) draw(ctx, safe, `Operator: ${input.operatorName}`, { size: 10 })
+  if (input.regulatorName) draw(ctx, safe, `Regulator: ${input.regulatorName}`, { size: 10 })
+  if (input.jurisdiction) draw(ctx, safe, `Jurisdiction: ${input.jurisdiction}`, { size: 10 })
+  gap(ctx)
+
+  draw(ctx, safe, 'Active statutory permits', { size: 13, font: bold, color: [0.09, 0.24, 0.21] })
+  if (!input.permits.length) {
+    draw(ctx, safe, 'No active statutory permits are recorded for this venue in BioVeracity.', {
+      size: 10, font: italic, color: [0.4, 0.44, 0.4],
+    })
+  } else {
+    let n = 0
+    for (const p of input.permits) {
+      n++
+      draw(ctx, safe, `${n}. ${titleCase(p.type)}${p.permitRef ? ` (${p.permitRef})` : ''}`, { size: 12, font: bold })
+      if (p.authority) draw(ctx, safe, `Authority: ${p.authority}`, { size: 10, indent: 4 })
+      draw(ctx, safe, `Status: ${titleCase(p.status)}`, { size: 10, indent: 4 })
+      draw(ctx, safe, `Granted: ${auditDate(p.grantedDate)}  •  Expires: ${auditDate(p.expiryDate)}`, { size: 10, indent: 4 })
+      if (p.conditions) draw(ctx, safe, `Conditions: ${p.conditions}`, { size: 9, indent: 4 })
+      if (p.sourceUrl) draw(ctx, safe, `Source: ${p.sourceUrl}`, { size: 9, link: p.sourceUrl, color: [0.1, 0.3, 0.7], indent: 4 })
+      gap(ctx, 8)
+    }
+  }
+  gap(ctx)
+
+  draw(ctx, safe, 'Latest sensor compliance readings', { size: 13, font: bold, color: [0.09, 0.24, 0.21] })
+  if (!input.measurements.length) {
+    draw(ctx, safe, 'No sensor measurements are recorded for this venue in BioVeracity.', {
+      size: 10, font: italic, color: [0.4, 0.44, 0.4],
+    })
+  } else {
+    for (const m of input.measurements) {
+      const reading = m.value != null && Number.isFinite(m.value) ? `${m.value}${m.unit ? ` ${m.unit}` : ''}` : 'no value recorded'
+      draw(ctx, safe, `${titleCase(m.parameter)}: ${reading}`, { size: 11, font: bold })
+      const meta = [
+        `Recorded: ${auditDate(m.date)}`,
+        m.station ? `Station: ${m.station}` : null,
+        m.validated ? 'Validated reading' : 'Awaiting validation',
+      ].filter(Boolean).join('  •  ')
+      draw(ctx, safe, meta, { size: 9, color: [0.4, 0.44, 0.4], indent: 4 })
+      gap(ctx, 6)
+    }
+  }
+
+  gap(ctx, 6)
+  await drawQr(ctx, input.recordUrl, 'Scan to open the live audit ledger for this venue.', safe)
+  gap(ctx, 14)
+  draw(ctx, safe, 'This report reflects the current source-linked record held by BioVeracity for this venue. A permit or reading appears only when it is present in that record — nothing is inferred.', {
+    size: 9, font: italic, color: [0.36, 0.4, 0.36],
+  })
+  const stamp = new Intl.DateTimeFormat('en-IE', { timeZone: 'Europe/Dublin', dateStyle: 'medium', timeStyle: 'short' }).format(new Date())
+  draw(ctx, safe, `Snapshot generated ${stamp}. Open the live ledger for the latest status.`, { size: 9, color: [0.4, 0.44, 0.4] })
+  draw(ctx, safe, input.recordUrl, { size: 9, link: input.recordUrl, color: [0.1, 0.3, 0.7] })
   return Buffer.from(await pdf.save())
 }

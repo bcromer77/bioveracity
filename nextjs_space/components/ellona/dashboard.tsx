@@ -14,12 +14,24 @@ import {
   type FilterableOpportunity,
 } from '@/lib/ellona/filter-opportunities'
 
+// Format an award value without relying on the runtime locale, so server and
+// client markup match (hydration-safe). Amounts are whole-pound grouped.
+function formatAwardValue(value: number | null): string | null {
+  if (value == null || !Number.isFinite(value)) return null
+  const whole = Math.round(value)
+  const grouped = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return `£${grouped}`
+}
+
 function OppCard({ o }: { o: OpportunityDTO }) {
+  const isAwarded = o.status === 'AWARDED'
+  const awardValue = formatAwardValue(o.awardedValue)
   return (
     <article className="bv-opp-card">
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <span className="bv-tag bv-tag-status">{o.status}</span>
         <span className="bv-tag bv-tag-class">{o.classification}</span>
+        {isAwarded ? <span className="bv-tag bv-tag-award">Awarded Contract</span> : null}
         {o.following ? <span className="bv-tag bv-tag-cat">Following</span> : null}
         {o.isSeed ? <span className="bv-tag bv-tag-cat">Trial seed — previously published</span> : null}
         {o.accessLimited ? <span className="bv-tag bv-tag-warn">Source access limited</span> : null}
@@ -33,6 +45,35 @@ function OppCard({ o }: { o: OpportunityDTO }) {
         {[o.region, o.country].filter(Boolean).join(', ')}
       </div>
       {o.measurementNeed ? <p className="bv-opp-need">{o.measurementNeed}</p> : null}
+      {isAwarded && (o.awardedSupplierName || awardValue || o.buyerContactName || o.buyerContactEmail) ? (
+        <div className="bv-award-block">
+          <div className="bv-award-head">Awarded contract</div>
+          {o.awardedSupplierName ? (
+            <div className="bv-award-row">
+              <span className="bv-award-label">Winning supplier</span>
+              <span>{o.awardedSupplierName}</span>
+            </div>
+          ) : null}
+          {awardValue ? (
+            <div className="bv-award-row">
+              <span className="bv-award-label">Contract value</span>
+              <span>{awardValue}</span>
+            </div>
+          ) : null}
+          {o.buyerContactName ? (
+            <div className="bv-award-row">
+              <span className="bv-award-label">Buyer contact</span>
+              <span>{o.buyerContactName}</span>
+            </div>
+          ) : null}
+          {o.buyerContactEmail ? (
+            <div className="bv-award-row">
+              <span className="bv-award-label">Contact email</span>
+              <a href={`mailto:${o.buyerContactEmail}`} suppressHydrationWarning>{o.buyerContactEmail}</a>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div className="bv-opp-foot">
         <span className="bv-opp-meta">
           {o.tenderDeadline ? `Submission: ${o.tenderDeadline}` : o.clarificationDeadline ? `Clarification: ${o.clarificationDeadline}` : 'No dated deadline'}

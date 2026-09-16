@@ -43,6 +43,11 @@ export type CanonicalOpportunityInput = {
   port?: string | null
   protectedSite?: string | null
   planningAuthority?: string | null
+  awardedSupplierName?: string | null
+  awardedSupplierId?: string | null
+  awardedValue?: number | null
+  buyerContactName?: string | null
+  buyerContactEmail?: string | null
   provenance?: Record<string, unknown>
   retrievedAt: Date
   nextAction: string
@@ -101,6 +106,11 @@ const canonicalOpportunitySchema = z.object({
   port: optionalShort,
   protectedSite: optionalShort,
   planningAuthority: optionalShort,
+  awardedSupplierName: optionalShort,
+  awardedSupplierId: optionalShort,
+  awardedValue: z.number().finite().nonnegative().nullable().optional(),
+  buyerContactName: optionalShort,
+  buyerContactEmail: z.string().trim().email().max(320).nullable().optional(),
   provenance: z.record(z.unknown()).refine((value) => JSON.stringify(value).length <= 20_000, 'Provenance exceeds the size limit.').optional(),
   retrievedAt: timestamp,
   nextAction: z.string().trim().min(1).max(3000),
@@ -190,7 +200,8 @@ const SNAPSHOT_FIELDS = [
   'publishedValue', 'valueBasis', 'publicationDate', 'eventDate', 'clarificationDeadline', 'tenderDeadline',
   'duration', 'supportedClaim', 'supportingPassage', 'accessLimitations', 'sourceReadable', 'locationType',
   'latitude', 'longitude', 'coordSource', 'precision', 'waterbody', 'catchment', 'port', 'protectedSite',
-  'planningAuthority', 'provenance',
+  'planningAuthority', 'awardedSupplierName', 'awardedSupplierId', 'awardedValue',
+  'buyerContactName', 'buyerContactEmail', 'provenance',
 ] as const
 
 export function canonicalSnapshot(input: CanonicalOpportunityInput): Record<string, unknown> {
@@ -280,6 +291,11 @@ function publicData(input: CanonicalOpportunityInput, versionHash: string) {
     port: input.port ?? null,
     protectedSite: input.protectedSite ?? null,
     planningAuthority: input.planningAuthority ?? null,
+    awardedSupplierName: input.awardedSupplierName ?? null,
+    awardedSupplierId: input.awardedSupplierId ?? null,
+    awardedValue: input.awardedValue ?? null,
+    buyerContactName: input.buyerContactName ?? null,
+    buyerContactEmail: input.buyerContactEmail ?? null,
     provenance: input.provenance ?? {},
     retrievedAt: input.retrievedAt,
   }
@@ -294,7 +310,8 @@ function inputJson(value: unknown): Prisma.InputJsonValue {
 }
 
 function visibleStatus(sourceStatus: string, existing?: string | null, changed = false): string {
-  if (/closed|awarded|expired|cancelled|withdrawn/i.test(sourceStatus)) return 'CLOSED'
+  if (/awarded/i.test(sourceStatus)) return 'AWARDED'
+  if (/closed|expired|cancelled|withdrawn/i.test(sourceStatus)) return 'CLOSED'
   if (existing === 'NOT RELEVANT') return existing
   if (changed && existing) return 'ACTION REQUIRED'
   return existing || 'NEW'
@@ -443,6 +460,11 @@ export type ComposedOpportunity = Omit<WorkspaceOpportunityRow, 'buyer' | 'title
   supportedClaim: string
   supportingPassage: string
   accessLimitations: string | null
+  awardedSupplierName: string | null
+  awardedSupplierId: string | null
+  awardedValue: number | null
+  buyerContactName: string | null
+  buyerContactEmail: string | null
   evidenceRefreshedAt: Date
 }
 
@@ -480,6 +502,11 @@ export function composeOpportunity(row: WorkspaceOpportunityRow): ComposedOpport
     port: source?.port ?? row.port,
     protectedSite: source?.protectedSite ?? row.protectedSite,
     planningAuthority: source?.planningAuthority ?? row.planningAuthority,
+    awardedSupplierName: source?.awardedSupplierName ?? null,
+    awardedSupplierId: source?.awardedSupplierId ?? null,
+    awardedValue: source?.awardedValue ?? null,
+    buyerContactName: source?.buyerContactName ?? null,
+    buyerContactEmail: source?.buyerContactEmail ?? null,
     sourceStatus: source?.sourceStatus ?? row.status,
     supportedClaim: source?.supportedClaim ?? '',
     supportingPassage: source?.supportingPassage ?? '',

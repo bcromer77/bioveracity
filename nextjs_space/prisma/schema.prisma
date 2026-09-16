@@ -1067,6 +1067,11 @@ model PublicOpportunity {
   port                   String?
   protectedSite         String?
   planningAuthority     String?
+  awardedSupplierName   String?
+  awardedSupplierId     String?
+  awardedValue          Float?
+  buyerContactName      String?
+  buyerContactEmail     String?
   provenance            Json     @default("{}")
   retrievedAt           DateTime @db.Timestamptz(3)
   createdAt             DateTime @default(now()) @db.Timestamptz(3)

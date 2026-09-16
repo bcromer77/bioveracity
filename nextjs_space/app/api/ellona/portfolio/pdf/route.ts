@@ -50,6 +50,10 @@ function asPortfolioItems(opportunities: ComposedOpportunity[], context: ReportC
       bucket: bucketFor(opportunity, context),
       accessLimitation: opportunity.accessLimitations,
       nextAction: opportunity.nextAction,
+      awardedSupplierName: opportunity.awardedSupplierName ?? null,
+      awardedValue: opportunity.awardedValue ?? null,
+      buyerContactName: opportunity.buyerContactName ?? null,
+      buyerContactEmail: opportunity.buyerContactEmail ?? null,
     }))
     .sort((left, right) => (left.deadline || '9999').localeCompare(right.deadline || '9999'))
 }
