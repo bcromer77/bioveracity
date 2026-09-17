@@ -17,6 +17,7 @@ export const KINDS = [
   'community',
   'other',
 ] as const
+export type Recommendation = { name: string; note: string }
 export type Profile = {
   name: string
   county: string
@@ -24,6 +25,13 @@ export type Profile = {
   story: string
   website: string
   interests: string[]
+  // Optional place fields, stored additively in the existing profile JSON.
+  locality?: string
+  invitation?: string
+  visitUrl?: string
+  visitPrompt?: string
+  natureStory?: string
+  recommendations?: Recommendation[]
 }
 export type Trend = {
   term: string
@@ -102,6 +110,22 @@ export function text(v: unknown, max: number, required = true): string {
     )
   return v.trim()
 }
+// Optional free text: absent/blank is allowed and normalises to ''.
+export function optText(v: unknown, max: number): string {
+  if (v === undefined || v === null) return ''
+  return text(v, max, false)
+}
+export function recommendationsInput(v: unknown): Recommendation[] {
+  if (v === undefined || v === null) return []
+  if (!Array.isArray(v) || v.length > 3)
+    throw new HubError(400, 'Add up to three nearby recommendations.')
+  return v
+    .map((item) => {
+      const r = record(item)
+      return { name: optText(r.name, 120), note: optText(r.note, 300) }
+    })
+    .filter((r) => r.name || r.note)
+}
 export function publicUrl(value: unknown): string {
   const v = text(value, 500, false)
   if (!v) return ''
@@ -140,6 +164,12 @@ export function profileInput(raw: unknown): Profile {
     story: text(v.story, 2000),
     website: publicUrl(v.website),
     interests: [...new Set(v.interests as string[])],
+    locality: optText(v.locality, 160),
+    invitation: optText(v.invitation, 200),
+    visitUrl: v.visitUrl ? publicUrl(v.visitUrl) : '',
+    visitPrompt: optText(v.visitPrompt, 400),
+    natureStory: optText(v.natureStory, 1500),
+    recommendations: recommendationsInput(v.recommendations),
   }
 }
 // Parse a single-series Google Trends "Interest over time" CSV. Preserve censored

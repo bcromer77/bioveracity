@@ -5,7 +5,7 @@ import { EvidenceLink } from '@/components/evidence-link'
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { WILD_COUNTIES } from '@/lib/wild-counties/counties'
+import { WILD_COUNTIES, getWildCounty } from '@/lib/wild-counties/counties'
 import {
   KINDS,
   MONTHS,
@@ -32,6 +32,12 @@ const empty: Profile = {
   story: '',
   website: '',
   interests: ['nature'],
+  locality: '',
+  invitation: '',
+  visitUrl: '',
+  visitPrompt: '',
+  natureStory: '',
+  recommendations: [],
 }
 export function HubStudio() {
   const [list, setList] = useState<{ id: string; profile: Profile }[]>([]),
@@ -113,7 +119,7 @@ export function HubStudio() {
     }
   }
   async function open(id: string) {
-    if (dirty && !window.confirm('Discard unsaved changes and open this hub?'))
+    if (dirty && !window.confirm('Discard unsaved changes and open this place?'))
       return
     await run(async () => {
       receive((await api(`/api/wild/hubs/${id}`)).hub)
@@ -121,6 +127,14 @@ export function HubStudio() {
   }
   function update<K extends keyof Profile>(key: K, value: Profile[K]) {
     setProfile({ ...profile, [key]: value })
+    setDirty(true)
+    setApproved(false)
+  }
+  function recField(i: number, key: 'name' | 'note', value: string) {
+    const recs = [...(profile.recommendations || [])]
+    while (recs.length < 3) recs.push({ name: '', note: '' })
+    recs[i] = { ...recs[i], [key]: value }
+    setProfile({ ...profile, recommendations: recs })
     setDirty(true)
     setApproved(false)
   }
@@ -154,14 +168,17 @@ export function HubStudio() {
     !!hub && JSON.stringify(profile) !== JSON.stringify(hub.profile)
   const planDirty = !!hub && JSON.stringify(plan) !== JSON.stringify(hub.plan)
   const campaign = plan?.campaigns[month]
+  const recs = profile.recommendations || []
+  const countyBrand = getWildCounty(profile.county)?.brandName || profile.county
   return (
     <section className="bv-section bv-studio">
-      <p className="bv-eyebrow">Your venue. Your seasons. Your approval.</p>
-      <h1>Your ecology hubs</h1>
+      <p className="bv-eyebrow">Your place. Your words. Your approval.</p>
+      <h1>Your Wild Counties page</h1>
       <p>
-        Build a guest guide and twelve months of content. Drafts are private.
-        Publishing requires your approval and a BioVeracity editorial review; it does not purchase signage
-        or start a paid membership.
+        Create your place, add your photographs and preview your page exactly as a
+        visitor will see it. Your draft stays private. Publishing needs your
+        approval and a short review by our team; it does not buy signage or start a
+        paid membership.
       </p>
       <div aria-live="polite">
         {error && (
@@ -201,7 +218,7 @@ export function HubStudio() {
               setAuthorised(false)
             }}
           >
-            New ecology hub
+            Add another place
           </button>
           {hub && (
             <button className="bv-text-link" onClick={() => open(hub.id)}>
@@ -229,18 +246,18 @@ export function HubStudio() {
                     })
                 receive(next.hub)
                 setMessage(
-                  'Venue details saved. Generate a fresh seasonal plan when ready.',
+                  'Your place is saved. Preview it, then send it for review when ready.',
                 )
                 await refresh()
               })
             }}
           >
             {planDirty && (
-              <p>Save your plan edits before changing venue details.</p>
+              <p>Save your seasonal plan edits before changing your place.</p>
             )}
             <fieldset disabled={busy || planDirty}>
-              <legend>1. Tell your story</legend>
-              <label htmlFor="hub-name">Venue name</label>
+              <legend>Your place</legend>
+              <label htmlFor="hub-name">Place name</label>
               <input
                 id="hub-name"
                 value={profile.name}
@@ -248,7 +265,7 @@ export function HubStudio() {
                 maxLength={100}
                 onChange={(e) => update('name', e.target.value)}
               />
-              <label htmlFor="hub-kind">Venue type</label>
+              <label htmlFor="hub-kind">Kind of place</label>
               <select
                 id="hub-kind"
                 value={profile.kind}
@@ -262,7 +279,7 @@ export function HubStudio() {
                   </option>
                 ))}
               </select>
-              <label htmlFor="hub-county">County</label>
+              <label htmlFor="hub-county">Wild County</label>
               <select
                 id="hub-county"
                 value={profile.county}
@@ -274,6 +291,27 @@ export function HubStudio() {
                   </option>
                 ))}
               </select>
+              <label htmlFor="hub-locality">Town or area (optional)</label>
+              <input
+                id="hub-locality"
+                value={profile.locality || ''}
+                maxLength={160}
+                placeholder="e.g. near Downpatrick"
+                onChange={(e) => update('locality', e.target.value)}
+              />
+            </fieldset>
+            <fieldset disabled={busy || planDirty}>
+              <legend>Your story</legend>
+              <label htmlFor="hub-invitation">
+                One-line welcome (optional)
+              </label>
+              <input
+                id="hub-invitation"
+                value={profile.invitation || ''}
+                maxLength={200}
+                placeholder="A short invitation to visitors"
+                onChange={(e) => update('invitation', e.target.value)}
+              />
               <label htmlFor="hub-story">Your story</label>
               <textarea
                 id="hub-story"
@@ -283,17 +321,7 @@ export function HubStudio() {
                 required
                 onChange={(e) => update('story', e.target.value)}
               />
-              <label htmlFor="hub-website">
-                Your website or booking link (HTTPS)
-              </label>
-              <input
-                id="hub-website"
-                type="url"
-                value={profile.website}
-                onChange={(e) => update('website', e.target.value)}
-                maxLength={500}
-              />
-              <p>What should guests explore?</p>
+              <p>What should visitors explore?</p>
               {['nature', 'coast', 'food', 'craft'].map((i) => (
                 <label className="bv-check" key={i}>
                   <input
@@ -311,12 +339,83 @@ export function HubStudio() {
                   {i}
                 </label>
               ))}
+            </fieldset>
+            <fieldset disabled={busy || planDirty}>
+              <legend>Plan a visit</legend>
+              <label htmlFor="hub-website">
+                Your website (HTTPS, optional)
+              </label>
+              <input
+                id="hub-website"
+                type="url"
+                value={profile.website}
+                onChange={(e) => update('website', e.target.value)}
+                maxLength={500}
+              />
+              <label htmlFor="hub-visit-url">
+                Booking or visit link (HTTPS, optional)
+              </label>
+              <input
+                id="hub-visit-url"
+                type="url"
+                value={profile.visitUrl || ''}
+                onChange={(e) => update('visitUrl', e.target.value)}
+                maxLength={500}
+              />
+              <label htmlFor="hub-visit-prompt">
+                Before you come (optional)
+              </label>
+              <textarea
+                id="hub-visit-prompt"
+                rows={3}
+                value={profile.visitPrompt || ''}
+                maxLength={400}
+                placeholder="Opening times, parking, access notes"
+                onChange={(e) => update('visitPrompt', e.target.value)}
+              />
+            </fieldset>
+            <fieldset disabled={busy || planDirty}>
+              <legend>Nature around your place</legend>
+              <label htmlFor="hub-nature-story">
+                In your own words (optional)
+              </label>
+              <textarea
+                id="hub-nature-story"
+                rows={4}
+                value={profile.natureStory || ''}
+                maxLength={1500}
+                placeholder="What visitors might notice in the landscape and wildlife around you"
+                onChange={(e) => update('natureStory', e.target.value)}
+              />
+              <p>Nearby, worth a look (optional, up to three)</p>
+              <p className="bv-small">
+                These are shown as your own recommendations, clearly marked as not
+                verified by BioVeracity.
+              </p>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="bv-rec">
+                  <label htmlFor={`hub-rec-name-${i}`}>Name</label>
+                  <input
+                    id={`hub-rec-name-${i}`}
+                    value={recs[i]?.name || ''}
+                    maxLength={120}
+                    onChange={(e) => recField(i, 'name', e.target.value)}
+                  />
+                  <label htmlFor={`hub-rec-note-${i}`}>Why you like it</label>
+                  <input
+                    id={`hub-rec-note-${i}`}
+                    value={recs[i]?.note || ''}
+                    maxLength={300}
+                    onChange={(e) => recField(i, 'note', e.target.value)}
+                  />
+                </div>
+              ))}
               <button
                 className="bv-button bv-green"
                 type="submit"
                 disabled={planDirty}
               >
-                {hub ? 'Save venue details' : 'Create private draft'}
+                {hub ? 'Save your place' : 'Create private draft'}
               </button>
             </fieldset>
           </form>
@@ -351,15 +450,15 @@ export function HubStudio() {
                   setRights(false)
                   setScanConsent(false)
                   setMessage(
-                    'Photo saved privately. Select it when you publish.',
+                    'Photo saved privately. Select it when you send for review.',
                   )
                 })
               }}
             >
               <fieldset disabled={busy}>
-                <legend>2. Add your photographs</legend>
+                <legend>Your photographs</legend>
                 <p>
-                  JPEG or PNG, up to 3 MB each. Twelve photos per hub. Location
+                  JPEG or PNG, up to 3 MB each. Twelve photos per place. Location
                   metadata is removed.
                 </p>
                 <label htmlFor="hub-photo">Choose a photograph</label>
@@ -424,14 +523,198 @@ export function HubStudio() {
             <div className="bv-topic">
               <h2>Start with your place.</h2>
               <p>
-                Save your details to unlock photographs, a seasonal plan and
-                your publication preview.
+                Save your details to unlock photographs, a private preview and
+                sending your page for review.
               </p>
             </div>
           ) : (
             <>
               <section className="bv-form">
-                <h2>3. Shape the seasons</h2>
+                <h2>Preview my page</h2>
+                <p>
+                  See your place exactly as a Wild Counties visitor will, using
+                  your saved words and photographs. Only you can see this preview
+                  and nothing is published.
+                </p>
+                {dirty ? (
+                  <p className="bv-small">
+                    Save your changes to update the preview.
+                  </p>
+                ) : (
+                  <Link
+                    className="bv-button bv-green"
+                    href={`/wild/studio/${hub.id}/preview`}
+                    target="_blank"
+                  >
+                    Preview my page ↗
+                  </Link>
+                )}
+              </section>
+              <section className="bv-form">
+                <h2>Send for review</h2>
+                {hub.review && <p role="status">Status: {hub.review.status}{hub.review.reason ? ' · ' + hub.review.reason : ''}. Saving changes needs a new submission.</p>}
+                <p>
+                  Choose the photographs to include, confirm you are happy, then
+                  send your saved page to our team. Your published page, if any,
+                  stays unchanged until a new version is approved.
+                </p>
+                <div className="bv-photo-grid">
+                  {hub.photos.map((p) => (
+                    <figure key={p.id}>
+                      <img src={`/api/wild/photos/${p.id}`} alt={p.caption} />
+                      <figcaption>
+                        {p.caption} · {p.credit}
+                      </figcaption>
+                      <label className="bv-check">
+                        <input
+                          type="checkbox"
+                          checked={selectedPhotos.includes(p.id)}
+                          onChange={(e) => {
+                            setSelectedPhotos(
+                              e.target.checked
+                                ? [...selectedPhotos, p.id]
+                                : selectedPhotos.filter((x) => x !== p.id),
+                            )
+                            setApproved(false)
+                          }}
+                        />
+                        Show on my page
+                      </label>
+                      <button
+                        className="bv-text-link"
+                        disabled={busy || dirty}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              'Permanently delete this photo from your place?',
+                            )
+                          )
+                            return
+                          run(async () =>
+                            receive(
+                              (
+                                await api(
+                                  `/api/wild/hubs/${hub.id}/photos`,
+                                  'DELETE',
+                                  { photoId: p.id, revision: hub.revision },
+                                )
+                              ).hub,
+                            ),
+                          )
+                        }}
+                      >
+                        Delete photo
+                      </button>
+                    </figure>
+                  ))}
+                </div>
+                <CountyNature county={profile.county}/><p className="bv-small">Source-linked county records are shown for context and update separately from your approved words and photographs.</p>
+                {!plan && (
+                  <p className="bv-small">
+                    Add a seasonal plan below before sending your page for review.
+                  </p>
+                )}
+                <label className="bv-check">
+                  <input
+                    type="checkbox"
+                    checked={authorised}
+                    onChange={(e) => setAuthorised(e.target.checked)}
+                  />
+                  I am authorised to represent this place and publish the
+                  selected material.
+                </label>
+                <label className="bv-check">
+                  <input
+                    type="checkbox"
+                    checked={approved}
+                    onChange={(e) => setApproved(e.target.checked)}
+                  />
+                  I have reviewed my place details, selected photos and the
+                  seasonal plan. I approve this version for public use and
+                  automatic monthly selection within its plan year.
+                </label>
+                <button
+                  className="bv-button bv-green"
+                  disabled={busy || dirty || !plan || !approved || !authorised}
+                  onClick={() =>
+                    action(
+                      {
+                        action: 'submit',
+                        photoIds: selectedPhotos,
+                        approved,
+                        authorised,
+                      },
+                      'Version submitted for editorial review. Your public page stays unchanged until approval.',
+                    )
+                  }
+                >
+                  Submit for editorial review
+                </button>
+                {hub.published && (
+                  <div className="bv-published">
+                    <p>
+                      Published version {hub.published.version} ·{' '}
+                      {new Date(hub.published.approvedAt).toLocaleDateString(
+                        'en-GB',
+                      )}
+                    </p>
+                    <Link href={`/wild/places/${hub.id}`} target="_blank">
+                      Open published page ↗
+                    </Link>
+                    <p>
+                      <button
+                        className="bv-text-link"
+                        disabled={busy || dirty}
+                        onClick={() =>
+                          action(
+                            { action: 'unpublish' },
+                            'Page unpublished. Its public page and QR destination are no longer available.',
+                          )
+                        }
+                      >
+                        Unpublish page
+                      </button>
+                    </p>
+                  </div>
+                )}
+                <div className="bv-plaque">
+                  <p className="bv-eyebrow">{countyBrand}</p>
+                  <h3>{profile.name || 'Your place'}</h3>
+                  {hub.published ? (
+                    <>
+                      <img
+                        width={180}
+                        height={180}
+                        src={`/api/wild/qr/${hub.id}`}
+                        alt="QR code for your published Wild Counties page"
+                      />
+                      <EvidenceLink href={`/api/wild/qr/${hub.id}?download=1`} download>
+                        Download QR
+                      </EvidenceLink>
+                      <p className="bv-small">
+                        Digital plaque preview. This QR opens your published page.
+                        It is a preview only — no plaque is ordered or
+                        manufactured here. Check the destination before printing.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bv-plaque-qr" aria-hidden="true">QR</div>
+                      <p className="bv-small">
+                        Digital plaque preview. Your QR opens this page once it is
+                        published. This is a preview only — no plaque is ordered or
+                        manufactured here.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </section>
+              <section className="bv-form">
+                <h2>Seasonal plan</h2>
+                <p className="bv-small">
+                  Optional twelve-month set of gentle discovery ideas. A saved
+                  plan is needed before you send your page for review.
+                </p>
                 <p>{trendSummary(hub.trend)}</p>
                 {hub.trend && (
                   <p className="bv-small">
@@ -550,7 +833,8 @@ export function HubStudio() {
                 </button>
                 {dirty && (
                   <p>
-                    Save your edits before generating, uploading or publishing.
+                    Save your edits before generating, uploading or sending for
+                    review.
                   </p>
                 )}
               </section>
@@ -558,12 +842,12 @@ export function HubStudio() {
                 <section className="bv-form">
                   {profileDirty && (
                     <p>
-                      Save your venue details and regenerate the plan before
-                      editing monthly content.
+                      Save your place and regenerate the plan before editing
+                      monthly content.
                     </p>
                   )}
                   <fieldset disabled={busy || profileDirty}>
-                    <legend>4. Review your plan</legend>
+                    <legend>Review your seasonal plan</legend>
                     <p>
                       Plan for {plan.year}. These are editable invitations and
                       activities. Check suitability, opening information and
@@ -590,7 +874,7 @@ export function HubStudio() {
                       maxLength={180}
                       onChange={(e) => campaignField('title', e.target.value)}
                     />
-                    <label htmlFor="campaign-intro">Guest introduction</label>
+                    <label htmlFor="campaign-intro">Visitor introduction</label>
                     <textarea
                       id="campaign-intro"
                       value={campaign.introduction}
@@ -661,140 +945,6 @@ export function HubStudio() {
                   </fieldset>
                 </section>
               )}
-              <section className="bv-form">
-                <h2>5. Submit your ecology hub for review</h2>
-                {hub.review && <p role="status">Editorial status: {hub.review.status}{hub.review.reason ? ' · ' + hub.review.reason : ''}. Saving changes requires a new submission.</p>}
-                <h3>{profile.name}</h3>
-                <p className="bv-preserve">{profile.story}</p>
-                <p>Website: {profile.website || 'Not added'}</p>
-                <div className="bv-photo-grid">
-                  {hub.photos.map((p) => (
-                    <figure key={p.id}>
-                      <img src={`/api/wild/photos/${p.id}`} alt={p.caption} />
-                      <figcaption>
-                        {p.caption} · {p.credit}
-                      </figcaption>
-                      <label className="bv-check">
-                        <input
-                          type="checkbox"
-                          checked={selectedPhotos.includes(p.id)}
-                          onChange={(e) => {
-                            setSelectedPhotos(
-                              e.target.checked
-                                ? [...selectedPhotos, p.id]
-                                : selectedPhotos.filter((x) => x !== p.id),
-                            )
-                            setApproved(false)
-                          }}
-                        />
-                        Include on public hub
-                      </label>
-                      <button
-                        className="bv-text-link"
-                        disabled={busy || dirty}
-                        onClick={() => {
-                          if (
-                            !window.confirm(
-                              'Permanently delete this photo from your hub?',
-                            )
-                          )
-                            return
-                          run(async () =>
-                            receive(
-                              (
-                                await api(
-                                  `/api/wild/hubs/${hub.id}/photos`,
-                                  'DELETE',
-                                  { photoId: p.id, revision: hub.revision },
-                                )
-                              ).hub,
-                            ),
-                          )
-                        }}
-                      >
-                        Delete photo
-                      </button>
-                    </figure>
-                  ))}
-                </div>
-                <CountyNature county={profile.county}/><p>API records are county context and update separately from your approved words and photographs.</p>
-                <label className="bv-check">
-                  <input
-                    type="checkbox"
-                    checked={authorised}
-                    onChange={(e) => setAuthorised(e.target.checked)}
-                  />
-                  I am authorised to represent this venue and publish the
-                  selected material.
-                </label>
-                <label className="bv-check">
-                  <input
-                    type="checkbox"
-                    checked={approved}
-                    onChange={(e) => setApproved(e.target.checked)}
-                  />
-                  I have reviewed the venue details, selected photos and all
-                  twelve monthly entries. I approve this version for public use
-                  and automatic monthly selection within its plan year.
-                </label>
-                <button
-                  className="bv-button bv-green"
-                  disabled={busy || dirty || !plan || !approved || !authorised}
-                  onClick={() =>
-                    action(
-                      {
-                        action: 'submit',
-                        photoIds: selectedPhotos,
-                        approved,
-                        authorised,
-                      },
-                      'Version submitted for editorial review. Your public hub stays unchanged until approval.',
-                    )
-                  }
-                >
-                  Submit for editorial review
-                </button>
-                {hub.published && (
-                  <div className="bv-published">
-                    <p>
-                      Published version {hub.published.version} ·{' '}
-                      {new Date(hub.published.approvedAt).toLocaleDateString(
-                        'en-GB',
-                      )}
-                    </p>
-                    <Link href={`/wild/places/${hub.id}`} target="_blank">
-                      Open public ecology hub ↗
-                    </Link>
-                    <p>
-                      Use this QR only after checking the destination and
-                      printed proof.
-                    </p>
-                    <img
-                      width={180}
-                      height={180}
-                      src={`/api/wild/qr/${hub.id}`}
-                      alt="Your ecology hub QR code"
-                    />
-                    <EvidenceLink href={`/api/wild/qr/${hub.id}?download=1`} download>
-                      Download QR
-                    </EvidenceLink>
-                    <p>
-                      <button
-                        className="bv-text-link"
-                        disabled={busy || dirty}
-                        onClick={() =>
-                          action(
-                            { action: 'unpublish' },
-                            'Hub unpublished. Its public page and QR destination are no longer available.',
-                          )
-                        }
-                      >
-                        Unpublish hub
-                      </button>
-                    </p>
-                  </div>
-                )}
-              </section>
             </>
           )}
         </div>
