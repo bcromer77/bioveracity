@@ -50,8 +50,7 @@ export function HubStudio() {
     [error, setError] = useState(''),
     [dirty, setDirty] = useState(false),
     [approved, setApproved] = useState(false),
-    [authorised, setAuthorised] = useState(false),
-    [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
+    [authorised, setAuthorised] = useState(false)
   const [currentYear, setCurrentYear] = useState(0)
   const [year, setYear] = useState(0),
     [month, setMonth] = useState(0),
@@ -101,7 +100,6 @@ export function HubStudio() {
     setProfile(next.profile)
     setPlan(next.plan)
     setMonth((next.plan?.suggestedLeadMonth || 1) - 1)
-    setSelectedPhotos((next.review?.photoIds || next.published?.photoIds || []).filter(id => next.photos.some(p => p.id === id)))
     setDirty(false)
     setApproved(false)
     setAuthorised(false)
@@ -568,14 +566,18 @@ export function HubStudio() {
                       <label className="bv-check">
                         <input
                           type="checkbox"
-                          checked={selectedPhotos.includes(p.id)}
+                          checked={(
+                            profile.photoIds ?? hub.photos.map((x) => x.id)
+                          ).includes(p.id)}
                           onChange={(e) => {
-                            setSelectedPhotos(
+                            const current =
+                              profile.photoIds ?? hub.photos.map((x) => x.id)
+                            update(
+                              'photoIds',
                               e.target.checked
-                                ? [...selectedPhotos, p.id]
-                                : selectedPhotos.filter((x) => x !== p.id),
+                                ? [...current, p.id]
+                                : current.filter((x) => x !== p.id),
                             )
-                            setApproved(false)
                           }}
                         />
                         Show on my page
@@ -609,11 +611,6 @@ export function HubStudio() {
                   ))}
                 </div>
                 <CountyNature county={profile.county}/><p className="bv-small">Source-linked county records are shown for context and update separately from your approved words and photographs.</p>
-                {!plan && (
-                  <p className="bv-small">
-                    Add a seasonal plan below before sending your page for review.
-                  </p>
-                )}
                 <label className="bv-check">
                   <input
                     type="checkbox"
@@ -629,18 +626,17 @@ export function HubStudio() {
                     checked={approved}
                     onChange={(e) => setApproved(e.target.checked)}
                   />
-                  I have reviewed my place details, selected photos and the
-                  seasonal plan. I approve this version for public use and
-                  automatic monthly selection within its plan year.
+                  I have reviewed my place details and selected photographs. I
+                  approve this version for public use, including any optional
+                  seasonal plan and its automatic monthly selection.
                 </label>
                 <button
                   className="bv-button bv-green"
-                  disabled={busy || dirty || !plan || !approved || !authorised}
+                  disabled={busy || dirty || !approved || !authorised}
                   onClick={() =>
                     action(
                       {
                         action: 'submit',
-                        photoIds: selectedPhotos,
                         approved,
                         authorised,
                       },
@@ -712,8 +708,9 @@ export function HubStudio() {
               <section className="bv-form">
                 <h2>Seasonal plan</h2>
                 <p className="bv-small">
-                  Optional twelve-month set of gentle discovery ideas. A saved
-                  plan is needed before you send your page for review.
+                  Optional twelve-month set of gentle discovery ideas. You can
+                  preview, submit and publish your page without one, and add a
+                  plan later whenever you like.
                 </p>
                 <p>{trendSummary(hub.trend)}</p>
                 {hub.trend && (

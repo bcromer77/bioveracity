@@ -34,12 +34,16 @@ export async function previewEdition(
     'SELECT "id","caption","credit" FROM "WildHubPhoto" WHERE "hubId"=$1 ORDER BY "createdAt","id"',
     [id],
   )
+  // Show exactly the photographs the partner curated — the same selection that
+  // submission and publication use. Undefined means every photograph.
+  const selection = row.profile.photoIds
+  const chosen = photos.filter((p) => !selection || selection.includes(p.id))
   const county = getWildCounty(row.profile.county)
   return buildEdition({
     kind: 'preview',
     profile: row.profile,
     plan: row.plan,
-    photos: photos.map((p) => ({ ...p, src: `/api/wild/photos/${p.id}` })),
+    photos: chosen.map((p) => ({ ...p, src: `/api/wild/photos/${p.id}` })),
     countyBrand: county?.brandName || row.profile.county,
     provenanceLabel:
       'Private preview — this is how your Wild Counties page will look once published. Nothing here is published yet. Business identity and environmental performance are not certified by BioVeracity.',

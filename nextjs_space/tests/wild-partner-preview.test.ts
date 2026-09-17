@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { profileInput, generatePlan, HubError } from '../lib/wild-hubs/domain'
 import { buildEdition } from '../lib/wild-hubs/edition'
 import { previewEdition } from '../lib/wild-hubs/preview'
-import { hubService, publicHub } from '../lib/wild-hubs/service'
+import { hubService, publicHub, previewablePhoto } from '../lib/wild-hubs/service'
 import { reviewService } from '../lib/wild-hubs/review'
 import type { Sql, Database } from '../lib/workspaces/service'
 
@@ -157,6 +157,83 @@ test('optional fields reach the published edition and it stays immutable until a
     const still = await publicHub(db, hub.id)
     assert.equal(still?.version, publishedVersion)
     assert.equal(still?.profile.invitation, 'Come and slow down by the water.')
+  } finally {
+    await pg.close()
+  }
+})
+
+test('the private preview shows exactly the photographs that are submitted and published', async () => {
+  const { pg, db, sql } = await harness()
+  try {
+    const alice = hubService(db, 'alice')
+    let hub = await alice.create({ ...withPlace, requestId: randomUUID() })
+    for (const n of ['1', '2', '3'])
+      hub = await alice.addPhoto(hub.id, { caption: `Photo ${n}`, credit: 'QA', hash: `h${n}`, bytes: Buffer.from(`bytes-${n}`) })
+    const ids = hub.photos.map((p) => p.id)
+    assert.equal(ids.length, 3)
+    // The partner curates a subset: keep the first and last, drop the middle one.
+    const selection = [ids[0], ids[2]]
+    hub = await alice.change(hub.id, { action: 'save', revision: hub.revision, profile: { ...withPlace, photoIds: selection } })
+    // The private preview shows exactly that selection, in the stored order.
+    const preview = await previewEdition(sql, 'alice', hub.id)
+    assert.deepEqual(preview?.photos.map((p) => p.id), selection)
+    // Submit with no seasonal plan and publish it.
+    hub = await alice.change(hub.id, { action: 'submit', revision: hub.revision, approved: true, authorised: true })
+    const reviewer = reviewService(db, 'reviewer')
+    const pending = (await reviewer.list()).reviews[0]
+    await reviewer.decide(pending.id, { action: 'approve', revision: hub.revision, confirmed: true, reason: 'Synthetic fixture: reviewed the whole submission.' })
+    const published = await publicHub(db, hub.id)
+    // Publication carries the identical selection, so preview and published never diverge.
+    assert.deepEqual(published?.photoIds, selection)
+    assert.deepEqual(preview?.photos.map((p) => p.id), published?.photoIds)
+    // The dropped photograph appears in neither the preview nor the published page.
+    assert.ok(!preview?.photos.some((p) => p.id === ids[1]))
+    assert.ok(!published?.photoIds.includes(ids[1]))
+  } finally {
+    await pg.close()
+  }
+})
+
+test('a place with no seasonal plan can be submitted, reviewed and published', async () => {
+  const { pg, db } = await harness()
+  try {
+    const alice = hubService(db, 'alice')
+    let hub = await alice.create({ ...withPlace, requestId: randomUUID() })
+    hub = await alice.addPhoto(hub.id, { caption: 'The only photo', credit: 'QA', hash: 'h1', bytes: Buffer.from('bytes') })
+    // The partner never runs 'generate', so no twelve-month plan exists.
+    assert.equal(hub.plan, null)
+    hub = await alice.change(hub.id, { action: 'submit', revision: hub.revision, approved: true, authorised: true })
+    const reviewer = reviewService(db, 'reviewer')
+    const pending = (await reviewer.list()).reviews[0]
+    await reviewer.decide(pending.id, { action: 'approve', revision: hub.revision, confirmed: true, reason: 'Synthetic fixture: reviewed a place with no seasonal plan.' })
+    const published = await publicHub(db, hub.id)
+    // It publishes cleanly with a null plan and its photographs intact.
+    assert.ok(published, 'a place should publish without a seasonal plan')
+    assert.equal(published?.plan, null)
+    assert.equal(published?.photoIds.length, 1)
+  } finally {
+    await pg.close()
+  }
+})
+
+test('an administrator may retrieve an unpublished draft preview photograph, and nobody else can', async () => {
+  const { pg, db, sql } = await harness()
+  try {
+    const alice = hubService(db, 'alice')
+    let hub = await alice.create({ ...withPlace, requestId: randomUUID() })
+    hub = await alice.addPhoto(hub.id, { caption: 'Draft photo', credit: 'QA', hash: 'h1', bytes: Buffer.from('draft-bytes') })
+    const photoId = hub.photos[0].id
+    // Nothing is published yet, so the photo is not publicly readable.
+    assert.equal(await publicHub(db, hub.id), null)
+    // The owner can retrieve their own draft photograph.
+    assert.ok(await previewablePhoto(sql, photoId, 'alice'))
+    // An administrator authorised to view the draft preview may also fetch its photos.
+    const asAdmin = await previewablePhoto(sql, photoId, 'reviewer')
+    assert.ok(asAdmin, 'an admin should be able to retrieve the draft preview photo')
+    assert.equal(Buffer.from(asAdmin!.bytes).toString(), 'draft-bytes')
+    // A signed-in stranger and an anonymous visitor cannot.
+    assert.equal(await previewablePhoto(sql, photoId, 'bob'), null)
+    assert.equal(await previewablePhoto(sql, photoId, null), null)
   } finally {
     await pg.close()
   }

@@ -1,6 +1,6 @@
 import { auth } from '@/auth'
 import { enabled, hubDb, privateHeaders } from '@/lib/wild-hubs/http'
-import { readablePhoto } from '@/lib/wild-hubs/service'
+import { previewablePhoto } from '@/lib/wild-hubs/service'
 export const dynamic = 'force-dynamic'
 export async function GET(
   _: Request,
@@ -10,7 +10,7 @@ export async function GET(
     return new Response('Not found', { status: 404, headers: privateHeaders })
   const session = await auth()
   try {
-    const photo = await readablePhoto(
+    const photo = await previewablePhoto(
       hubDb,
       (await params).id,
       session?.user?.id || null,

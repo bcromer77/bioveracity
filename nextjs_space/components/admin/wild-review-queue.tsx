@@ -53,11 +53,11 @@ export function WildReviewQueue() {
         <summary className="cursor-pointer">Editorial diagnostics (raw submission data)</summary>
         <div className="mt-2 space-y-2">
           <p>{r.snapshot.profile.county} · {r.snapshot.profile.kind}</p>
-          <p>Interests: {r.snapshot.profile.interests.join(', ')} · Plan year {r.snapshot.plan.year} · Basis: {r.snapshot.plan.basis}</p>
+          <p>Interests: {r.snapshot.profile.interests.join(', ')}{r.snapshot.plan ? ` · Plan year ${r.snapshot.plan.year} · Basis: ${r.snapshot.plan.basis}` : ' · No seasonal plan (optional)'}</p>
           <p>Only the photos shown in the preview above will be published. Wider county records update separately and do not establish species presence at this venue.</p>
-          {r.snapshot.plan.trend && <details><summary>Owner-supplied historical Trends data</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(r.snapshot.plan.trend,null,2)}</pre></details>}
-          {r.snapshot.plan.sources.length > 0 && <details><summary>Retained source context</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(r.snapshot.plan.sources,null,2)}</pre></details>}
-          {r.snapshot.plan.campaigns.map(m => <section key={m.month} className="rounded border p-3">
+          {r.snapshot.plan?.trend && <details><summary>Owner-supplied historical Trends data</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(r.snapshot.plan.trend,null,2)}</pre></details>}
+          {r.snapshot.plan && r.snapshot.plan.sources.length > 0 && <details><summary>Retained source context</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(r.snapshot.plan.sources,null,2)}</pre></details>}
+          {r.snapshot.plan?.campaigns.map(m => <section key={m.month} className="rounded border p-3">
             <h4 className="font-semibold">{m.month}. {m.title}</h4><p>{m.introduction}</p><p>{m.activity}</p><p>{m.caption}</p><p>{m.planningNote}</p>
           </section>)}
         </div>
