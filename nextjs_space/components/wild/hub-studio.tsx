@@ -4,7 +4,7 @@ import { CountyNature } from '@/components/wild/county-nature'
 import { EvidenceLink } from '@/components/evidence-link'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WILD_COUNTIES, getWildCounty } from '@/lib/wild-counties/counties'
 import {
   KINDS,
@@ -85,6 +85,17 @@ export function HubStudio() {
   useEffect(() => {
     refresh().catch((e) => setError(e.message))
   }, [])
+  const autoOpened = useRef(false)
+  useEffect(() => {
+    // When a partner has exactly one place, open it automatically on load so
+    // their saved content is visible immediately instead of a blank form.
+    if (autoOpened.current) return
+    if (busy || dirty || hub) return
+    if (list.length === 1) {
+      autoOpened.current = true
+      open(list[0].id)
+    }
+  }, [list, busy, dirty, hub])
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {
       if (dirty) {
