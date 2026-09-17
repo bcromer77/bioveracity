@@ -218,3 +218,101 @@ test('self-service retry preserves creation identity; saved draft, edits and app
     'approval resets after publishing',
   )
 })
+
+// A clearly fictional place used only for isolated tests. Never a real partner.
+const solePlace = {
+  id: 'fictional-sole-place',
+  profile: {
+    name: 'The Whistling Fen Guesthouse (Fictional Test)',
+    county: 'down',
+    kind: 'hotel',
+    story: 'A fictional guesthouse used only for isolated tests.',
+    website: 'https://example.com',
+    interests: ['nature'],
+  },
+  revision: 3,
+  photos: [],
+  published: null,
+  plan: null,
+  trend: null,
+}
+
+function studioHarness(hubs) {
+  const originalFetch = globalThis.fetch,
+    originalWindow = globalThis.window
+  globalThis.window = {
+    addEventListener() {},
+    removeEventListener() {},
+    confirm() {
+      return true
+    },
+  }
+  const counts = { list: 0, detail: 0 }
+  globalThis.fetch = async (url, init = {}) => {
+    const u = String(url)
+    if (u.startsWith('/api/wild/nature/'))
+      return Response.json({ status: 'unsupported', records: [], county: 'Down', checkedAt: '2026-09-14T00:00:00Z', inspected: 0, excluded: 0, note: 'Fixture only' })
+    if (u === '/api/wild/hubs' && (!init.method || init.method === 'GET')) {
+      counts.list++
+      return Response.json({ hubs: hubs.map((h) => ({ id: h.id, profile: h.profile })) })
+    }
+    const detail = hubs.find((h) => u === `/api/wild/hubs/${h.id}`)
+    if (detail && (!init.method || init.method === 'GET')) {
+      counts.detail++
+      return Response.json({ hub: detail })
+    }
+    throw new Error(`unexpected fetch ${init.method || 'GET'} ${u}`)
+  }
+  const restore = () => {
+    globalThis.fetch = originalFetch
+    globalThis.window = originalWindow
+  }
+  return { counts, restore }
+}
+
+async function settle() {
+  for (let i = 0; i < 6; i++)
+    await act(async () => {
+      await Promise.resolve()
+      await new Promise((res) => setTimeout(res, 0))
+    })
+}
+
+test('a partner with exactly one place has it opened automatically on load', async (t) => {
+  const { counts, restore } = studioHarness([solePlace])
+  let r
+  t.after(async () => {
+    if (r) await act(() => r.unmount())
+    restore()
+  })
+  await act(async () => {
+    r = create(React.createElement(HubStudio))
+  })
+  await settle()
+  assert.equal(
+    r.root.findByProps({ id: 'hub-name' }).props.value,
+    solePlace.profile.name,
+    'the single saved place is loaded into the editor automatically',
+  )
+  assert.equal(counts.detail, 1, 'the sole place is opened exactly once')
+})
+
+test('a partner with more than one place is not auto-opened into either', async (t) => {
+  const second = { ...solePlace, id: 'fictional-second-place', profile: { ...solePlace.profile, name: 'The Drumlin Byre (Fictional Test)' } }
+  const { counts, restore } = studioHarness([solePlace, second])
+  let r
+  t.after(async () => {
+    if (r) await act(() => r.unmount())
+    restore()
+  })
+  await act(async () => {
+    r = create(React.createElement(HubStudio))
+  })
+  await settle()
+  assert.equal(
+    r.root.findByProps({ id: 'hub-name' }).props.value,
+    '',
+    'with several places the editor stays on a blank form until one is chosen',
+  )
+  assert.equal(counts.detail, 0, 'no place is opened automatically')
+})

@@ -1,5 +1,8 @@
 import { getWildCounty } from '../wild-counties/counties'
 
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export class HubError extends Error {
   constructor(
     public status: number,
@@ -17,6 +20,7 @@ export const KINDS = [
   'community',
   'other',
 ] as const
+export type Recommendation = { name: string; note: string }
 export type Profile = {
   name: string
   county: string
@@ -24,6 +28,18 @@ export type Profile = {
   story: string
   website: string
   interests: string[]
+  // Optional place fields, stored additively in the existing profile JSON.
+  locality?: string
+  invitation?: string
+  visitUrl?: string
+  visitPrompt?: string
+  natureStory?: string
+  recommendations?: Recommendation[]
+  // The photographs the partner has chosen to display, in the order stored.
+  // Undefined means "all photographs" (legacy/fresh drafts); an explicit array —
+  // including the empty array — is the curated selection. Preview, submission and
+  // publication all read this single field so the three can never diverge.
+  photoIds?: string[]
 }
 export type Trend = {
   term: string
@@ -64,7 +80,7 @@ export type Plan = {
 }
 export type Snapshot = {
   profile: Profile
-  plan: Plan
+  plan: Plan | null
   photoIds: string[]
   approvedAt: string
   reviewedAt?: string
@@ -101,6 +117,36 @@ export function text(v: unknown, max: number, required = true): string {
       'Please complete the required fields within their limits.',
     )
   return v.trim()
+}
+// Optional free text: absent/blank is allowed and normalises to ''.
+export function optText(v: unknown, max: number): string {
+  if (v === undefined || v === null) return ''
+  return text(v, max, false)
+}
+// A curated photo selection is optional. Validate format only (UUID, count and
+// uniqueness); that the ids belong to this hub is checked at submit and approval
+// against the live photographs. Absent/blank stays undefined = "all photographs".
+export function photoSelection(v: unknown): string[] | undefined {
+  if (v === undefined || v === null) return undefined
+  if (
+    !Array.isArray(v) ||
+    v.length > 12 ||
+    new Set(v).size !== v.length ||
+    v.some((x) => typeof x !== 'string' || !UUID.test(x))
+  )
+    throw new HubError(400, 'Select up to twelve of your own photographs.')
+  return v as string[]
+}
+export function recommendationsInput(v: unknown): Recommendation[] {
+  if (v === undefined || v === null) return []
+  if (!Array.isArray(v) || v.length > 3)
+    throw new HubError(400, 'Add up to three nearby recommendations.')
+  return v
+    .map((item) => {
+      const r = record(item)
+      return { name: optText(r.name, 120), note: optText(r.note, 300) }
+    })
+    .filter((r) => r.name || r.note)
 }
 export function publicUrl(value: unknown): string {
   const v = text(value, 500, false)
@@ -140,6 +186,13 @@ export function profileInput(raw: unknown): Profile {
     story: text(v.story, 2000),
     website: publicUrl(v.website),
     interests: [...new Set(v.interests as string[])],
+    locality: optText(v.locality, 160),
+    invitation: optText(v.invitation, 200),
+    visitUrl: v.visitUrl ? publicUrl(v.visitUrl) : '',
+    visitPrompt: optText(v.visitPrompt, 400),
+    natureStory: optText(v.natureStory, 1500),
+    recommendations: recommendationsInput(v.recommendations),
+    photoIds: photoSelection(v.photoIds),
   }
 }
 // Parse a single-series Google Trends "Interest over time" CSV. Preserve censored

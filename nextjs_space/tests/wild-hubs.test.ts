@@ -228,16 +228,9 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
     )
     await denied(bob.reserveScan(hub.id))
     assert.equal(await publicHub(db, hub.id), null)
-    await assert.rejects(
-      alice.change(hub.id, {
-        action: 'submit',
-        revision: 1,
-        approved: true,
-        authorised: true,
-        photoIds: [],
-      }),
-      /Generate/,
-    )
+    // The seasonal plan is optional, so submitting without one is no longer an
+    // error; the dedicated no-plan publication path is covered in
+    // wild-partner-preview.test.ts. Here we continue exercising the planned path.
     hub = await alice.change(hub.id, {
       action: 'trends',
       revision: hub.revision,
@@ -268,23 +261,33 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       requestId: randomUUID(),
     })
     const otherPhoto = await bob.addPhoto(other.id, { ...data, hash: 'bob' })
+    // Selecting a photograph that does not belong to this hub is rejected at submit.
+    const savedForeign = await alice.change(hub.id, {
+      action: 'save',
+      revision: hub.revision,
+      profile: { ...profile, photoIds: [otherPhoto.photos[0].id] },
+    })
     await assert.rejects(
       alice.change(hub.id, {
         action: 'submit',
-        revision: hub.revision,
+        revision: savedForeign.revision,
         approved: true,
         authorised: true,
-        photoIds: [otherPhoto.photos[0].id],
       }),
       /Select only/,
     )
+    // Reset the selection back to the owner's own photograph before continuing.
+    hub = await alice.change(hub.id, {
+      action: 'save',
+      revision: savedForeign.revision,
+      profile,
+    })
     await assert.rejects(
       alice.change(hub.id, {
         action: 'submit',
         revision: hub.revision,
         approved: false,
         authorised: true,
-        photoIds: [],
       }),
       /Confirm/,
     )
@@ -343,16 +346,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       alice.change(hub.id, { action: 'save', revision: oldRevision, profile }),
       /another tab/,
     )
-    await assert.rejects(
-      alice.change(hub.id, {
-        action: 'submit',
-        revision: hub.revision,
-        approved: true,
-        authorised: true,
-        photoIds: [],
-      }),
-      /Generate/,
-    )
+    // A seasonal plan is optional, so a plan-less submission is accepted rather than blocked.
     hub = await alice.change(hub.id, {
       action: 'unpublish',
       revision: hub.revision,

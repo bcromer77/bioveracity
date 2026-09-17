@@ -318,3 +318,10 @@
 .bv-tag-cat.cat-bioveracity-analysis{background:#e5ecf6;border-color:#adc2df;color:#274268}
 .bv-tag-cat.cat-ellona-input{background:#f6ecdc;border-color:#e0c79a;color:#6b4e17}
 .bv-tag-cat.cat-unknown{background:#efefe9;border-color:#d3d3c8;color:#6a6a5e}
+.bv-rec{padding:16px;background:#fff;border:1px solid #d3d7c5;border-radius:3px;margin-bottom:12px}
+.bv-rec input,.bv-rec textarea{width:100%}
+.bv-plaque{margin-top:25px;padding:24px;background:#f7f4ec;border:1px solid #d3d7c5;border-radius:4px;text-align:center}
+.bv-plaque-qr{width:150px;height:150px;margin:16px auto;display:flex;align-items:center;justify-content:center;background:#e8eddf;border:2px dashed #b09857;color:#8a7638;font-size:13px;letter-spacing:2px}
+.bv-plaque img{width:150px;height:150px;margin:16px auto;display:block;background:#fff}
+.bv-review-preview{border:1px solid #d3d7c5;border-radius:6px;overflow:hidden}
+.bv-review-preview .bv-hero{padding-top:24px}
