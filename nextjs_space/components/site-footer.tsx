@@ -15,6 +15,7 @@ export function SiteFooter() {
           </div>
           <div className="flex items-center gap-5 text-[15px]">
             <Link href="/search" className="text-muted-foreground hover:text-foreground">Search</Link>
+            <Link href="/register-interest" className="text-muted-foreground hover:text-foreground">Register interest</Link>
             <Link href="/institutional" className="text-muted-foreground hover:text-foreground">Institutional access</Link>
             <Link href="/privacy" className="text-muted-foreground hover:text-foreground">Privacy</Link>
             <Link href="/contact" className="text-muted-foreground hover:text-foreground">Contact</Link>

@@ -28,6 +28,7 @@ export default async function WildCountiesPage({
             <h1 className="mt-4 max-w-4xl font-display text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Find the wild story in every county.</h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-[#dfe9e4]">Discover the nature and stories of a place, with sources you can explore for yourself.</p>
             <Link href="/wild/partners" className="mt-6 inline-block rounded bg-[#dfc27a] px-5 py-3 font-semibold text-[#173d35]">Run a venue? Discover the Wild community →</Link>
+            <p className="mt-4"><Link href="/register-interest?source=wild" className="text-[15px] font-medium text-[#dfe9e4] underline underline-offset-4 hover:text-white">Register your interest →</Link></p>
             <form className="mt-8 flex max-w-2xl overflow-hidden rounded-md bg-white p-1.5 shadow-xl" action="/wild">
               <Search className="ml-3 mt-3 h-5 w-5 text-[#65736d]" aria-hidden="true" />
               <label className="sr-only" htmlFor="wild-search">Search Wild Counties</label>

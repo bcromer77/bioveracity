@@ -409,6 +409,24 @@ model Lead {
   @@index([status])
 }
 
+// Register interest (PR54) — lightweight demand capture. A submission NEVER
+// creates or mutates a User, workspace, WildHub, publication, subscription or
+// payment. It is a raised hand only; BioVeracity provisions separately.
+model InterestLead {
+  id           String   @id @default(cuid())
+  name         String
+  email        String
+  organisation String?
+  category     String   // controlled: wild-business, professional, planning-bng, community-school, other
+  message      String?
+  source       String   // controlled originating surface: wild, professionals, bng, general
+  status       String   @default("new") // new, interested
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([source])
+}
+
 model Question {
   id        String   @id @default(cuid())
   question  String
