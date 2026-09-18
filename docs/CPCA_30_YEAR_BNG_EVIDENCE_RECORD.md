@@ -38,6 +38,8 @@ Before implementation:
 
 Research Greater Cambridge, Cambridge City and South Cambridgeshire public sources and select the real site with the strongest evidence chain, not the most visually attractive site.
 
+Do **not** hard-code a candidate planning reference, UKHab code, habitat condition, metric result, Section 106 term, monitoring milestone or responsible party from an example or implementation prompt. Candidate sites such as Waterbeach or Darwin Green may be investigated, but the selected site and every populated field must come from retrieved authoritative evidence.
+
 Prefer evidence including, where publicly available:
 
 - planning reference, site location and boundary;
@@ -121,7 +123,29 @@ For each provider document: source, owner, endpoint/dataset, licence, geographic
 
 Reuse the existing Honeycomb provider contract and geographic architecture wherever technically sensible. The demonstration should test whether English providers can be substituted without redesigning the core system.
 
+Before writing an English provider, inspect the **current Irish environmental-evidence implementation** (including the GBIF/NBDC, EPA water and OPW flood work if it has been reconciled into the chosen base) and reuse its current provider result/status/provenance contract. Do not create a second `english-providers.ts` abstraction merely because an example suggests one.
+
+Verify every proposed English endpoint, response shape, licence, attribution requirement, geographic semantics and availability from the implementation environment before coding. Natural England/MAGIC and Environment Agency are candidate authorities, not pre-approved endpoints. Do not invent an API URL from memory or accept an illustrative URL as implementation evidence.
+
+Where an English dataset is not commercially reusable, treat that as an explicit provider capability/restriction and prefer metadata/reference/linking where lawful rather than silently repackaging the dataset.
+
 Provider states must distinguish OK, PARTIAL, NO MATCHING EVIDENCE, UNAVAILABLE and ERROR. A failed provider must not destroy the investigation. Do not seed environmental records merely to make the demonstration look populated.
+
+## Phase 5A — smallest BNG-specific implementation
+
+The existing evidence, provenance, chronology, workspace/case and export machinery is the starting point. Add the smallest BNG-specific structure necessary; do not build a Cambridge-only parallel evidence system.
+
+Do **not** create a standalone `bng-taxonomy.ts` with hard-coded Cambridge evidence unless repository inspection proves that this is the smallest compatible implementation. Prefer shared domain types/validation plus persisted records linked to the existing evidence/case architecture.
+
+A BNG obligation must retain the relationship between:
+
+SOURCE OBLIGATION → DUE DATE / RECURRENCE → EXPECTED EVIDENCE → EVIDENCE LOCATED / NOT LOCATED → PROFESSIONAL REVIEW → NEXT OBLIGATION.
+
+Do not model an obligation as an ordinary chronology event if doing so loses those relationships.
+
+UKHab codes, habitat conditions, biodiversity metric values, net-uplift percentages, responsible parties, Section 106 terms and milestone dates are **evidence values**, not source-code constants. They must be populated only from the selected site's authoritative documents and retain source locators.
+
+Before changing the Prisma schema, prove that the requirement cannot be represented safely with the existing persistent case/evidence model. If an additive schema change is necessary, prepare and test it on the implementation branch but do not migrate production.
 
 ## Phase 6 — bullseye user experience
 
@@ -200,9 +224,27 @@ The finished product must support a five-minute demonstration:
 
 The generated Evidence Record should contain site identity, boundary/location, baseline, commitments, obligation chronology, evidence located, evidence gaps, upcoming obligations, environmental context, source citations, original URLs and retrieval dates.
 
+Reuse the **actual current case export/report route** found during repository inspection. Do not assume `app/api/generate-pdf/route.ts`, `lib/pdf-report.ts`, QR verification, or any other historical/example route is authoritative until it is verified in the selected base. The demonstration passes only if the real private-case journey produces a readable cited output from the same evidence snapshot the professional reviewed.
+
 Include a clear statement that BioVeracity organises evidence and does not itself determine statutory compliance.
 
 The report must be understandable to a planning or environmental professional without developer explanation.
+
+## Phase 8A — Cambridge trial execution
+
+Once the real site and authoritative sources are confirmed, the shortest acceptable trial is:
+
+1. lock the implementation branch and record the starting SHA;
+2. select ONE real Greater Cambridge site on evidence quality;
+3. ingest/reconstruct only source-supported site, baseline, commitment and monitoring information;
+4. run the site's English environmental context through the existing Honeycomb architecture;
+5. open/save the evidence in a private case and review it;
+6. generate the real cited case output;
+7. rehearse the five-minute CPCA demonstration from the resulting evidence record.
+
+The demonstration narrative must use whatever the evidence actually establishes. Do not script a particular planning reference, habitat code, Year 3/Year 5 milestone or missing report before the source documents have been retrieved.
+
+The trial should be easy to repeat for a second site eventually, but **do not add a second Cambridge site in this PR**.
 
 ## Phase 9 — explicitly out of scope
 
@@ -241,6 +283,16 @@ The demonstration passes only when a reviewer can answer from real evidence:
 17. Does the product avoid unsupported compliance judgements?
 
 Run relevant existing tests, new BNG evidence-record tests, Honeycomb provider tests, workspace isolation tests, case/evidence tests, PDF/export tests and the production build.
+
+Also verify:
+
+- the selected site's obligations survive a reload/restart and are not demo-only in-memory data;
+- an evidence item imported from Honeycomb retains provider/source/licence/retrieval provenance in the private case;
+- an English provider returning zero results is distinguishable from an unavailable/erroring provider;
+- provider failure cannot corrupt or erase the case's BNG obligations;
+- the cited export uses the reviewed evidence snapshot and does not introduce unsupported statements;
+- no secrets or populated `.env` files are committed to the implementation branch;
+- any Cambridge-specific seed/fixture is clearly separated from production data and contains no invented statutory evidence.
 
 Do not deploy.
 
