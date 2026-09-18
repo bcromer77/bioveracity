@@ -229,7 +229,14 @@ export function hubService(db: Database, ownerId: string) {
     },
     async addPhoto(
       id: string,
-      photo: { caption: string; credit: string; hash: string; bytes: Buffer },
+      photo: {
+        caption: string
+        credit: string
+        hash: string
+        bytes: Buffer
+        kind?: string
+        meta?: unknown
+      },
     ) {
       return db.transaction(async (sql) => {
         const hub = await owned(sql, id, true)
@@ -251,7 +258,7 @@ export function hubService(db: Database, ownerId: string) {
         if ((await photos(sql, id)).length >= 12)
           throw new HubError(429, 'A hub can hold up to twelve photos.')
         await sql.query(
-          'INSERT INTO "WildHubPhoto" ("id","hubId","caption","credit","hash","bytes") VALUES ($1,$2,$3,$4,$5,$6)',
+          'INSERT INTO "WildHubPhoto" ("id","hubId","caption","credit","hash","bytes","kind","meta") VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',
           [
             randomUUID(),
             id,
@@ -259,6 +266,8 @@ export function hubService(db: Database, ownerId: string) {
             photo.credit,
             photo.hash,
             photo.bytes,
+            photo.kind === 'panorama' ? 'panorama' : 'photo',
+            photo.meta ? JSON.stringify(photo.meta) : null,
           ],
         )
         const [saved] = await sql.query<HubRow>(

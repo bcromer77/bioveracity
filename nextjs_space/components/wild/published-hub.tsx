@@ -2,17 +2,32 @@ import { CountyNature } from '@/components/wild/county-nature'
 import { EvidenceLink } from '@/components/evidence-link'
 import Link from 'next/link'
 import { PublicShell } from './public-shell'
+import { Panorama } from './panorama'
+import { FieldJournal } from './field-journal'
+import { ContributeForm } from './contribute-form'
 import { activeCampaign, MONTHS, type Snapshot } from '@/lib/wild-hubs/domain'
 import type { Photo } from '@/lib/wild-hubs/service'
+import type { PanoramaPoint } from '@/lib/wild-hubs/photos'
+import type { Journal } from '@/lib/wild-hubs/journal'
 import { getWildCounty } from '@/lib/wild-counties/counties'
+export type PanoramaView = {
+  id: string
+  caption: string
+  credit: string
+  points: PanoramaPoint[]
+}
 export function PublishedHub({
   id,
   snapshot,
   photos,
+  panoramas = [],
+  journal,
 }: {
   id: string
   snapshot: Snapshot
   photos: Photo[]
+  panoramas?: PanoramaView[]
+  journal?: Journal
 }) {
   const { profile, plan } = snapshot,
     county = getWildCounty(profile.county),
@@ -40,6 +55,25 @@ export function PublishedHub({
           BioVeracity.
         </p>
       </section>
+      {panoramas.length > 0 && (
+        <section className="bv-section">
+          <p className="bv-eyebrow">Stand here a moment</p>
+          <h2>Look around.</h2>
+          <p>
+            A view of the place, with a few things worth pausing over. Take your
+            time — there is always more here than first meets the eye.
+          </p>
+          {panoramas.map((p) => (
+            <Panorama
+              key={p.id}
+              photoId={p.id}
+              caption={p.caption}
+              credit={p.credit}
+              points={p.points}
+            />
+          ))}
+        </section>
+      )}
       <section className="bv-section">
         <p className="bv-eyebrow">Our story</p>
         <h2>A place to discover.</h2>
@@ -80,6 +114,8 @@ export function PublishedHub({
           </div>
         </section>
       )}
+      {journal && <FieldJournal journal={journal} placeName={profile.name} />}
+      <ContributeForm hubId={id} />
       <section className="bv-section"><CountyNature county={profile.county}/><p className="bv-small">County records update separately from the venue-approved edition.</p></section>
       <section className="bv-section">
         <p className="bv-small">

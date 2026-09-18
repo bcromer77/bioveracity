@@ -12,7 +12,14 @@ export async function POST(request: Request, ctx: Context) {
     const input = photoInput(await body(request, 4300000))
     await s.reserveScan(id)
     try {
-      return { hub: await s.addPhoto(id, await preparePhoto(input)) }
+      const prepared = await preparePhoto(input)
+      return {
+        hub: await s.addPhoto(id, {
+          ...prepared,
+          kind: input.kind,
+          meta: input.meta,
+        }),
+      }
     } catch (e) {
       if (e instanceof ScanError) throw new HubError(e.status, e.message)
       throw e
