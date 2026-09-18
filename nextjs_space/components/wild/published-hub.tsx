@@ -47,6 +47,7 @@ export function PublishedHub({
           </EvidenceLink>
         )}
       </section>
+      <ContributeForm hubId={id} />
       {panoramas.length > 0 && (
         <section className="bv-section">
           <p className="bv-eyebrow">Stand here a moment</p>
@@ -107,7 +108,6 @@ export function PublishedHub({
         </section>
       )}
       {journal && <FieldJournal journal={journal} placeName={profile.name} />}
-      <ContributeForm hubId={id} />
       <section className="bv-section"><CountyNature county={profile.county}/></section>
       <section className="bv-section bv-colophon">
         <Link href={`/wild/${profile.county}`} className="bv-colophon-link">
