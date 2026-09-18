@@ -49,7 +49,6 @@ export function SeasonalLanding() {
     <>
       <section className="bv-hero bv-season-hero">
         <div>
-          <p className="bv-eyebrow">Source-linked evidence for every place in Ireland</p>
           <h1>
             Every place has a story.
             <br />
