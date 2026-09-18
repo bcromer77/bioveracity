@@ -35,11 +35,8 @@ export function PublishedHub({
   return (
     <PublicShell>
       <section className="bv-hero">
-        <p className="bv-eyebrow">{county?.brandName} · Ecology hub</p>
+        <p className="bv-eyebrow">{county?.brandName} · A living field journal</p>
         <h1>{profile.name}</h1>
-        <p className="bv-intro">
-          Your starting point for local stories and seasonal discoveries.
-        </p>
         {profile.website && (
           <EvidenceLink
             className="bv-button"
@@ -49,11 +46,6 @@ export function PublishedHub({
             Visit our website ↗
           </EvidenceLink>
         )}
-        <p className="bv-small">
-          Venue content supplied and approved by the venue account.
-          Business identity and environmental performance are not certified by
-          BioVeracity.
-        </p>
       </section>
       {panoramas.length > 0 && (
         <section className="bv-section">
@@ -116,18 +108,17 @@ export function PublishedHub({
       )}
       {journal && <FieldJournal journal={journal} placeName={profile.name} />}
       <ContributeForm hubId={id} />
-      <section className="bv-section"><CountyNature county={profile.county}/><p className="bv-small">County records update separately from the venue-approved edition.</p></section>
-      <section className="bv-section">
-        <p className="bv-small">
-          Venue-approved edition {snapshot.version} ·{' '}
-          {new Date(snapshot.approvedAt).toLocaleDateString('en-GB', {
-            timeZone: 'Europe/Dublin',
-          })}
-        </p>
-        {snapshot.reviewedAt && <p className="bv-small">Editorial review completed {new Date(snapshot.reviewedAt).toLocaleDateString('en-GB', {timeZone:'Europe/Dublin'})}. This is content review, not environmental certification.</p>}
-        <Link href={`/wild/${profile.county}`}>
-          Discover {county?.brandName} →
+      <section className="bv-section"><CountyNature county={profile.county}/></section>
+      <section className="bv-section bv-colophon">
+        <Link href={`/wild/${profile.county}`} className="bv-colophon-link">
+          Discover more of {county?.brandName} →
         </Link>
+        <p className="bv-small">
+          This page is written and approved by {profile.name}. County wildlife
+          records come from national databases and update separately. It is a
+          place&rsquo;s own story, shared with care — not an environmental
+          certification.
+        </p>
       </section>
     </PublicShell>
   )

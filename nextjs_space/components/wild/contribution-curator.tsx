@@ -1,11 +1,12 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 
-// The curator: an extremely simple place for the venue to read what visitors
-// have shared and decide, one by one, what becomes part of the public story.
-// Approving something publishes it — it never turns an observation into verified
-// ecological evidence, and it never reveals a sensitive location that the venue
-// has chosen to hide.
+// Laura's desk. A quiet editorial place to read what visitors have noticed and
+// decide, one photograph at a time, what becomes part of the place's living
+// journal. Adding something publishes it — it never turns an observation into a
+// verified identification, and it never reveals a sensitive location the venue
+// has chosen to keep quiet. The photograph leads; the machinery stays out of
+// the way until it is needed.
 
 type OwnerContribution = {
   id: string
@@ -22,12 +23,6 @@ type OwnerContribution = {
   moderatorNote: string
   createdAt: string
   moderatedAt: string | null
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Awaiting your review',
-  PUBLISHED: 'Published',
-  REJECTED: 'Kept private',
 }
 
 const fmt = (iso: string | null) =>
@@ -114,9 +109,13 @@ export function ContributionCurator({ hubs }: { hubs: { id: string; name: string
           </select>
         </label>
       )}
-      {error && <p className="bv-error" role="alert">{error}</p>}
+      {error && (
+        <p className="bv-error" role="alert">
+          {error}
+        </p>
+      )}
       {loading ? (
-        <p>Loading…</p>
+        <p className="bv-small">Loading…</p>
       ) : items.length === 0 ? (
         <div className="bv-curator-empty">
           <h3>Nothing shared yet.</h3>
@@ -124,22 +123,29 @@ export function ContributionCurator({ hubs }: { hubs: { id: string; name: string
         </div>
       ) : (
         <>
-          <h3>To review ({pending.length})</h3>
-          {pending.length === 0 && <p className="bv-small">You’re all caught up.</p>}
-          <ul className="bv-curator-list">
-            {pending.map((c) => (
-              <CuratorCard key={c.id} c={c} hubId={hubId} busy={busyId === c.id} onDecide={decide} />
-            ))}
-          </ul>
+          <div className="bv-desk-group">
+            <h3 className="bv-desk-heading">
+              Waiting for you{pending.length > 0 ? ` — ${pending.length}` : ''}
+            </h3>
+            {pending.length === 0 ? (
+              <p className="bv-small">You&rsquo;re all caught up.</p>
+            ) : (
+              <div className="bv-desk-list">
+                {pending.map((c) => (
+                  <CuratorCard key={c.id} c={c} hubId={hubId} busy={busyId === c.id} onDecide={decide} />
+                ))}
+              </div>
+            )}
+          </div>
           {decided.length > 0 && (
-            <>
-              <h3>Already decided</h3>
-              <ul className="bv-curator-list">
+            <div className="bv-desk-group">
+              <h3 className="bv-desk-heading">Your decisions so far</h3>
+              <div className="bv-desk-list">
                 {decided.map((c) => (
                   <CuratorCard key={c.id} c={c} hubId={hubId} busy={busyId === c.id} onDecide={decide} />
                 ))}
-              </ul>
-            </>
+              </div>
+            </div>
           )}
         </>
       )}
@@ -166,54 +172,45 @@ function CuratorCard({
   const [hideLocation, setHideLocation] = useState(c.sensitiveHidden)
   const [note, setNote] = useState(c.moderatorNote)
   const decided = c.publicationStatus !== 'PENDING'
+  const published = c.publicationStatus === 'PUBLISHED'
+  const when = c.observedAt ? fmt(c.observedAt) : ''
+
   return (
-    <li className="bv-curator-card">
-      <figure>
-        <img src={`/api/wild/hubs/${hubId}/contributions/${c.id}/photo`} alt="Visitor contribution" loading="lazy" />
+    <article className={`bv-desk-card${decided ? ' is-decided' : ''}`}>
+      <figure className="bv-desk-photo">
+        <img
+          src={`/api/wild/hubs/${hubId}/contributions/${c.id}/photo`}
+          alt="A visitor&rsquo;s photograph"
+          loading="lazy"
+        />
       </figure>
-      <div className="bv-curator-body">
-        <div className="bv-curator-head">
-          <span className="bv-chip bv-chip-community">Community observation</span>
-          <span className="bv-badge">{STATUS_LABEL[c.publicationStatus] ?? c.publicationStatus}</span>
-        </div>
-        <p className="bv-curator-what">{c.whatYouThink || 'They weren’t sure what it was.'}</p>
-        <p className="bv-small">
-          {c.categoryLabel}
-          {c.observedAt ? ` · seen ${fmt(c.observedAt)}` : ` · shared ${fmt(c.createdAt)}`}
-          {c.coarseLocation ? ` · ${c.coarseLocation}` : ''}
+      <div className="bv-desk-body">
+        <p className="bv-desk-lead">
+          Someone noticed this{when ? ` on ${when}` : ''}
+          {c.coarseLocation ? `, ${c.coarseLocation}` : ''}.
         </p>
-        {c.note && (
-          <p className="bv-curator-note">
-            <strong>Private note:</strong> {c.note}
-          </p>
-        )}
-        <p className="bv-small">
-          Evidence class: {c.evidenceClass} · publishing does not change this.
+        <p className="bv-desk-what">
+          {c.whatYouThink
+            ? `They thought it might be ${c.whatYouThink}.`
+            : 'They weren’t sure what it was.'}
         </p>
-        {!c.permissionToPublish && (
-          <p className="bv-small">
-            This visitor did not give permission to publish, so it can only be kept private.
+        {c.note && <p className="bv-desk-visitornote">&ldquo;{c.note}&rdquo;</p>}
+        <p className="bv-desk-prov">
+          A visitor&rsquo;s observation — shared as a community sighting, not a verified
+          identification. Adding it to the journal keeps it that way.
+        </p>
+
+        {decided ? (
+          <p className={`bv-desk-status${published ? ' is-published' : ''}`}>
+            {published ? 'In the journal' : 'Kept private'}
+            {published && c.sensitiveHidden ? ' · location hidden' : ''}
           </p>
-        )}
-        {!decided && (
+        ) : !c.permissionToPublish ? (
           <>
-            <label className="bv-check">
-              <input type="checkbox" checked={hideLocation} onChange={(e) => setHideLocation(e.target.checked)} />
-              <span>Hide the location if published (sensitive site — nest, den or roost).</span>
-            </label>
-            <label className="bv-curator-modnote">
-              A note for your records (optional)
-              <input type="text" value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} />
-            </label>
+            <p className="bv-small">
+              This visitor didn&rsquo;t give permission to publish, so it can only be kept private.
+            </p>
             <div className="bv-actions">
-              <button
-                type="button"
-                className="bv-button bv-green"
-                disabled={busy || !c.permissionToPublish}
-                onClick={() => onDecide(c, 'publish', hideLocation, note)}
-              >
-                {busy ? 'Saving…' : 'Add to the story'}
-              </button>
               <button
                 type="button"
                 className="bv-text-link"
@@ -224,9 +221,51 @@ function CuratorCard({
               </button>
             </div>
           </>
+        ) : (
+          <div className="bv-desk-decide">
+            <div className="bv-actions">
+              <button
+                type="button"
+                className="bv-button bv-green"
+                disabled={busy}
+                onClick={() => onDecide(c, 'publish', hideLocation, note)}
+              >
+                {busy ? 'Saving…' : 'Add to the journal'}
+              </button>
+              <button
+                type="button"
+                className="bv-text-link"
+                disabled={busy}
+                onClick={() => onDecide(c, 'reject', hideLocation, note)}
+              >
+                Keep private
+              </button>
+            </div>
+            <details className="bv-desk-more">
+              <summary>Handling options</summary>
+              <label className="bv-check">
+                <input
+                  type="checkbox"
+                  checked={hideLocation}
+                  onChange={(e) => setHideLocation(e.target.checked)}
+                />
+                <span>
+                  Hide the location if added (sensitive site &mdash; a nest, den or roost).
+                </span>
+              </label>
+              <label className="bv-desk-recordnote">
+                A note for your own records (optional)
+                <input
+                  type="text"
+                  value={note}
+                  maxLength={2000}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </label>
+            </details>
+          </div>
         )}
-        {decided && c.sensitiveHidden && <p className="bv-small">Location hidden from the public.</p>}
       </div>
-    </li>
+    </article>
   )
 }

@@ -1,69 +1,83 @@
 import type { Journal } from '@/lib/wild-hubs/journal'
 
-// “A year in the woods.” A quiet, editorial reading of the place across twelve
-// months — the venue's own seasonal notes alongside what visitors have noticed.
-// Every visitor entry carries its provenance in plain words. Empty months are
-// shown with intent, never padded with invented sightings or a species counter.
+// “A year in the woods.” A quiet, unfolding reading of one place as the seasons
+// turn. We do NOT lay the year out as twelve identical boxes: a month only
+// appears once there is something to say about it — the venue's own seasonal
+// note, or what visitors have actually noticed. Empty stretches stay silent
+// rather than competing for attention, and every visitor entry keeps its
+// provenance in plain words. Photographs lead; the system never does.
 
 export function FieldJournal({ journal, placeName }: { journal: Journal; placeName: string }) {
+  const active = journal.months.filter((m) => m.entries.length > 0 || m.campaign)
+
   return (
     <section className="bv-section bv-journal">
       <p className="bv-eyebrow">A year in the woods</p>
-      <h2>The place, month by month.</h2>
-      <p>
+      <h2>The place, as the year turns.</h2>
+      <p className="bv-journal-lead">
         {journal.total > 0
-          ? 'What people have noticed here, kept in the month they saw it — alongside what to look for as the year turns.'
-          : 'Nothing has been noticed here yet. As visitors begin to share what they see, this year will slowly fill in.'}
+          ? `What people have noticed at ${placeName}, kept in the month they saw it — alongside what to look for as the seasons change.`
+          : `Nothing has been noticed at ${placeName} yet. As visitors begin to share what they see, this year will slowly fill in, month by month.`}
       </p>
-      <ol className="bv-journal-months">
-        {journal.months.map((m) => (
-          <li key={m.index} className="bv-journal-month">
-            <div className="bv-journal-head">
-              <h3>{m.name}</h3>
-              {m.campaign && <span className="bv-badge">Seasonal note</span>}
-            </div>
-            {m.campaign && (
-              <div className="bv-journal-note">
-                <h4>{m.campaign.title}</h4>
-                <p>{m.campaign.introduction}</p>
-              </div>
-            )}
-            {m.entries.length > 0 ? (
-              <ul className="bv-journal-entries">
-                {m.entries.map((e) => (
-                  <li key={e.id} className="bv-journal-entry">
-                    <figure>
-                      <img src={e.photoUrl} alt={e.identified ? `A visitor's photograph, thought to be ${e.whatYouThink || e.categoryLabel}` : 'A visitor\u2019s photograph, not yet identified'} loading="lazy" />
-                    </figure>
-                    <div className="bv-journal-entry-body">
-                      <span className="bv-chip bv-chip-community">Community observation</span>
-                      <p className="bv-journal-what">
-                        {e.identified
-                          ? e.whatYouThink || e.categoryLabel
-                          : 'Not yet identified'}
-                      </p>
-                      <p className="bv-small">
-                        {e.categoryLabel}
-                        {' · '}
-                        {e.observedLabel}
-                        {e.coarseLocation ? ` · ${e.coarseLocation}` : ''}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              !m.campaign && (
-                <p className="bv-journal-empty">Nothing recorded here yet.</p>
-              )
-            )}
-          </li>
-        ))}
-      </ol>
+
+      {active.length > 0 && (
+        <div className="bv-journal-year">
+          {active.map((m) => (
+            <article key={m.index} className="bv-journal-month">
+              <header className="bv-journal-month-head">
+                <h3>{m.name}</h3>
+                {m.entries.length > 0 && (
+                  <span className="bv-journal-count">
+                    {m.entries.length} {m.entries.length === 1 ? 'observation' : 'observations'}
+                  </span>
+                )}
+              </header>
+
+              {m.campaign && (
+                <p className="bv-journal-note">
+                  <span className="bv-journal-note-title">{m.campaign.title}.</span>{' '}
+                  {m.campaign.introduction}
+                </p>
+              )}
+
+              {m.entries.length > 0 && (
+                <ul className="bv-journal-entries">
+                  {m.entries.map((e) => (
+                    <li key={e.id} className="bv-journal-entry">
+                      <figure>
+                        <img
+                          src={e.photoUrl}
+                          alt={
+                            e.identified
+                              ? `A visitor's photograph, thought to be ${e.whatYouThink || e.categoryLabel}`
+                              : 'A visitor\u2019s photograph, not yet identified'
+                          }
+                          loading="lazy"
+                        />
+                        <figcaption>
+                          <span className="bv-journal-what">
+                            {e.identified ? e.whatYouThink || e.categoryLabel : 'Not yet identified'}
+                          </span>
+                          <span className="bv-journal-meta">
+                            {e.observedLabel}
+                            {e.coarseLocation ? ` · ${e.coarseLocation}` : ''}
+                          </span>
+                          <span className="bv-journal-prov">A visitor's observation</span>
+                        </figcaption>
+                      </figure>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
       <p className="bv-small">
-        Every entry above is a visitor’s own observation, shared with permission
-        and shown as a community sighting. It is not verified ecological
-        evidence, and being published here does not change that.
+        Every photograph above is a visitor’s own observation, shared with permission. It records what
+        someone thought they saw — not verified ecological evidence — and appearing here does not change
+        that.
       </p>
     </section>
   )

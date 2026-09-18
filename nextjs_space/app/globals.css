@@ -351,21 +351,24 @@
 .bv-pano-tag{display:inline-block;background:var(--forest);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-right:8px;vertical-align:middle}
 @media(max-width:640px){.bv-pano-fields{grid-template-columns:1fr}.bv-pano-point-row{flex-wrap:wrap}.bv-pano-point-row .bv-text-link{margin-top:0}}
 
-/* A year in the woods: quiet twelve-month reading of the place. */
-.bv-journal-months{list-style:none;margin:36px 0 0;padding:0;display:grid;gap:34px}
-.bv-journal-month{border-top:1px solid #c3c6b5;padding-top:24px}
-.bv-journal-head{display:flex;align-items:baseline;gap:14px}
-.bv-journal-head h3{margin:0;font-family:Georgia,serif;font-size:26px;font-weight:400;letter-spacing:-.5px}
-.bv-journal-note{margin:14px 0 4px;max-width:640px}
-.bv-journal-note h4{margin:0 0 6px;font-family:Georgia,serif;font-size:19px}
-.bv-journal-note p{font-size:15px;line-height:1.7;color:#3a4a40}
-.bv-journal-entries{list-style:none;margin:20px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:24px}
-.bv-journal-entry{background:#fff;border:1px solid #d3d7c5;border-radius:6px;overflow:hidden;box-shadow:var(--shadow-sm)}
-.bv-journal-entry figure{margin:0;aspect-ratio:4/3;background:#dbe2cc;overflow:hidden}
-.bv-journal-entry figure img{width:100%;height:100%;object-fit:cover;display:block}
-.bv-journal-entry-body{padding:16px}
-.bv-journal-what{font-family:Georgia,serif;font-size:18px;margin:10px 0 6px;line-height:1.35}
-.bv-journal-empty{font-size:14px;color:#7a8572;font-style:italic;margin:12px 0 0}
+/* A year in the woods: a quiet, unfolding reading of the place. Only months
+   with something to say appear; photographs lead, the system stays silent. */
+.bv-journal-lead{max-width:600px;margin:14px 0 0;font-size:17px;line-height:1.75;color:#415044}
+.bv-journal-year{margin:44px 0 0;display:flex;flex-direction:column;gap:56px}
+.bv-journal-month{margin:0}
+.bv-journal-month-head{display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #d8dcc9;padding-bottom:10px}
+.bv-journal-month-head h3{margin:0;font-family:Georgia,serif;font-size:30px;font-weight:400;letter-spacing:-.6px;color:#17372f}
+.bv-journal-count{font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#7c8676}
+.bv-journal-note{margin:16px 0 0;max-width:620px;font-size:15px;line-height:1.75;color:#5a6b60}
+.bv-journal-note-title{font-family:Georgia,serif;font-style:italic;color:#3a4a40}
+.bv-journal-entries{list-style:none;margin:24px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:32px}
+.bv-journal-entry{margin:0}
+.bv-journal-entry figure{margin:0}
+.bv-journal-entry figure img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#dbe2cc;border-radius:4px}
+.bv-journal-entry figcaption{padding:12px 2px 0}
+.bv-journal-what{display:block;font-family:Georgia,serif;font-size:19px;line-height:1.3;color:#17372f}
+.bv-journal-meta{display:block;font-size:13px;color:#6b7166;margin-top:5px}
+.bv-journal-prov{display:block;font-size:12px;font-style:italic;color:#93998c;margin-top:7px}
 
 /* Provenance chips: a community observation is never "verified wildlife". */
 .bv-chip{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;padding:4px 10px;border-radius:20px}
@@ -383,22 +386,70 @@
 .bv-curator-select select{display:block;width:100%;padding:12px;margin-top:6px;background:#fafbf7;border:1px solid #a7b5a9;border-radius:3px;font-size:16px;color:#17372f}
 .bv-curator-empty{background:#eeeddf;padding:32px;border-radius:6px;max-width:560px}
 .bv-curator-empty h3{margin-top:0}
-.bv-curator-list{list-style:none;margin:0 0 20px;padding:0;display:grid;gap:22px}
-.bv-curator-card{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;background:#fff;border:1px solid #d3d7c5;border-radius:6px;overflow:hidden;box-shadow:var(--shadow-sm)}
-.bv-curator-card figure{margin:0;background:#dbe2cc}
-.bv-curator-card figure img{width:100%;height:100%;max-height:280px;object-fit:cover;display:block}
-.bv-curator-body{padding:20px 22px 22px}
-.bv-curator-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-.bv-curator-what{font-family:Georgia,serif;font-size:21px;line-height:1.3;margin:8px 0 6px}
-.bv-curator-note{font-size:14px;background:#f5f4ec;border-left:3px solid var(--gold);padding:10px 12px;margin:12px 0;overflow-wrap:anywhere}
-.bv-curator-modnote{display:block;font-size:13px;font-weight:600;margin:14px 0 0}
-.bv-curator-modnote input{display:block;width:100%;padding:11px;margin-top:6px;background:#fafbf7;border:1px solid #a7b5a9;border-radius:3px;font-size:15px;color:#17372f}
+.bv-desk-group{margin:34px 0 0}
+.bv-desk-heading{font-family:Georgia,serif;font-weight:400;font-size:24px;color:#17372f;margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid #d8dcc9}
+.bv-desk-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:40px}
+.bv-desk-card{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:30px;align-items:start}
+.bv-desk-card.is-decided{opacity:.72}
+.bv-desk-photo{margin:0}
+.bv-desk-photo img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#dbe2cc;border-radius:6px}
+.bv-desk-body{min-width:0;padding-top:4px}
+.bv-desk-lead{font-size:13px;letter-spacing:.3px;text-transform:uppercase;color:#7c8676;margin:0}
+.bv-desk-what{font-family:Georgia,serif;font-size:23px;line-height:1.3;color:#17372f;margin:8px 0 0}
+.bv-desk-visitornote{font-family:Georgia,serif;font-style:italic;font-size:16px;line-height:1.6;color:#3a4a40;margin:14px 0 0;padding-left:14px;border-left:2px solid #dfc27a}
+.bv-desk-prov{font-size:12.5px;font-style:italic;line-height:1.6;color:#93998c;margin:16px 0 0;max-width:460px}
+.bv-desk-status{font-size:13px;font-weight:700;letter-spacing:.4px;color:#8a8f80;margin:18px 0 0}
+.bv-desk-status.is-published{color:#2f6b4f}
+.bv-desk-decide{margin-top:22px}
+.bv-desk-more{margin-top:16px}
+.bv-desk-more>summary{font-size:12.5px;color:#7c8676;cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px}
+.bv-desk-more>summary::-webkit-details-marker{display:none}
+.bv-desk-more>summary::before{content:'\203A';font-size:16px;line-height:0;transition:transform .15s ease}
+.bv-desk-more[open]>summary::before{transform:rotate(90deg)}
+.bv-desk-more[open]>summary{margin-bottom:12px}
+.bv-desk-recordnote{display:block;font-size:13px;font-weight:600;color:#5a6b60;margin:14px 0 0}
+.bv-desk-recordnote input{display:block;width:100%;max-width:420px;padding:10px;margin-top:6px;background:#fafbf7;border:1px solid #c2cbba;border-radius:3px;font-size:15px;color:#17372f}
+
+/* Colophon: provenance kept honest, quiet, and last. */
+.bv-colophon{border-top:1px solid #d8dcc9;padding-top:26px}
+.bv-colophon-link{display:inline-block;font-family:Georgia,serif;font-size:20px;color:#17372f;text-decoration:none;border-bottom:1px solid #dfc27a;padding-bottom:2px}
+.bv-colophon-link:hover{color:#2f6b4f}
+.bv-colophon .bv-small{margin-top:16px;max-width:560px}
 
 @media(max-width:640px){
   .bv-panorama-frame{aspect-ratio:4/3;box-shadow:8px 10px 0 #0f3028}
   .bv-panorama-label{min-width:130px;max-width:200px}
-  .bv-journal-entries{grid-template-columns:1fr 1fr;gap:14px}
-  .bv-journal-head h3{font-size:22px}
-  .bv-curator-card{grid-template-columns:1fr}
-  .bv-curator-card figure img{max-height:220px}
+  .bv-journal-entries{grid-template-columns:1fr;gap:28px}
+  .bv-journal-month-head h3{font-size:25px}
+  .bv-journal-lead{font-size:16px}
+  .bv-desk-card{grid-template-columns:1fr;gap:16px}
+  .bv-desk-what{font-size:21px}
 }
+
+/* Discovery map (PR57 correction): a real, interactive Leaflet basemap that
+   replaces the old static SVG. Editorial card overlay on marker tap. */
+.bv-dmap{margin:26px 0 0}
+.bv-dmap-frame{position:relative;height:480px;border-radius:10px;overflow:hidden;border:1px solid #d8d3c1;background:#eceadd}
+.bv-dmap-loading{display:flex;align-items:center;justify-content:center;height:480px;border-radius:10px;border:1px solid #d8d3c1;background:#eceadd;color:#6b7166;font-size:14px}
+.bv-dmap-note{font-size:12px!important;line-height:1.6;margin-top:12px;color:#5a6b60;max-width:640px}
+.leaflet-container.bv-dmap-frame,.bv-dmap-frame .leaflet-container{font:inherit}
+.bv-dmap-pin-wrap{background:none;border:0}
+.bv-dmap-pin{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#173d35;color:#f7f4ec;border:2px solid #dfc27a;font-weight:700;font-size:15px;box-shadow:0 3px 8px rgba(0,0,0,.4);transition:transform .15s ease,background .15s ease}
+.bv-dmap-pin.is-active{background:#dfc27a;color:#17372f;transform:scale(1.18);box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.bv-dmap-card{position:absolute;left:18px;bottom:18px;z-index:1000;width:min(340px,calc(100% - 36px));background:#f7f4ec;border:1px solid #cfd3bf;border-radius:10px;box-shadow:0 18px 40px -8px rgba(15,48,40,.45);padding:20px 22px 18px}
+.bv-dmap-close{position:absolute;top:8px;right:10px;background:none;border:0;font-size:22px;line-height:1;color:#5a6b60;cursor:pointer;min-width:32px;min-height:32px}
+.bv-dmap-close:hover{color:#17372f}
+.bv-dmap-place{font-size:11px!important;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#8a6d2e;margin:0 26px 6px 0}
+.bv-dmap-card h3{font-family:Georgia,serif;font-weight:400;font-size:24px;line-height:1.15;letter-spacing:-.5px;margin:0 0 10px}
+.bv-dmap-summary{font-size:14px!important;line-height:1.6;margin:0 0 10px;color:#2b382f;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.bv-dmap-season{font-size:13px!important;line-height:1.55;margin:0 0 14px;color:#3a4a40}
+.bv-dmap-season strong{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a6d2e}
+.bv-dmap-jump{background:none;border:0;padding:0;font-size:14px;font-weight:700;color:#173d35;cursor:pointer;text-decoration:underline;text-underline-offset:4px}
+.bv-discovery-flash{animation:bv-discovery-flash 1.6s ease}
+@keyframes bv-discovery-flash{0%,100%{box-shadow:0 0 0 0 rgba(223,194,122,0)}30%{box-shadow:0 0 0 4px rgba(223,194,122,.7)}}
+@media(max-width:640px){
+  .bv-dmap-frame,.bv-dmap-loading{height:360px}
+  .bv-dmap-card{left:12px;right:12px;bottom:12px;width:auto;padding:16px 16px 14px}
+  .bv-dmap-card h3{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){.bv-discovery-flash{animation:none!important}}

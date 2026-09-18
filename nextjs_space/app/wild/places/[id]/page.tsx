@@ -1,5 +1,5 @@
 import { CountyNature } from '@/components/wild/county-nature'
-import { CountyMap } from '@/components/wild/county-map'
+import { DiscoveryMap } from '@/components/wild/discovery-map'
 import { EvidenceLink } from '@/components/evidence-link'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -88,8 +88,8 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
       <section className="bv-section bv-tinted">
         <p className="bv-eyebrow">Three things to discover nearby</p>
         <h2>Verified discoveries within reach</h2>
-        <p>Each nearby discovery is one of {venue.countyData.brandName}’s reviewed stories, checked against a named public source. Locations are public localities — never precise or sensitive wildlife sites.</p>
-        <CountyMap topics={discoveries} countyName={venue.countyData.brandName} />
+        <p>Each nearby discovery is one of {venue.countyData.brandName}’s reviewed stories, checked against a named public source.</p>
+        <DiscoveryMap topics={discoveries} countyName={venue.countyData.brandName} />
         <ol className="bv-discoveries">
           {discoveries.map((topic, index) => (
             <li key={topic.slug} id={topic.slug} className="bv-discovery">
