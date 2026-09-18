@@ -153,6 +153,37 @@ SITE → SOURCE EVIDENCE → SELECT RELEVANT EVIDENCE → PRIVATE CASE → PROFE
 
 Do not weaken workspace/case isolation. Test unauthorised cross-workspace access. Do not expose private documents through the public demonstration. Keep public-source and private uploaded evidence clearly distinguishable.
 
+## Individual professional offer — 10 concurrent live cases
+
+The individual professional case offer must support **up to 10 live cases at the same time per individual account/workspace**.
+
+This is a concurrent-live-case limit, not a lifetime case limit. A professional may retain completed or archived cases without those cases consuming one of the 10 live slots.
+
+For this requirement:
+
+- LIVE means an active case that can continue to receive/populate evidence, documents, Honeycomb findings, timeline entries, reviews and exports;
+- COMPLETED or ARCHIVED cases remain readable and retain their evidence/provenance, but do not consume a live slot;
+- evidence population for one live case must not block or overwrite population of any of the other nine;
+- all 10 live cases must remain isolated from one another and from other users/workspaces;
+- each case must retain its own documents, evidence, chronology, sites, reviews, exports and provenance;
+- opening an 11th live case must not silently overwrite, delete or close another case;
+- if the 10-live-case limit is reached, the product must give a clear human message and require the user to complete/archive an existing case before activating another;
+- the limit must be enforced server-side, not only hidden or disabled in the UI;
+- concurrent/background population must be idempotent and safe to retry so that one failed provider or ingestion job does not corrupt another case;
+- do not create a second case system for this offer: reuse the existing PrivateWorkspace → PrivateCase architecture and add only the minimum lifecycle/entitlement controls needed.
+
+For the CPCA demonstration, prove the architecture can hold 10 distinct live cases concurrently. Only the selected Cambridge BNG case needs the full curated demonstration dataset; the other nine must not be populated with fabricated BNG evidence merely to satisfy the concurrency test.
+
+Acceptance checks:
+
+1. one individual account/workspace can have 10 LIVE cases concurrently;
+2. all 10 can be independently opened and populated without cross-case leakage;
+3. an attempt to activate/create an 11th LIVE case is safely rejected with a clear message;
+4. archiving/completing one case frees one live slot without deleting its evidence;
+5. the archived/completed case remains readable and source-linked;
+6. another user's case cannot be accessed through IDs, APIs, exports or population jobs;
+7. case counts and lifecycle state are enforced on the server under concurrent requests.
+
 ## Phase 8 — CPCA demonstration output
 
 The finished product must support a five-minute demonstration:
