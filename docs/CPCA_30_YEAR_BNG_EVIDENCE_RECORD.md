@@ -1,0 +1,276 @@
+# CPCA 30-Year BNG Evidence Record Demonstration
+
+## Purpose
+
+Build one evidence-defensible demonstration of BioVeracity solving a real 30-year Biodiversity Net Gain evidence-management problem in Greater Cambridge.
+
+This is not a generic BNG dashboard, a mock-up, an AI compliance scoring system, or permission to redesign BioVeracity.
+
+The proposition under test is:
+
+> BioVeracity remembers a site's environmental commitments for 30 years and keeps the evidence attached to them.
+
+The demonstration must use one real Greater Cambridge BNG site, habitat bank or development supported by genuine public evidence. The professional remains the decision-maker. BioVeracity must not state that a site is compliant or non-compliant unless an authoritative source explicitly makes that determination.
+
+The CPCA demonstration must answer:
+
+1. What was promised here?
+2. What is legally or operationally required?
+3. When should it happen?
+4. What evidence exists that it happened?
+5. What evidence is missing or unavailable?
+6. What independent environmental evidence exists around the same place?
+7. What needs checking next?
+8. Where did every piece of evidence come from?
+
+## Phase 0 — protect the existing product
+
+Before implementation:
+
+- inspect the current repository, branches and open PRs;
+- identify and record the authoritative integration base and full SHA;
+- read AGENTS.md, docs/DEVELOPMENT_WORKFLOW.md and docs/CURRENT_HANDOVER.md where present;
+- identify and preserve unmerged work;
+- do not modify production, deploy, migrate production data or change existing Irish Honeycomb behaviour;
+- use one dedicated implementation branch and report the exact starting SHA.
+
+## Phase 1 — select one real Cambridge site
+
+Research Greater Cambridge, Cambridge City and South Cambridgeshire public sources and select the real site with the strongest evidence chain, not the most visually attractive site.
+
+Prefer evidence including, where publicly available:
+
+- planning reference, site location and boundary;
+- Biodiversity Gain Plan and statutory biodiversity metric;
+- baseline and target habitat information;
+- Habitat Management and Monitoring Plan (HMMP);
+- Section 106 agreement or conservation covenant where applicable;
+- responsible party/body;
+- habitat creation or enhancement commitments;
+- monitoring schedule, target condition and management actions;
+- subsequent monitoring evidence;
+- planning history and ecological reports;
+- council committee/report references;
+- Natural England or Biodiversity Gain Sites Register information where relevant;
+- other authoritative environmental evidence around the site.
+
+Do not fabricate missing documents, create fictional monitoring evidence or treat a press release as proof that an action occurred.
+
+Before implementation report: selected site, planning reference, location, why selected, public documents found, documents not found, authoritative sources, likely 30-year obligations and known evidence gaps.
+
+## Phase 2 — reconstruct the original promise
+
+Extract only what source documents support.
+
+Capture where available:
+
+**Site:** name, location, boundary, planning reference, responsible planning authority and relevant BNG registration/reference.
+
+**Baseline:** date, habitat, habitat condition, biodiversity units, source document and page/section, assessment author/date.
+
+**Commitment:** habitat to be created or enhanced, target condition, biodiversity units, percentage/net-gain commitment where stated, spatial commitment, responsible party, legal mechanism, commencement date and duration.
+
+**Management:** required action, responsible party, frequency, start date, duration and expected evidence.
+
+**Monitoring:** event, due date/year, required survey/assessment, expected report/evidence, responsible party, recipient where stated and documented remediation/review mechanism.
+
+Every extracted obligation must retain provenance: original document title, issuing organisation, original URL, publication/execution date, page/section/paragraph locator where possible, retrieval date and a supporting passage where legally/licensing appropriate.
+
+Classify statements as REQUIRED, PLANNED, TARGET, RECOMMENDED, INFERRED or UNKNOWN. Never silently convert inferred or vague wording into a requirement.
+
+## Phase 3 — 30-year evidence timeline
+
+Reuse BioVeracity's existing chronology/evidence architecture wherever possible. Do not create a parallel application when the existing case/evidence/timeline system can perform the job.
+
+The chronology is:
+
+BASELINE → COMMITMENT → ACTION DUE → EVIDENCE EXPECTED → EVIDENCE RECEIVED / NOT LOCATED → PROFESSIONAL REVIEW → DOCUMENTED FOLLOW-UP → NEXT OBLIGATION.
+
+Create a persistent record that a professional can understand chronologically.
+
+Preserve these distinctions everywhere:
+
+- Evidence not located does not mean the action did not happen.
+- No public evidence found does not mean non-compliant.
+- Source unavailable does not mean no evidence exists.
+
+## Phase 4 — obligation calendar
+
+Create or reuse the minimum structure required to answer:
+
+- What is due?
+- When is it due?
+- Who is responsible?
+- What evidence should exist?
+- Has that evidence been located?
+- What is next?
+
+Support, where available: title, obligation type, source, responsible party, due date/year, recurrence, expected evidence, linked evidence, review status and next due event.
+
+Workflow statuses may include UPCOMING, EVIDENCE LOCATED, UNDER REVIEW, EVIDENCE NOT LOCATED, OVERDUE EVIDENCE CHECK and SOURCE UNAVAILABLE.
+
+Do not use COMPLIANT, NON-COMPLIANT, PASS, FAIL, GOOD or BAD as BioVeracity judgements. If an authoritative source makes such a determination, attribute it explicitly.
+
+## Phase 5 — independent environmental context
+
+Connect the same site to Honeycomb. Research the appropriate authoritative English providers rather than assuming Irish providers apply.
+
+Potential categories include biodiversity/species observations, protected/designated sites, Natural England evidence, Environment Agency water and flood evidence, planning history and relevant habitat/environment datasets.
+
+For each provider document: source, owner, endpoint/dataset, licence, geographic resolution, update frequency, available provenance, limitations and implementation cost/complexity.
+
+Reuse the existing Honeycomb provider contract and geographic architecture wherever technically sensible. The demonstration should test whether English providers can be substituted without redesigning the core system.
+
+Provider states must distinguish OK, PARTIAL, NO MATCHING EVIDENCE, UNAVAILABLE and ERROR. A failed provider must not destroy the investigation. Do not seed environmental records merely to make the demonstration look populated.
+
+## Phase 6 — bullseye user experience
+
+Do not redesign the whole site. Build the smallest professional experience that makes the proposition obvious.
+
+The site record should make clear:
+
+**This place:** identity, location and governing planning/BNG commitment.
+
+**What was promised:** material commitments with original-source links.
+
+**30-year timeline:** baseline → commitments → management → monitoring → evidence → next obligation.
+
+**What is due:** upcoming monitoring/evidence obligations.
+
+**What evidence do we have:** linked reports, documents and authoritative records.
+
+**What could we not establish:** missing or unavailable evidence stated honestly.
+
+**What else is happening around this place:** independent environmental context through Honeycomb.
+
+Every meaningful item must provide a route back to its original evidence.
+
+## Phase 7 — private case and evidence workflow
+
+Where existing capability supports it, verify:
+
+SITE → SOURCE EVIDENCE → SELECT RELEVANT EVIDENCE → PRIVATE CASE → PROFESSIONAL REVIEW → CITED REPORT/EXPORT.
+
+Do not weaken workspace/case isolation. Test unauthorised cross-workspace access. Do not expose private documents through the public demonstration. Keep public-source and private uploaded evidence clearly distinguishable.
+
+## Phase 8 — CPCA demonstration output
+
+The finished product must support a five-minute demonstration:
+
+- This is a real Cambridge site.
+- This is what was promised.
+- These obligations last for 30 years.
+- This is what should have happened by now.
+- This is the evidence we can actually find.
+- This is something we could not establish.
+- This is what independent environmental evidence says about the same place.
+- This is what needs checking next.
+- Every statement takes us back to its original source.
+
+The generated Evidence Record should contain site identity, boundary/location, baseline, commitments, obligation chronology, evidence located, evidence gaps, upcoming obligations, environmental context, source citations, original URLs and retrieval dates.
+
+Include a clear statement that BioVeracity organises evidence and does not itself determine statutory compliance.
+
+The report must be understandable to a planning or environmental professional without developer explanation.
+
+## Phase 9 — explicitly out of scope
+
+Do not build: generic BNG SaaS dashboard, compliance or biodiversity risk scores, red/amber/green judgements, automatic statutory decisions, replacement for ecologists/Natural England/LPAs, general AI chatbot, speculative predictive ecology, invoicing, Stripe, CRM, 100-site bulk ingestion, new mobile application, unrelated UI redesign, resident-objection ingestion, a new automatic divergence engine, broad 30by30 product, LNRS management platform or automated enforcement.
+
+Record adjacent opportunities as LATER. Do not implement them.
+
+## Phase 10 — data integrity
+
+Never invent dates, obligations, species, habitat condition, monitoring results, responsible parties, compliance conclusions, missing documents or source availability.
+
+Preserve EVENT DATE, DOCUMENT DATE, PUBLICATION DATE and RETRIEVAL DATE separately where relevant.
+
+Show conflicting dates rather than resolving them silently. Show stale evidence dates. When evidence is absent, state what was searched. Expose source failure honestly. Preserve superseded historical documents and identify newer versions.
+
+## Phase 11 — acceptance test
+
+The demonstration passes only when a reviewer can answer from real evidence:
+
+1. What real site is this?
+2. What is its BNG/planning reference?
+3. What was the ecological baseline?
+4. What habitat gain was committed?
+5. What legal/documentary source created the commitment?
+6. How long does the obligation last?
+7. Who is responsible, where stated?
+8. What management/monitoring actions are required?
+9. Which actions/evidence are due next?
+10. What monitoring evidence has actually been located?
+11. What expected evidence has not been located?
+12. What independent environmental evidence exists around the site?
+13. Can every material statement be traced to an original source?
+14. Can relevant evidence be brought into a private case?
+15. Can BioVeracity generate a readable cited evidence record?
+16. Can an unauthorised user access the private case? The answer must be NO.
+17. Does the product avoid unsupported compliance judgements?
+
+Run relevant existing tests, new BNG evidence-record tests, Honeycomb provider tests, workspace isolation tests, case/evidence tests, PDF/export tests and the production build.
+
+Do not deploy.
+
+## Phase 12 — commercial measurement
+
+Do not invent ROI. Prepare the demonstration so a council officer can be asked: **How do you do this today?**
+
+Discovery should establish the number of BNG sites monitored, people involved, current systems, time spent locating evidence, monitoring/review frequency, ecological/administrative review cost, how missed/late evidence is identified, staff handover handling, where the 30-year record lives, budget owner, procurement route and willingness to pilot.
+
+The proposed commercial unit for testing is ONE MONITORED SITE / YEAR. Do not put a public price into the product or assume willingness to pay.
+
+## Final handover
+
+Return one structured report containing:
+
+1. authoritative starting branch + full SHA;
+2. implementation branch + full SHA;
+3. selected real Cambridge site;
+4. why selected;
+5. original authoritative sources;
+6. documents found;
+7. documents not found;
+8. reconstructed BNG baseline;
+9. reconstructed 30-year commitments;
+10. monitoring/obligation calendar;
+11. evidence located;
+12. evidence gaps;
+13. English Honeycomb providers used;
+14. licences/attribution requirements;
+15. files changed;
+16. database/migration changes, if any;
+17. environment variables, if any;
+18. tests run + exact results;
+19. build result;
+20. access-isolation result;
+21. generated report/PDF result;
+22. known limitations;
+23. external/API cost estimate;
+24. rollback plan;
+25. items deliberately left for later.
+
+Finish with exactly one of:
+
+CPCA DEMONSTRATION READY
+
+CPCA DEMONSTRATION PARTIALLY READY
+
+CPCA DEMONSTRATION NOT READY
+
+Then explain why.
+
+## Stop condition
+
+Once one real Cambridge site demonstrates:
+
+REAL PLACE → REAL BASELINE → REAL 30-YEAR COMMITMENT → REAL OBLIGATIONS → REAL EVIDENCE → HONEST GAPS → INDEPENDENT ENVIRONMENTAL CONTEXT → ORIGINAL SOURCES → PRIVATE CASE → CITED OUTPUT
+
+STOP DEVELOPMENT.
+
+Do not add another feature. Do not seed another site. Do not deploy.
+
+Return the evidence for review and deployment authorisation.
+
+The purpose is one undeniable CPCA demonstration that lets a council or planning professional understand the commercial problem and BioVeracity's solution within five minutes.
