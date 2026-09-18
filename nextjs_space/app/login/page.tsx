@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [callbackUrl, setCallbackUrl] = useState('/workspace')
+  const [callbackUrl, setCallbackUrl] = useState('/start')
   const router = useRouter()
 
   useEffect(() => {

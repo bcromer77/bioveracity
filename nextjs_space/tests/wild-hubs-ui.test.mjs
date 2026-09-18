@@ -77,6 +77,8 @@ test('season control changes the guest campaign and hub preview together', async
 
 test('sign-in returns only to local routes, including the ecology studio', () => {
   assert.equal(authReturnPath('/wild/studio'), '/wild/studio')
+  // With no safe explicit target, sign-in falls back to the context resolver
+  // (/start), which then sends each person to their product home.
   for (const value of [
     '//evil.example',
     'https://evil.example',
@@ -85,7 +87,7 @@ test('sign-in returns only to local routes, including the ecology studio', () =>
     '/\nevil',
     null,
   ])
-    assert.equal(authReturnPath(value), '/workspace')
+    assert.equal(authReturnPath(value), '/start')
 })
 
 test('self-service retry preserves creation identity; saved draft, edits and approval remain separate', async (t) => {
