@@ -21,7 +21,7 @@ const nextConfig = {
   // the platform's browser checks on the pod browse via 127.0.0.1. Enumerated hosts, never a
   // wildcard: every conversation previews under the same parent domain and serves content its own
   // author controls, so `**.<domain>` would let any UNRELATED app's preview reach this dev server.
-  allowedDevOrigins: ['127.0.0.1', '3f3b98860.na120.preview.abacusai.app', '135878d217.na120.preview.abacusai.app', '126f09400a.na120.preview.abacusai.app', 'd525f92e6.na120.preview.abacusai.app', '7f3bca4d5.na120.preview.abacusai.app', 'bb0d77695.na120.preview.abacusai.app', '966c03a2b.na120.preview.abacusai.app', '7a641960e.na120.preview.abacusai.app', '11430c3469.na120.preview.abacusai.app', '10a7b3fefb.na120.preview.abacusai.app', '4130d9308.na120.preview.abacusai.app', '14e4caf57d.na120.preview.abacusai.app', '1630450285.na120.preview.abacusai.app', '3008818e.na120.preview.abacusai.app', 'e9ef33d59.na120.preview.abacusai.app', '6832faa55.na120.preview.abacusai.app'],
+  allowedDevOrigins: ['127.0.0.1', '3f3b98860.na120.preview.abacusai.app', '135878d217.na120.preview.abacusai.app', '126f09400a.na120.preview.abacusai.app', 'd525f92e6.na120.preview.abacusai.app', '7f3bca4d5.na120.preview.abacusai.app', 'bb0d77695.na120.preview.abacusai.app', '966c03a2b.na120.preview.abacusai.app', '7a641960e.na120.preview.abacusai.app', '11430c3469.na120.preview.abacusai.app', '10a7b3fefb.na120.preview.abacusai.app', '4130d9308.na120.preview.abacusai.app', '14e4caf57d.na120.preview.abacusai.app', '1630450285.na120.preview.abacusai.app', '3008818e.na120.preview.abacusai.app', 'e9ef33d59.na120.preview.abacusai.app', '6832faa55.na120.preview.abacusai.app', 'f725020c3.na120.preview.abacusai.app'],
 };
 
 const fs = require('fs');
