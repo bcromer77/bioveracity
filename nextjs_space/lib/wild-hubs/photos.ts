@@ -20,6 +20,11 @@ export type PanoramaPoint = {
   label: string
 }
 export type PanoramaMeta = { points: PanoramaPoint[] }
+// Validate a bare { points } payload when editing an existing panorama's
+// editorial points (the image itself is unchanged).
+export function panoramaPointsInput(raw: unknown): PanoramaMeta {
+  return panoramaMeta(raw)
+}
 function panoramaMeta(raw: unknown): PanoramaMeta {
   const v = record(raw)
   if (!Array.isArray(v.points) || v.points.length > 8)
