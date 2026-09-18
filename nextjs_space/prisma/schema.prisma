@@ -113,6 +113,7 @@ model User {
   wildReviews WildHubReview[] @relation("WildReviewer")
   wildHubs WildHub[]
   wildPublications WildHubPublication[]
+  wildContributionModerations WildContribution[] @relation("WildContributionModerator")
   privateMemberships PrivateWorkspaceMember[]
   privateAudit PrivateWorkspaceAudit[]
   caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
@@ -967,11 +968,14 @@ model WildHub {
   revision Int @default(1)
   scanCount Int @default(0)
   scanWindow DateTime @default(now())
+  contribCount Int @default(0)
+  contribWindow DateTime @default(now())
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
   photos WildHubPhoto[]
   publications WildHubPublication[]
   reviews WildHubReview[]
+  contributions WildContribution[]
   @@index([ownerId])
 }
 model WildHubPhoto {
@@ -982,9 +986,38 @@ model WildHubPhoto {
   credit String
   hash String
   bytes Bytes
+  kind String @default("photo")
+  meta Json?
   createdAt DateTime @default(now())
   @@unique([hubId, hash])
   @@index([hubId])
+}
+
+// A visitor community observation. Distinct from WildHubPhoto (owner-supplied media)
+// and from the evidence pipeline (CommunityReport / ObservationCandidate). Its
+// evidenceClass is fixed at 'community-observation' and is never upgraded by
+// editorial publication. Nothing here auto-publishes.
+model WildContribution {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  photoBytes Bytes
+  photoHash String
+  broadCategory String
+  whatYouThink String @default("")
+  note String @default("")
+  observedAt DateTime?
+  coarseLocation String @default("")
+  permissionToPublish Boolean @default(false)
+  evidenceClass String @default("community-observation")
+  publicationStatus String @default("PENDING")
+  sensitiveHidden Boolean @default(false)
+  moderatorId String?
+  moderator User? @relation("WildContributionModerator", fields: [moderatorId], references: [id], onDelete: SetNull)
+  moderatorNote String @default("")
+  createdAt DateTime @default(now())
+  moderatedAt DateTime?
+  @@index([hubId, publicationStatus])
 }
 model WildHubPublication {
   id String @id

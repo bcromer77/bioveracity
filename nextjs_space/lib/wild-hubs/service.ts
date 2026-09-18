@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { Database, Sql } from '../workspaces/service'
+import type { PanoramaMeta } from './photos'
 import {
   HubError,
   profileInput,
@@ -23,7 +24,7 @@ export type HubRow = {
   revision: number
   updatedAt: Date
 }
-export type Photo = { id: string; caption: string; credit: string }
+export type Photo = { id: string; caption: string; credit: string; kind?: string; meta?: PanoramaMeta | null }
 const columns =
   '"id","ownerId","profile","plan","trend","published","revision","updatedAt"'
 export function hubService(db: Database, ownerId: string) {
@@ -45,7 +46,7 @@ export function hubService(db: Database, ownerId: string) {
   }
   async function photos(sql: Sql, id: string) {
     return sql.query<Photo>(
-      'SELECT "id","caption","credit" FROM "WildHubPhoto" WHERE "hubId"=$1 ORDER BY "createdAt","id"',
+      'SELECT "id","caption","credit","kind","meta" FROM "WildHubPhoto" WHERE "hubId"=$1 ORDER BY "createdAt","id"',
       [id],
     )
   }
@@ -229,7 +230,14 @@ export function hubService(db: Database, ownerId: string) {
     },
     async addPhoto(
       id: string,
-      photo: { caption: string; credit: string; hash: string; bytes: Buffer },
+      photo: {
+        caption: string
+        credit: string
+        hash: string
+        bytes: Buffer
+        kind?: string
+        meta?: unknown
+      },
     ) {
       return db.transaction(async (sql) => {
         const hub = await owned(sql, id, true)
@@ -251,7 +259,7 @@ export function hubService(db: Database, ownerId: string) {
         if ((await photos(sql, id)).length >= 12)
           throw new HubError(429, 'A hub can hold up to twelve photos.')
         await sql.query(
-          'INSERT INTO "WildHubPhoto" ("id","hubId","caption","credit","hash","bytes") VALUES ($1,$2,$3,$4,$5,$6)',
+          'INSERT INTO "WildHubPhoto" ("id","hubId","caption","credit","hash","bytes","kind","meta") VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)',
           [
             randomUUID(),
             id,
@@ -259,6 +267,8 @@ export function hubService(db: Database, ownerId: string) {
             photo.credit,
             photo.hash,
             photo.bytes,
+            photo.kind === 'panorama' ? 'panorama' : 'photo',
+            photo.meta ? JSON.stringify(photo.meta) : null,
           ],
         )
         const [saved] = await sql.query<HubRow>(
@@ -280,6 +290,35 @@ export function hubService(db: Database, ownerId: string) {
         await sql.query(
           'DELETE FROM "WildHubPhoto" WHERE "id"=$1 AND "hubId"=$2',
           [photoId, id],
+        )
+        const [saved] = await sql.query<HubRow>(
+          `UPDATE "WildHub" SET "revision"="revision"+1,"updatedAt"=now() WHERE "id"=$1 RETURNING ${columns}`,
+          [id],
+        )
+        return result(sql, saved)
+      })
+    },
+    // Edit the restrained editorial points on an existing panorama. Only the
+    // meta changes; the image bytes are untouched, so this is not a re-upload.
+    async setPanoramaPoints(
+      id: string,
+      photoId: string,
+      meta: PanoramaMeta,
+      rev: unknown,
+    ) {
+      return db.transaction(async (sql) => {
+        const hub = await owned(sql, id, true)
+        revision(hub, rev)
+        const [photo] = await sql.query<{ kind: string }>(
+          'SELECT "kind" FROM "WildHubPhoto" WHERE "id"=$1 AND "hubId"=$2',
+          [photoId, id],
+        )
+        if (!photo) throw new HubError(404, 'Photo not found.')
+        if (photo.kind !== 'panorama')
+          throw new HubError(400, 'Only a panorama carries editorial points.')
+        await sql.query(
+          'UPDATE "WildHubPhoto" SET "meta"=$3::jsonb WHERE "id"=$1 AND "hubId"=$2',
+          [photoId, id, JSON.stringify(meta)],
         )
         const [saved] = await sql.query<HubRow>(
           `UPDATE "WildHub" SET "revision"="revision"+1,"updatedAt"=now() WHERE "id"=$1 RETURNING ${columns}`,

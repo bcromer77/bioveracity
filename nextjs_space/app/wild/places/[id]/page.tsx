@@ -1,5 +1,5 @@
 import { CountyNature } from '@/components/wild/county-nature'
-import { CountyMap } from '@/components/wild/county-map'
+import { DiscoveryMap } from '@/components/wild/discovery-map'
 import { EvidenceLink } from '@/components/evidence-link'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -7,8 +7,11 @@ import { PublicShell } from '@/components/wild/public-shell'
 import { getWildVenue, publicWildOrigin } from '@/lib/wild-counties/venues'
 import { getPublishedHub } from '@/lib/wild-hubs/public'
 import { hubDb } from '@/lib/wild-hubs/http'
-import { PublishedHub } from '@/components/wild/published-hub'
+import { PublishedHub, type PanoramaView } from '@/components/wild/published-hub'
 import type { Photo } from '@/lib/wild-hubs/service'
+import { contributionService } from '@/lib/wild-hubs/contributions'
+import { buildJournal } from '@/lib/wild-hubs/journal'
+import type { PanoramaMeta } from '@/lib/wild-hubs/photos'
 
 const SCOPE_LABEL: Record<string, string> = {
   county: 'County record',
@@ -25,10 +28,18 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
   if (!venue) {
     const snapshot = await getPublishedHub(id)
     if (!snapshot) notFound()
-    const photos = snapshot.photoIds.length
-      ? await hubDb.query<Photo>('SELECT "id","caption","credit" FROM "WildHubPhoto" WHERE "hubId"=$1 AND "id"=ANY($2::text[]) ORDER BY "createdAt","id"', [id, snapshot.photoIds])
+    const media = snapshot.photoIds.length
+      ? await hubDb.query<Photo & { kind: string; meta: PanoramaMeta | null }>('SELECT "id","caption","credit","kind","meta" FROM "WildHubPhoto" WHERE "hubId"=$1 AND "id"=ANY($2::text[]) ORDER BY "createdAt","id"', [id, snapshot.photoIds])
       : []
-    return <PublishedHub id={id} snapshot={snapshot} photos={photos} />
+    const photos: Photo[] = media
+      .filter((m) => m.kind !== 'panorama')
+      .map((m) => ({ id: m.id, caption: m.caption, credit: m.credit }))
+    const panoramas: PanoramaView[] = media
+      .filter((m) => m.kind === 'panorama')
+      .map((m) => ({ id: m.id, caption: m.caption, credit: m.credit, points: m.meta?.points ?? [] }))
+    const contributions = await contributionService(hubDb).publicList(id)
+    const journal = buildJournal(snapshot, contributions)
+    return <PublishedHub id={id} snapshot={snapshot} photos={photos} panoramas={panoramas} journal={journal} />
   }
 
   const origin = publicWildOrigin()
@@ -77,8 +88,8 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
       <section className="bv-section bv-tinted">
         <p className="bv-eyebrow">Three things to discover nearby</p>
         <h2>Verified discoveries within reach</h2>
-        <p>Each nearby discovery is one of {venue.countyData.brandName}’s reviewed stories, checked against a named public source. Locations are public localities — never precise or sensitive wildlife sites.</p>
-        <CountyMap topics={discoveries} countyName={venue.countyData.brandName} />
+        <p>Each nearby discovery is one of {venue.countyData.brandName}’s reviewed stories, checked against a named public source.</p>
+        <DiscoveryMap topics={discoveries} countyName={venue.countyData.brandName} />
         <ol className="bv-discoveries">
           {discoveries.map((topic, index) => (
             <li key={topic.slug} id={topic.slug} className="bv-discovery">

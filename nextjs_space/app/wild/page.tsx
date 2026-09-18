@@ -3,7 +3,10 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
-import { searchWildCounties } from '@/lib/wild-counties/counties'
+import { getWildCounty, searchWildCounties } from '@/lib/wild-counties/counties'
+import { searchPublishedHubs } from '@/lib/wild-hubs/public'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Wild Counties | BioVeracity',
@@ -17,6 +20,8 @@ export default async function WildCountiesPage({
 }) {
   const { q = '' } = await searchParams
   const counties = searchWildCounties(q)
+  const venues = await searchPublishedHubs(q)
+  const total = counties.length + venues.length
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f2e9] text-[#18332a]">
@@ -43,7 +48,7 @@ export default async function WildCountiesPage({
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6f744f]">Explore Wild Counties</p>
               <h2 className="mt-2 font-display text-3xl font-semibold">{q ? `Results for “${q}”` : 'Choose a county'}</h2>
             </div>
-            <p className="text-sm text-[#637069]">{counties.length} result{counties.length === 1 ? '' : 's'}</p>
+            <p className="text-sm text-[#637069]">{total} result{total === 1 ? '' : 's'}</p>
           </div>
 
           {!q && (
@@ -58,6 +63,28 @@ export default async function WildCountiesPage({
             </div>
           )}
 
+          {venues.length ? (
+            <div className="mb-8">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-[#6f744f]">Places</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {venues.map((venue) => {
+                  const brand = getWildCounty(venue.county)?.brandName
+                  return (
+                    <Link key={venue.id} href={`/wild/places/${venue.id}`} className="group rounded-md border border-[#d8d3c4] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#8ea697] hover:shadow-md">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-display text-2xl font-semibold">{venue.name}</h3>
+                        <span className="rounded-full bg-[#e4efe8] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#24573f]">Place</span>
+                      </div>
+                      {brand && <p className="mt-2 text-sm text-[#66716b]">{brand.replace(/^Wild /, '')}</p>}
+                      {venue.story && <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#4c5751]">{venue.story}</p>}
+                      <p className="mt-4 text-sm font-semibold text-[#24573f]">Explore this place →</p>
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+
           {counties.length ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {counties.map((county) => (
@@ -71,7 +98,7 @@ export default async function WildCountiesPage({
                 </Link>
               ))}
             </div>
-          ) : (
+          ) : venues.length ? null : (
             <div className="rounded-md border border-dashed border-[#bbb6a8] bg-white p-10 text-center">
               <h3 className="font-display text-2xl font-semibold">No matching place or topic</h3>
               <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#66716b]">Try a county, place or topic such as snowdrops. Coverage is limited to the collections shown.</p>

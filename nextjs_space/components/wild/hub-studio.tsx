@@ -1,7 +1,9 @@
 'use client'
 import { CountyNature } from '@/components/wild/county-nature'
+import { PanoramaEditor } from '@/components/wild/panorama-editor'
 
 import { EvidenceLink } from '@/components/evidence-link'
+import type { PanoramaPoint } from '@/lib/wild-hubs/photos'
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -23,7 +25,13 @@ type Hub = {
   revision: number
   published: Snapshot | null
   review?: { id: string; status: string; reason: string; photoIds: string[] } | null
-  photos: { id: string; caption: string; credit: string }[]
+  photos: {
+    id: string
+    caption: string
+    credit: string
+    kind?: string
+    meta?: { points: PanoramaPoint[] } | null
+  }[]
 }
 const empty: Profile = {
   name: '',
@@ -57,7 +65,8 @@ export function HubStudio() {
     [caption, setCaption] = useState(''),
     [credit, setCredit] = useState(''),
     [rights, setRights] = useState(false),
-    [scanConsent, setScanConsent] = useState(false)
+    [scanConsent, setScanConsent] = useState(false),
+    [isPanorama, setIsPanorama] = useState(false)
   async function api(url: string, method = 'GET', data?: unknown) {
     const response = await fetch(url, {
       method,
@@ -342,6 +351,9 @@ export function HubStudio() {
                         credit,
                         rightsConfirmed: rights,
                         scannerConsent: scanConsent,
+                        ...(isPanorama
+                          ? { kind: 'panorama', meta: { points: [] } }
+                          : {}),
                       })
                     ).hub,
                   )
@@ -351,8 +363,11 @@ export function HubStudio() {
                   setRights(false)
                   setScanConsent(false)
                   setMessage(
-                    'Photo saved privately. Select it when you publish.',
+                    isPanorama
+                      ? 'Panorama saved privately. Add its points below, then select it when you publish.'
+                      : 'Photo saved privately. Select it when you publish.',
                   )
+                  setIsPanorama(false)
                 })
               }}
             >
@@ -362,6 +377,16 @@ export function HubStudio() {
                   JPEG or PNG, up to 3 MB each. Twelve photos per hub. Location
                   metadata is removed.
                 </p>
+                <label className="bv-check">
+                  <input
+                    type="checkbox"
+                    checked={isPanorama}
+                    onChange={(e) => setIsPanorama(e.target.checked)}
+                  />
+                  This is a panorama — a wide view guests can look around. A
+                  landscape photograph works best. You will place its points
+                  after uploading.
+                </label>
                 <label htmlFor="hub-photo">Choose a photograph</label>
                 <input
                   id="hub-photo"
@@ -413,7 +438,7 @@ export function HubStudio() {
                   className="bv-button bv-green"
                   disabled={!photo || dirty}
                 >
-                  Upload privately
+                  {isPanorama ? 'Upload panorama privately' : 'Upload privately'}
                 </button>
               </fieldset>
             </form>
@@ -672,6 +697,9 @@ export function HubStudio() {
                     <figure key={p.id}>
                       <img src={`/api/wild/photos/${p.id}`} alt={p.caption} />
                       <figcaption>
+                        {p.kind === 'panorama' && (
+                          <span className="bv-pano-tag">Panorama</span>
+                        )}
                         {p.caption} · {p.credit}
                       </figcaption>
                       <label className="bv-check">
@@ -717,6 +745,49 @@ export function HubStudio() {
                     </figure>
                   ))}
                 </div>
+                {hub.photos.some((p) => p.kind === 'panorama') && (
+                  <div className="bv-pano-studio">
+                    <h3>Look around — your panorama points</h3>
+                    <p>
+                      Place a few quiet points on each panorama. They are
+                      invitations to notice, shown to guests exactly as previewed
+                      here. Include the panorama on your public hub above to make
+                      it live when you publish.
+                    </p>
+                    {hub.photos
+                      .filter((p) => p.kind === 'panorama')
+                      .map((p) => (
+                        <div key={p.id} className="bv-pano-block">
+                          <p className="bv-eyebrow">{p.caption || 'Panorama'}</p>
+                          <PanoramaEditor
+                            photoId={p.id}
+                            caption={p.caption}
+                            credit={p.credit}
+                            points={p.meta?.points ?? []}
+                            disabled={busy || dirty}
+                            onSave={async (points) => {
+                              await run(async () => {
+                                receive(
+                                  (
+                                    await api(
+                                      `/api/wild/hubs/${hub.id}/photos`,
+                                      'PATCH',
+                                      {
+                                        photoId: p.id,
+                                        points,
+                                        revision: hub.revision,
+                                      },
+                                    )
+                                  ).hub,
+                                )
+                                setMessage('Editorial points saved.')
+                              })
+                            }}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                )}
                 <CountyNature county={profile.county}/><p>API records are county context and update separately from your approved words and photographs.</p>
                 <label className="bv-check">
                   <input

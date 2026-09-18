@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PublicShell } from '@/components/wild/public-shell'
 import { CountyNature } from '@/components/wild/county-nature'
-import { CountyMap } from '@/components/wild/county-map'
+import { DiscoveryMap } from '@/components/wild/discovery-map'
 import { EvidenceLink } from '@/components/evidence-link'
 import { RegionalSearch } from '@/components/wild/regional-search'
 import { loadSnapshot } from '@/lib/cambridgeshire/server'
@@ -111,8 +111,7 @@ export default async function WildCountyPage({ params }: { params: Promise<{ cou
             <section className="bv-section">
               <p className="bv-eyebrow">Discovery map</p>
               <h2>Where these stories live</h2>
-              <p>Approximate public localities — towns, landmarks and designated areas — numbered to match the stories below. Sensitive or precise wildlife locations are never shown.</p>
-              <CountyMap topics={stories} countyName={county.brandName} />
+              <DiscoveryMap topics={stories} countyName={county.brandName} />
             </section>
           )}
 
