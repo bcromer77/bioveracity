@@ -4,6 +4,7 @@ import { HubError, record, text } from '@/lib/wild-hubs/domain'
 import { contributionInput } from '@/lib/wild-hubs/contributions'
 import { contributionPhotoInput, preparePhoto } from '@/lib/wild-hubs/photos'
 import { ScanError } from '@/lib/workspaces/scan-file.mjs'
+import { notifyOwnerOfNewContribution } from '@/lib/wild-hubs/contribution-notification'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,13 @@ export async function POST(request: Request) {
     const photo = contributionPhotoInput(v)
     try {
       const prepared = await preparePhoto(photo)
-      return s.submit(hubId, prepared, fields)
+      const result = await s.submit(hubId, prepared, fields)
+      // The observation is now committed. Tell the owner one is waiting —
+      // best-effort and awaited so the attempt completes while the function is
+      // alive; the helper swallows every failure, so a mail problem can never
+      // affect the stored contribution.
+      await notifyOwnerOfNewContribution(hubId)
+      return result
     } catch (e) {
       if (e instanceof ScanError) throw new HubError(e.status, e.message)
       throw e
