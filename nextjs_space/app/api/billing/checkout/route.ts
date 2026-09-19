@@ -25,6 +25,9 @@ export async function POST(request: Request) {
     const plan = planForCheckout(input.planKey)
 
     let account = await prisma.billingAccount.findUnique({ where: { userId: session.user.id } })
+    if (account?.stripeSubscriptionId && !['NONE', 'CANCELED', 'INCOMPLETE_EXPIRED'].includes(account.status)) {
+      throw new WorkspaceError(409, 'You already have a subscription. Manage it from your billing page.')
+    }
     let customerId = account?.stripeCustomerId || null
     if (!customerId) {
       const customer = await createStripeCustomer(session.user.email, session.user.id)
