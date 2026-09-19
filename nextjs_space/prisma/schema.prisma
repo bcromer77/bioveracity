@@ -186,6 +186,8 @@ model Asset {
   capitalProjects     CapitalProject[]
   regulatoryItems     RegulatoryActivity[]
   measurements        Measurement[]
+  observationEvents   ObservationEventRecord[]
+  evidenceChecks      EvidenceCheckRecord[]
   communityItems      CommunityReport[]
   newsItems           NewsItem[]
   evidenceGaps        EvidenceGap[]
@@ -304,6 +306,93 @@ model RegulatoryActivity {
   createdAt     DateTime  @default(now())
 
   @@index([assetId])
+}
+
+// Canonical place observation memory. These tables persist the Luogo observation
+// contract without upgrading a source observation into scientific truth.
+model ObservationEventRecord {
+  id                       String   @id
+  canonicalEventId         String   @unique
+  assetId                  String?
+  asset                    Asset?   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  method                   String
+  observedAt               String?
+  observedPrecision        String
+  observedBasis            String
+  receivedAt               DateTime @db.Timestamptz(3)
+  placeLabel               String?
+  geometry                 Json?
+  crs                      String?
+  spatialUncertaintyMeters Float?
+  placeScopeNote           String?
+  effort                   Json?
+  coverageState            String
+  coverageNote             String
+  lineage                  Json     @default("{}")
+  findings                 ObservationFindingRecord[]
+  sources                  ObservationSourceRecord[]
+  createdAt                DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([assetId, receivedAt])
+  @@index([coverageState])
+}
+
+model ObservationFindingRecord {
+  id             String   @id
+  eventId        String
+  event          ObservationEventRecord @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  kind           String
+  state          String
+  target         String?
+  value          Float?
+  unit           String?
+  ordinalValue   String?
+  rawStatement   String?
+  reviewStatus   String
+  evidenceClass  String
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([eventId])
+  @@index([target, state])
+}
+
+model ObservationSourceRecord {
+  id                String   @id @default(cuid())
+  eventId           String
+  event             ObservationEventRecord @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  sourceSystem      String
+  publisher         String?
+  datasetIdentifier String?
+  upstreamRecordId  String?
+  upstreamEventId   String?
+  sourceUrl         String?
+  licence           String?
+  retrievedAt       DateTime @db.Timestamptz(3)
+  versionHash       String?
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([eventId])
+  @@index([sourceSystem, upstreamRecordId])
+  @@index([upstreamEventId])
+}
+
+// A bounded documentary/data inquiry. This is intentionally separate from an
+// ecological estimate: "not located in sources reviewed" is not absence.
+model EvidenceCheckRecord {
+  id             String   @id @default(cuid())
+  assetId        String?
+  asset          Asset?   @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  question       String
+  scope          Json
+  sourceVersions Json
+  method         Json
+  resultStatus   String   // LOCATED | NOT_LOCATED_IN_REVIEWED_SCOPE | PARTIAL | UNAVAILABLE | OUT_OF_SCOPE
+  resultSummary  String?
+  coverage       Json
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([assetId, createdAt])
+  @@index([resultStatus])
 }
 
 model Measurement {
