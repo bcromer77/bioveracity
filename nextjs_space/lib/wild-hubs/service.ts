@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { isAdmin } from '../access'
 import type { Database, Sql } from '../workspaces/service'
 import {
   HubError,
@@ -153,27 +154,29 @@ export function hubService(db: Database, ownerId: string) {
                 400,
                 'Confirm your authority and review the content before submitting.',
               )
-            if (!plan)
-              throw new HubError(
-                409,
-                'Generate and review a seasonal plan first.',
-              )
-            const year = new Date().getUTCFullYear()
-            if (plan.year < year || plan.year > year + 1)
-              throw new HubError(
-                409,
-                'Refresh the plan for this year or next year.',
-              )
+            // The seasonal plan is optional. When one exists it must be for a
+            // sensible year; a place with no plan may still be submitted.
+            if (plan) {
+              const year = new Date().getUTCFullYear()
+              if (plan.year < year || plan.year > year + 1)
+                throw new HubError(
+                  409,
+                  'Refresh the plan for this year or next year.',
+                )
+            }
+            // Publish exactly the photographs the partner curated in their saved
+            // profile — the same set the private preview shows. An undefined
+            // selection (legacy/fresh drafts) means every photograph.
             const available = await photos(sql, id)
+            const chosen = profile.photoIds ?? available.map((p) => p.id)
             if (
-              !Array.isArray(input.photoIds) ||
-              input.photoIds.length > 12 ||
-              new Set(input.photoIds).size !== input.photoIds.length ||
-              input.photoIds.some((v) => !available.some((p) => p.id === v))
+              chosen.length > 12 ||
+              new Set(chosen).size !== chosen.length ||
+              chosen.some((v) => !available.some((p) => p.id === v))
             )
               throw new HubError(400, 'Select only photos from this hub.')
             const snapshot: Snapshot = {
-              profile, plan, photoIds: input.photoIds as string[],
+              profile, plan, photoIds: chosen,
               approvedAt: new Date().toISOString(), version: hub.revision + 1,
             }
             await sql.query(
@@ -308,6 +311,30 @@ export async function readablePhoto(
   const [photo] = await sql.query<Photo & { bytes: Uint8Array }>(
     `SELECT p."id",p."caption",p."credit",p."bytes" FROM "WildHubPhoto" p JOIN "WildHub" h ON h."id"=p."hubId" WHERE p."id"=$1 AND (h."ownerId"=$2 OR h."published"->'photoIds' ? p."id")`,
     [id, viewerId],
+  )
+  return photo || null
+}
+// Photograph access for the private draft preview. The owner and anyone with the
+// published photo can read it (readablePhoto); additionally an administrator — who
+// may view any owner's unpublished preview — may retrieve that preview's
+// photographs. Admin status is re-checked against the live database, never a JWT,
+// so a stale token cannot retain access. Everyone else still gets null (404).
+export async function previewablePhoto(
+  sql: Sql,
+  id: string,
+  viewerId: string | null,
+) {
+  if (!viewerId) return null
+  const owned = await readablePhoto(sql, id, viewerId)
+  if (owned) return owned
+  const [user] = await sql.query<{ id: string; role: string; accessState: string }>(
+    'SELECT "id","role","accessState" FROM "User" WHERE "id"=$1',
+    [viewerId],
+  )
+  if (!user || !isAdmin({ user, expires: '' } as never)) return null
+  const [photo] = await sql.query<Photo & { bytes: Uint8Array }>(
+    'SELECT "id","caption","credit","bytes" FROM "WildHubPhoto" WHERE "id"=$1',
+    [id],
   )
   return photo || null
 }
