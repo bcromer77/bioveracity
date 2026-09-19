@@ -13,6 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PRISMA_SKIP_POSTINSTALL_GENERATE: 'true'
+      DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:5432/unused'
+      NEXTAUTH_SECRET: 'isolated-ci-build-no-production-access'
+      AUTH_SECRET: 'isolated-ci-build-no-production-access'
+      NEXTAUTH_URL: 'http://localhost:3000'
+      NEXT_TELEMETRY_DISABLED: '1'
     defaults:
       run:
         working-directory: nextjs_space
@@ -26,6 +31,13 @@ jobs:
         run: |
           corepack enable
           corepack prepare yarn@4.9.2 --activate
+          rm -f yarn.lock
+          cp ci/yarn.lock yarn.lock
+          cat > .yarnrc.yml <<'YARNRC'
+          enableGlobalCache: false
+          enableTelemetry: false
+          nodeLinker: node-modules
+          YARNRC
       - name: Install locked dependencies
         run: yarn install --immutable
       - name: Generate an isolated Prisma client without connecting to a database
