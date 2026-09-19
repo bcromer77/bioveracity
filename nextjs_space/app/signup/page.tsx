@@ -9,12 +9,13 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function SignupPage() {
+  const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === 'true'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [callbackUrl, setCallbackUrl] = useState('/workspace')
+  const [callbackUrl, setCallbackUrl] = useState('/start')
   const router = useRouter()
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function SignupPage() {
           </div>
           <div>
             <label className="block text-[15px] font-medium text-foreground mb-1.5">Password</label>
-            <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="At least 8 characters" required minLength={8} className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
+            <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="At least 10 characters" required minLength={10} className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <Button type="submit" disabled={loading} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Create account'}
