@@ -1,0 +1,26 @@
+name: Luogo observation contract
+
+on:
+  pull_request:
+    paths:
+      - 'nextjs_space/lib/observations/**'
+      - 'nextjs_space/tests/observation-contract.test.ts'
+      - '.github/workflows/luogo-observation-contract.yml'
+  workflow_dispatch:
+
+jobs:
+  observation-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nextjs_space
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+          cache-dependency-path: nextjs_space/package-lock.json
+      - run: npm ci
+      - run: node --import tsx --test tests/observation-contract.test.ts
+      - run: npm run typecheck
