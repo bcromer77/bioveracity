@@ -84,7 +84,10 @@ export async function POST(request: Request) {
   try {
     const cfg = billingConfig()
     if (!cfg.enabled || !cfg.webhookSecret) throw new WorkspaceError(503, 'Stripe webhook is not configured')
+    const declaredLength = Number(request.headers.get('content-length') || '0')
+    if (declaredLength > 1024 * 1024) throw new WorkspaceError(413, 'Stripe webhook payload is too large')
     const rawBody = await request.text()
+    if (Buffer.byteLength(rawBody, 'utf8') > 1024 * 1024) throw new WorkspaceError(413, 'Stripe webhook payload is too large')
     verifyStripeSignature(rawBody, request.headers.get('stripe-signature'), cfg.webhookSecret)
     const event = JSON.parse(rawBody) as StripeEvent
     if (!event?.id || !event?.type || !Number.isFinite(event.created)) throw new WorkspaceError(400, 'Invalid Stripe event')
