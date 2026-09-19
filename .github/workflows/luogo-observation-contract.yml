@@ -1,4 +1,5 @@
 name: Luogo observation contract
+# PR60 rerun marker: validates source-train stack after PR59 CI fix
 
 on:
   pull_request:
