@@ -1,9 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { EvidenceLink } from '@/components/evidence-link'
 import { WILD_COUNTIES } from '@/lib/wild-counties/counties'
 import { KINDS, type Profile } from '@/lib/wild-hubs/domain'
-import { parseVenueCsv, venueSetupInput, VENUE_CSV_HEADER, type VenueSetupInput } from '@/lib/wild-hubs/onboarding-input'
+import { parseVenueCsv, venueSetupInput, type VenueSetupInput } from '@/lib/wild-hubs/onboarding-input'
 import type { VenueLaunchRow } from '@/lib/wild-hubs/onboarding'
 
 type List = { places: VenueLaunchRow[]; total: number; page: number; photoBytes: string }
@@ -76,7 +77,7 @@ export function VenueLaunchDesk() {
       <label className="block">Venue story<textarea className={fieldClass} rows={4} value={form.profile.story} disabled={Boolean(batch.length)} onChange={e => update('story', e.target.value)} /></label>
       {!edit && <details><summary className="cursor-pointer underline">Prepare up to 50 places from a CSV</summary><div className="space-y-3 mt-3">
         <p>Use one unique reference per place. Importing the same details again will reuse the prepared record.</p>
-        <a className="underline" download="venue-intake.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(VENUE_CSV_HEADER + '\n')}`}>Download blank intake template</a>
+        <EvidenceLink className="underline" download="venue-intake.csv" href="/venue-intake.csv">Download blank intake template</EvidenceLink>
         <label className="block">Choose intake CSV<input className={fieldClass} type="file" accept=".csv,text/csv" onChange={e => { const file = e.target.files?.[0]; if (!file) return; setBatch([]); setAuthorised(false); run(async () => { if (file.size > 180000) throw Error('Use a CSV smaller than 180 KB.'); setBatch(parseVenueCsv(await file.text())); setMessage('CSV checked. Review the places below before saving.'); }) }} /></label>
         {batch.length > 0 && <><p>{batch.length} places ready to prepare:</p><ul className="max-h-60 overflow-auto list-disc pl-6">{batch.map(p => <li key={p.reference}>{p.profile.name} · {p.profile.county} · {p.email}</li>)}</ul><button className="underline" onClick={() => { setBatch([]); setAuthorised(false) }}>Clear import</button></>}
       </div></details>}
@@ -95,7 +96,7 @@ export function VenueLaunchDesk() {
             {!row.acceptedAt && <><button className="underline" disabled={busy || Boolean(row.revokedAt)} onClick={() => change(row, 'issue')}>Prepare setup link</button>
               <button className="underline" disabled={busy} onClick={() => { setEdit(row); setForm({ reference: row.reference, email: row.email, profile: row.profile }); setBatch([]); setAuthorised(false); setLink(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Edit details</button>
               <button className="underline" disabled={busy || Boolean(row.revokedAt)} onClick={() => change(row, 'revoke')}>Revoke setup</button></>}
-            {row.publicPath && <><Link className="underline" href={row.publicPath}>Guest page</Link><a className="underline" href={`/api/wild/qr/${row.hubId}?download=1`}>Download QR</a></>}
+            {row.publicPath && <><Link className="underline" href={row.publicPath}>Guest page</Link><EvidenceLink className="underline" href={`/api/wild/qr/${row.hubId}?download=1`}>Download QR</EvidenceLink></>}
           </div>
         </article>)}</div>
         <div className="flex gap-4"><button disabled={busy || data.page === 0} className="bv-button" onClick={() => run(() => load(data.page - 1))}>Previous</button><span className="self-center">Page {data.page + 1}</span><button disabled={busy || (data.page + 1) * 50 >= data.total} className="bv-button" onClick={() => run(() => load(data.page + 1))}>Next</button></div>

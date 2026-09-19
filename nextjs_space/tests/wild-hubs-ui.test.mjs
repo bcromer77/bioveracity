@@ -1,6 +1,6 @@
 import { after, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
@@ -14,7 +14,7 @@ const outfile = path.join(directory, 'components.mjs')
 await build({
   stdin: {
     contents:
-      "export { SeasonalLanding } from './components/wild/seasonal-landing'; export { HubStudio } from './components/wild/hub-studio'; export { VenueJoin } from './components/wild/venue-join'; export { generatePlan } from './lib/wild-hubs/domain'; export { authReturnPath } from './lib/auth-return-path'",
+      "export { VenueLaunchDesk } from './components/admin/venue-launch-desk'; export { parseVenueCsv } from './lib/wild-hubs/onboarding-input'; export { SeasonalLanding } from './components/wild/seasonal-landing'; export { HubStudio } from './components/wild/hub-studio'; export { VenueJoin } from './components/wild/venue-join'; export { generatePlan } from './lib/wild-hubs/domain'; export { authReturnPath } from './lib/auth-return-path'",
     resolveDir: process.cwd(),
     loader: 'tsx',
   },
@@ -44,7 +44,7 @@ await build({
     },
   ],
 })
-const { SeasonalLanding, HubStudio, VenueJoin, generatePlan, authReturnPath } =
+const { VenueLaunchDesk, parseVenueCsv, SeasonalLanding, HubStudio, VenueJoin, generatePlan, authReturnPath } =
   await import(pathToFileURL(outfile).href)
 const text = (r) => JSON.stringify(r.toJSON())
 const button = (r, label) =>
@@ -280,4 +280,32 @@ test('venue setup token survives login in this tab and is claimed only after con
     assert.equal(values.size, 0)
     await act(() => r.unmount())
   } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow; globalThis.sessionStorage = oldStorage }
+})
+
+
+test('launch desk keeps CSV and QR downloads usable through managed links', async () => {
+  const originalFetch = globalThis.fetch
+  let r
+  globalThis.fetch = async () => Response.json({
+    places: [{ id: 'setup-fixture', email: 'owner@example.test', profile: { name: 'Fixture venue', county: 'down' }, status: 'published', acceptedAt: '2026-09-19T00:00:00Z', photoCount: 1, planYear: 2026, publicPath: '/wild/hub/fixture', hubId: 'hub-fixture' }],
+    total: 1, page: 0, photoBytes: '0',
+  })
+  try {
+    await act(async () => { r = create(React.createElement(VenueLaunchDesk)) })
+    const anchors = r.root.findAllByType('a')
+    const template = anchors.find(a => a.children.join('') === 'Download blank intake template')
+    assert.ok(template, 'template must remain a working anchor, not an attribution button')
+    assert.equal(template.props.href, '/venue-intake.csv')
+    assert.equal(template.props.download, 'venue-intake.csv')
+    const csv = await readFile(path.join(process.cwd(), 'public', template.props.href), 'utf8')
+    const places = parseVenueCsv(csv + 'fixture,owner@example.test,Fixture venue,down,food,A fictional venue for testing.,\n')
+    assert.equal(places.length, 1)
+    assert.equal(places[0].reference, 'fixture')
+    const qr = anchors.find(a => a.children.join('') === 'Download QR')
+    assert.ok(qr, 'QR must remain a working download anchor')
+    assert.equal(qr.props.href, '/api/wild/qr/hub-fixture?download=1')
+  } finally {
+    if (r) await act(() => r.unmount())
+    globalThis.fetch = originalFetch
+  }
 })
