@@ -1,7 +1,11 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { observationContentHash, scopedIdentity } from './identity'
 import { validateObservationEvent, type ObservationEvent, type ObservationTime } from './contract'
 
-const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
+function finish(event: ObservationEvent): ObservationEvent {
+  const validated = validateObservationEvent(event)
+  validated.source.versionHash = observationContentHash(validated)
+  return validated
+}
 const received = (value?: string | null) => value ?? new Date().toISOString()
 
 function time(value: string | null | undefined, basis: ObservationTime['basis'] = 'source'): ObservationTime {
@@ -26,9 +30,8 @@ export function fromCommunityObservation(input: {
     upstreamRecordId: input.contributionId,
     upstreamEventId: input.contributionId,
     retrievedAt: input.createdAt,
-    versionHash: hash(input),
   }
-  return validateObservationEvent({
+  return finish({
     id: `community:${input.contributionId}`,
     canonicalEventId: `community:${input.contributionId}`,
     method: 'CASUAL_OBSERVATION',
@@ -52,28 +55,33 @@ export function fromCommunityObservation(input: {
 
 export function fromOccurrenceRecord(input: {
   recordId: string
+  sourceSystem: string
+  datasetIdentifier: string
   eventId?: string | null
   scientificName: string
   eventDate?: string | null
   receivedAt?: string | null
   publisher: string
-  datasetIdentifier?: string | null
   sourceUrl?: string | null
   licence?: string | null
   placeId?: string | null
   spatialUncertaintyMeters?: number | null
 }): ObservationEvent {
   const retrievedAt = received(input.receivedAt)
-  const canonical = input.eventId ? `occurrence-event:${input.eventId}` : `occurrence-record:${input.recordId}`
-  return validateObservationEvent({
-    id: `occurrence:${input.recordId}`,
+  const recordIdentity = scopedIdentity('occurrence-record', input.sourceSystem, input.datasetIdentifier, input.recordId)
+  // Cross-provider equivalence requires explicit reconciliation, never a bare event-ID match.
+  const canonical = input.eventId
+    ? scopedIdentity('occurrence-event', input.sourceSystem, input.datasetIdentifier, input.eventId)
+    : recordIdentity
+  return finish({
+    id: recordIdentity,
     canonicalEventId: canonical,
     method: 'OFFICIAL_RECORD',
     observedTime: time(input.eventDate),
     receivedAt: retrievedAt,
     place: { placeId: input.placeId ?? null, spatialUncertaintyMeters: input.spatialUncertaintyMeters ?? null },
     source: {
-      sourceSystem: 'external-occurrence',
+      sourceSystem: input.sourceSystem,
       publisher: input.publisher,
       datasetIdentifier: input.datasetIdentifier ?? null,
       upstreamRecordId: input.recordId,
@@ -81,10 +89,9 @@ export function fromOccurrenceRecord(input: {
       sourceUrl: input.sourceUrl ?? null,
       licence: input.licence ?? null,
       retrievedAt,
-      versionHash: hash(input),
     },
     findings: [{
-      id: `occurrence:${input.recordId}:presence`,
+      id: `${recordIdentity}:presence`,
       kind: 'OCCURRENCE',
       state: 'DETECTED',
       target: input.scientificName,
@@ -110,7 +117,7 @@ export function fromPhysicalMeasurement(input: {
   sourceUrl?: string | null
   licence?: string | null
 }): ObservationEvent {
-  return validateObservationEvent({
+  return finish({
     id: `measurement:${input.sourceSystem}:${input.recordId}`,
     canonicalEventId: `measurement:${input.sourceSystem}:${input.recordId}`,
     method: 'INSTRUMENT',
@@ -124,7 +131,6 @@ export function fromPhysicalMeasurement(input: {
       sourceUrl: input.sourceUrl ?? null,
       licence: input.licence ?? null,
       retrievedAt: input.retrievedAt,
-      versionHash: hash(input),
     },
     findings: [{
       id: `measurement:${input.sourceSystem}:${input.recordId}:value`,
@@ -154,7 +160,7 @@ export function fromSpatialContext(input: {
   licence?: string | null
   scopeNote: string
 }): ObservationEvent {
-  return validateObservationEvent({
+  return finish({
     id: `context:${input.sourceSystem}:${input.recordId}`,
     canonicalEventId: `context:${input.sourceSystem}:${input.recordId}`,
     method: 'OFFICIAL_RECORD',
@@ -170,7 +176,6 @@ export function fromSpatialContext(input: {
       sourceUrl: input.sourceUrl ?? null,
       licence: input.licence ?? null,
       retrievedAt: input.retrievedAt,
-      versionHash: hash(input),
     },
     findings: [{
       id: `context:${input.sourceSystem}:${input.recordId}:boundary`,
@@ -196,8 +201,8 @@ export function structuredNonDetection(input: {
   sourceSystem: string
   upstreamRecordId: string
 }): ObservationEvent {
-  const eventId = input.eventId ?? randomUUID()
-  return validateObservationEvent({
+  const eventId = scopedIdentity('structured-check', input.sourceSystem, input.eventId ?? input.upstreamRecordId)
+  return finish({
     id: `check:${eventId}`,
     canonicalEventId: `check:${eventId}`,
     method: 'STRUCTURED_CHECK',
@@ -208,9 +213,8 @@ export function structuredNonDetection(input: {
     source: {
       sourceSystem: input.sourceSystem,
       upstreamRecordId: input.upstreamRecordId,
-      upstreamEventId: eventId,
+      upstreamEventId: input.eventId ?? input.upstreamRecordId,
       retrievedAt: input.receivedAt,
-      versionHash: hash(input),
     },
     findings: [{
       id: `check:${eventId}:non-detection`,

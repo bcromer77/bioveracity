@@ -30,9 +30,9 @@ test('community observation preserves unknown date instead of inventing upload t
   assert.equal(event.coverage.state, 'unknown')
 })
 
-test('same external sampling event is one independent event even with two occurrence representations', () => {
+test('two records within the same source dataset sampling event share canonical identity', () => {
   const a = fromOccurrenceRecord({
-    recordId: 'gbif-1',
+    recordId: 'gbif-1', sourceSystem: 'gbif', datasetIdentifier: 'dataset-a',
     eventId: 'survey-42',
     scientificName: 'Aeshna cyanea',
     eventDate: '2026-07-10',
@@ -40,12 +40,12 @@ test('same external sampling event is one independent event even with two occurr
     publisher: 'Recorder scheme via GBIF',
   })
   const b = fromOccurrenceRecord({
-    recordId: 'nbn-9',
+    recordId: 'gbif-9', sourceSystem: 'gbif', datasetIdentifier: 'dataset-a',
     eventId: 'survey-42',
     scientificName: 'Aeshna cyanea',
     eventDate: '2026-07-10',
     receivedAt: '2026-09-19T12:00:01Z',
-    publisher: 'Recorder scheme via NBN',
+    publisher: 'Recorder scheme via GBIF',
   })
   assert.equal(independentObservationCount([a, b]), 1)
 })
