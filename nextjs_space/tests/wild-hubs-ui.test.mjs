@@ -85,7 +85,7 @@ test('sign-in returns only to local routes, including the ecology studio', () =>
     '/\nevil',
     null,
   ])
-    assert.equal(authReturnPath(value), '/workspace')
+    assert.equal(authReturnPath(value), '/start')
 })
 
 test('self-service retry preserves creation identity; saved draft, edits and approval remain separate', async (t) => {

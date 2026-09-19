@@ -6,13 +6,13 @@ export function authReturnPath(value: string | null): string {
     value.startsWith('//') ||
     /[\\\u0000-\u0020]/.test(value)
   )
-    return '/workspace'
+    return '/start'
   try {
     const url = new URL(value, 'https://bioveracity.invalid')
     return url.origin === 'https://bioveracity.invalid'
       ? url.pathname + url.search + url.hash
       : '/workspace'
   } catch {
-    return '/workspace'
+    return '/start'
   }
 }

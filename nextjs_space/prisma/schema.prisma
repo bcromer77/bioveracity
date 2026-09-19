@@ -115,6 +115,8 @@ model User {
   wildPublications WildHubPublication[]
   privateMemberships PrivateWorkspaceMember[]
   privateAudit PrivateWorkspaceAudit[]
+  workspaceInvitationsSent PrivateWorkspaceInvitation[] @relation("WorkspaceInviteSender")
+  workspaceInvitationsAccepted PrivateWorkspaceInvitation[] @relation("WorkspaceInviteAccepter")
   caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
   caseReviews PrivateCaseEventRevision[] @relation("CaseEventReviewer")
   caseExports PrivateCaseExport[] @relation("CaseExportRequester")
@@ -889,6 +891,7 @@ model PrivateWorkspace {
   members PrivateWorkspaceMember[]
   cases PrivateCase[]
   audit PrivateWorkspaceAudit[]
+  invitations PrivateWorkspaceInvitation[]
 }
 model PrivateWorkspaceMember {
   workspaceId String
@@ -913,6 +916,7 @@ model PrivateCase {
   audit PrivateWorkspaceAudit[]
   documents PrivateCaseDocument[]
   exports PrivateCaseExport[]
+  invitations PrivateWorkspaceInvitation[]
   @@unique([workspaceId, id])
 }
 
@@ -1019,6 +1023,30 @@ model PrivateCaseSite {
   case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
   @@index([workspaceId, caseId])
 }
+model PrivateWorkspaceInvitation {
+  id String @id
+  workspaceId String
+  caseId String?
+  email String
+  role String
+  canExport Boolean @default(false)
+  tokenHash String @unique
+  invitedBy String
+  acceptedBy String?
+  expiresAt DateTime @db.Timestamptz(3)
+  acceptedAt DateTime? @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  case PrivateCase? @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  sender User @relation("WorkspaceInviteSender", fields: [invitedBy], references: [id], onDelete: Restrict)
+  accepter User? @relation("WorkspaceInviteAccepter", fields: [acceptedBy], references: [id], onDelete: Restrict)
+
+  @@index([workspaceId, createdAt])
+  @@index([email, revokedAt, acceptedAt])
+  @@index([expiresAt])
+}
+
 model PrivateWorkspaceAudit {
   id String @id
   workspaceId String
