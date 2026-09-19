@@ -117,6 +117,9 @@ model User {
   privateAudit PrivateWorkspaceAudit[]
   workspaceInvitationsSent PrivateWorkspaceInvitation[] @relation("WorkspaceInviteSender")
   workspaceInvitationsAccepted PrivateWorkspaceInvitation[] @relation("WorkspaceInviteAccepter")
+  attentionPreferences AttentionPreference[]
+  attentionEvents AttentionEvent[]
+  notificationDeliveries NotificationDelivery[]
   caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
   caseReviews PrivateCaseEventRevision[] @relation("CaseEventReviewer")
   caseExports PrivateCaseExport[] @relation("CaseExportRequester")
@@ -934,6 +937,72 @@ model PrivateCaseSite {
   case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
   @@index([workspaceId, caseId])
 }
+model AttentionPreference {
+  id String @id
+  userId String
+  scopeKey String
+  actionEmail Boolean @default(true)
+  importantChangeEmail Boolean @default(true)
+  weeklyDigest Boolean @default(true)
+  routineEmail Boolean @default(false)
+  quietHoursStart Int? // local hour 0-23, null means no quiet-hours preference
+  quietHoursEnd Int?
+  timezone String? // IANA name when supplied by the user
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, scopeKey])
+  @@index([userId])
+}
+
+model AttentionEvent {
+  id String @id
+  userId String
+  scopeKey String
+  workspaceId String?
+  caseId String?
+  category String
+  significance String
+  requiresAction Boolean @default(false)
+  title String
+  summary String
+  actionPath String
+  dedupeKey String
+  occurredAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  metadata Json @default("{}")
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  deliveries NotificationDelivery[]
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, occurredAt])
+  @@index([scopeKey, occurredAt])
+}
+
+model NotificationDelivery {
+  id String @id
+  userId String
+  attentionEventId String?
+  channel String
+  status String
+  reason String
+  bundleKey String?
+  subject String
+  actionPath String
+  scheduledAt DateTime @db.Timestamptz(3)
+  sentAt DateTime? @db.Timestamptz(3)
+  openedAt DateTime? @db.Timestamptz(3)
+  usefulReturnAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  event AttentionEvent? @relation(fields: [attentionEventId], references: [id], onDelete: Restrict)
+
+  @@index([userId, scheduledAt])
+  @@index([status, scheduledAt])
+  @@index([bundleKey, scheduledAt])
+}
+
 model PrivateWorkspaceInvitation {
   id String @id
   workspaceId String
