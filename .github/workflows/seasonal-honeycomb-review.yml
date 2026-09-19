@@ -64,6 +64,7 @@ jobs:
           yarn test:onsite
           node --import tsx --test tests/private-workspaces.test.ts
           node --import tsx --test tests/institutional-arrival.test.ts
+          node --import tsx --test tests/attention-return.test.ts
           node --import tsx scripts/test-wild-counties.ts
           WILD_QR_DECODE_TEST=true yarn test:wild-community
       - name: Production build
