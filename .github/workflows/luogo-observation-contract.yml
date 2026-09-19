@@ -15,12 +15,14 @@ jobs:
       run:
         working-directory: nextjs_space
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22.13.0'
-          cache: npm
-          cache-dependency-path: nextjs_space/package-lock.json
-      - run: npm ci
+      # The current integration base does not track a package-lock.json, so npm ci
+      # and setup-node dependency caching are not valid here. Install without
+      # modifying repository files in CI; restoring a lockfile is a separate
+      # repository-wide dependency-management decision.
+      - run: npm install --ignore-scripts --no-audit --no-fund
       - run: node --import tsx --test tests/observation-contract.test.ts
       - run: npm run typecheck
