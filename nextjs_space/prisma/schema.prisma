@@ -120,6 +120,7 @@ model User {
   attentionPreferences AttentionPreference[]
   attentionEvents AttentionEvent[]
   notificationDeliveries NotificationDelivery[]
+  billingAccount BillingAccount?
   caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
   caseReviews PrivateCaseEventRevision[] @relation("CaseEventReviewer")
   caseExports PrivateCaseExport[] @relation("CaseExportRequester")
@@ -1090,6 +1091,34 @@ model NotificationDelivery {
   @@index([userId, scheduledAt])
   @@index([status, scheduledAt])
   @@index([bundleKey, scheduledAt])
+}
+
+model BillingAccount {
+  id String @id
+  userId String @unique
+  stripeCustomerId String? @unique
+  stripeSubscriptionId String? @unique
+  planKey String?
+  priceId String?
+  status String @default("NONE")
+  cancelAtPeriodEnd Boolean @default(false)
+  currentPeriodEnd DateTime? @db.Timestamptz(3)
+  lastStripeEventCreated Int?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([status])
+}
+
+model StripeWebhookEvent {
+  id String @id
+  type String
+  created Int
+  livemode Boolean
+  processedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([type, processedAt])
 }
 
 model PrivateWorkspaceInvitation {
