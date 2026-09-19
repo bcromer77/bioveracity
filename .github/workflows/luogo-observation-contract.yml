@@ -1,0 +1,57 @@
+name: Luogo observation contract
+
+on:
+  pull_request:
+    paths:
+      - 'nextjs_space/lib/observations/**'
+      - 'nextjs_space/tests/observation-contract.test.ts'
+      - '.github/workflows/luogo-observation-contract.yml'
+  workflow_dispatch:
+
+jobs:
+  observation-contract:
+    runs-on: ubuntu-latest
+    env:
+      PRISMA_SKIP_POSTINSTALL_GENERATE: 'true'
+      DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:5432/unused'
+      NEXTAUTH_SECRET: 'isolated-ci-build-no-production-access'
+      AUTH_SECRET: 'isolated-ci-build-no-production-access'
+      NEXTAUTH_URL: 'http://localhost:3000'
+      NEXT_TELEMETRY_DISABLED: '1'
+    defaults:
+      run:
+        working-directory: nextjs_space
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.13.0'
+          package-manager-cache: false
+      - name: Prepare portable dependency configuration
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          rm -f yarn.lock
+          cp ci/yarn.lock yarn.lock
+          cat > .yarnrc.yml <<'YARNRC'
+          enableGlobalCache: false
+          enableTelemetry: false
+          nodeLinker: node-modules
+          YARNRC
+      - name: Install locked dependencies
+        run: yarn install --immutable
+      - name: Generate an isolated Prisma client without connecting to a database
+        run: |
+          node - <<'NODE'
+          const fs = require('fs')
+          const path = require('path')
+          const schema = fs.readFileSync('prisma/schema.prisma','utf8')
+            .replace(/output\s*=\s*"[^"]*"/, 'output = '+JSON.stringify(path.join(process.cwd(),'node_modules/.prisma/client')))
+          fs.writeFileSync('ci-schema.prisma', schema)
+          NODE
+          yarn prisma generate --schema ci-schema.prisma
+          rm ci-schema.prisma
+      - name: Luogo observation contract tests
+        run: node --import tsx --test tests/observation-contract.test.ts
+      - name: Full TypeScript check
+        run: yarn typecheck
