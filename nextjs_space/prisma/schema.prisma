@@ -102,6 +102,9 @@ model EvidenceSearchQuota {
 }
 
 model User {
+  venueSetupsCreated WildVenueSetup[] @relation("VenueSetupCreator")
+  venueSetupsAccepted WildVenueSetup[] @relation("VenueSetupAcceptor")
+  venueSetupEvents WildVenueSetupEvent[]
   id            String      @id @default(cuid())
   name          String?
   email         String      @unique
@@ -1190,6 +1193,7 @@ model ScanPacing {
 }
 
 model WildHub {
+  venueSetup WildVenueSetup?
   id String @id
   ownerId String
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -1519,4 +1523,37 @@ model PartnerReport {
   createdAt           DateTime @default(now()) @db.Timestamptz(3)
   @@unique([workspaceId, kind, version])
   @@index([workspaceId, kind, createdAt])
+}
+
+// Managed venue intake. Links grant only a new hub to the named recipient.
+model WildVenueSetup {
+  id String @id
+  reference String @unique
+  email String
+  profile Json
+  createdBy String
+  creator User @relation("VenueSetupCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  acceptedBy String?
+  acceptor User? @relation("VenueSetupAcceptor", fields: [acceptedBy], references: [id], onDelete: Restrict)
+  hubId String? @unique
+  hub WildHub? @relation(fields: [hubId], references: [id], onDelete: Restrict)
+  tokenHash String? @unique
+  expiresAt DateTime? @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  acceptedAt DateTime? @db.Timestamptz(3)
+  revision Int @default(1)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  events WildVenueSetupEvent[]
+  @@index([createdAt])
+}
+model WildVenueSetupEvent {
+  id String @id
+  setupId String
+  setup WildVenueSetup @relation(fields: [setupId], references: [id], onDelete: Restrict)
+  actorId String
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([setupId, createdAt])
 }

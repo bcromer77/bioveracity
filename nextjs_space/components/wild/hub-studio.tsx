@@ -78,7 +78,21 @@ export function HubStudio() {
     setYear((prev) => (prev ? prev : y))
   }, [])
   useEffect(() => {
-    refresh().catch((e) => setError(e.message))
+    let cancelled = false
+    setBusy(true)
+    api('/api/wild/hubs').then(async json => {
+      if (cancelled) return
+      setList(json.hubs)
+      const requested = new URLSearchParams(window.location.search).get('hub')
+      const target = requested || (json.hubs.length === 1 ? json.hubs[0].id : null)
+      if (target) {
+        if (!json.hubs.some((item: { id: string }) => item.id === target)) throw Error('This place is not available to your account. Choose one of your places below.')
+        const loaded = await api(`/api/wild/hubs/${encodeURIComponent(target)}`)
+        if (!cancelled) receive(loaded.hub)
+      }
+    }).catch(e => { if (!cancelled) setError(e.message) })
+      .finally(() => { if (!cancelled) setBusy(false) })
+    return () => { cancelled = true }
   }, [])
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {

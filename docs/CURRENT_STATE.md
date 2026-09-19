@@ -1,3 +1,28 @@
+# Current engineering update — venue launch preparation
+
+Updated 2026-09-19 (UTC). This section supersedes the older release snapshot below.
+
+- GitHub integration baseline inspected for this task: PR65 merged into
+  `clarity/usability-release` at `a36399b` (verified via git fetch).
+- Last production report supplied by Bazil: Abacus deployed
+  `7b240dab00826c8d2a52c1c4582449d744dec2e5`, applied the three `20260919_*`
+  migrations and kept Wild Hub/billing flags disabled. This is a supplied deployment
+  report, not an independently inspected live environment.
+- PR65 production deployment and its observation migration are not verified here.
+- Current work: `feat/venue-launch-onboarding` implements managed intake, owner setup
+  and launch tracking. Read `docs/VENUE_50_LAUNCH.md` for scope, validation and release
+  gates. No live flags, accounts, permissions, messages or databases changed here.
+- Venue readiness now takes priority at Bazil's instruction: prepare the technical
+  route for 50 places next week. This is a delivery target, not contracted demand.
+- PR64 was the merged billing-date fix. The historical reservation below is obsolete.
+  Annual billing remains outside this venue-onboarding change.
+- The connector branch is preserved remotely as `archive/abacus-connectors-acaadb1`
+  per the supplied Abacus report; it is not part of this change.
+
+---
+
+# Historical release snapshot (superseded above; retained for provenance)
+
 > All agents must read this file before reconstructing project state. Verify externally changeable facts before deployment and update this file before completing release work.
 
 # BioVeracity Current State
