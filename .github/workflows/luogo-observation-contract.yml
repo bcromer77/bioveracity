@@ -11,6 +11,8 @@ on:
 jobs:
   observation-contract:
     runs-on: ubuntu-latest
+    env:
+      PRISMA_SKIP_POSTINSTALL_GENERATE: 'true'
     defaults:
       run:
         working-directory: nextjs_space
@@ -19,10 +21,25 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22.13.0'
-      # The current integration base does not track a package-lock.json, so npm ci
-      # and setup-node dependency caching are not valid here. Install without
-      # modifying repository files in CI; restoring a lockfile is a separate
-      # repository-wide dependency-management decision.
-      - run: npm install --ignore-scripts --no-audit --no-fund
-      - run: node --import tsx --test tests/observation-contract.test.ts
-      - run: npm run typecheck
+          package-manager-cache: false
+      - name: Prepare portable dependency configuration
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+      - name: Install locked dependencies
+        run: yarn install --immutable
+      - name: Generate an isolated Prisma client without connecting to a database
+        run: |
+          node - <<'NODE'
+          const fs = require('fs')
+          const path = require('path')
+          const schema = fs.readFileSync('prisma/schema.prisma','utf8')
+            .replace(/output\s*=\s*"[^"]*"/, 'output = '+JSON.stringify(path.join(process.cwd(),'node_modules/.prisma/client')))
+          fs.writeFileSync('ci-schema.prisma', schema)
+          NODE
+          yarn prisma generate --schema ci-schema.prisma
+          rm ci-schema.prisma
+      - name: Luogo observation contract tests
+        run: node --import tsx --test tests/observation-contract.test.ts
+      - name: Full TypeScript check
+        run: yarn typecheck
