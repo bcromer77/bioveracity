@@ -43,6 +43,7 @@ export function cambridgeshireOccurrenceToObservation(input: {
 }): ObservationEvent {
   return fromOccurrenceRecord({
     recordId: String(input.key),
+    sourceSystem: 'gbif',
     eventId: input.eventId ?? null,
     scientificName: input.scientificName,
     eventDate: input.eventDate ?? null,

@@ -337,6 +337,7 @@ model ObservationEventRecord {
   lineage                  Json     @default("{}")
   findings                 ObservationFindingRecord[]
   sources                  ObservationSourceRecord[]
+  revisions                ObservationRevisionRecord[]
   createdAt                DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([assetId, receivedAt])
@@ -363,6 +364,7 @@ model ObservationFindingRecord {
 }
 
 model ObservationSourceRecord {
+  revision          ObservationRevisionRecord?
   id                String   @id @default(cuid())
   eventId           String
   event             ObservationEventRecord @relation(fields: [eventId], references: [id], onDelete: Restrict)
@@ -380,6 +382,22 @@ model ObservationSourceRecord {
   @@index([eventId])
   @@index([sourceSystem, upstreamRecordId])
   @@index([upstreamEventId])
+}
+
+// Immutable distinct source-content snapshots. Legacy event/finding rows retain
+// first-seen values; corrections are read from these source-linked versions.
+model ObservationRevisionRecord {
+  id          String @id
+  eventId     String
+  event       ObservationEventRecord @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  sourceId    String @unique
+  source      ObservationSourceRecord @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  contentHash String
+  snapshot    Json
+  receivedAt  DateTime @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([eventId, receivedAt])
 }
 
 // A bounded documentary/data inquiry. This is intentionally separate from an

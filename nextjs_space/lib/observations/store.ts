@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type { Database, Sql } from '../workspaces/service'
 import { validateObservationEvent, type ObservationEvent } from './contract'
+import { observationContentHash } from './identity'
 
 export type EvidenceCheckInput = {
   assetId?: string | null
@@ -25,44 +26,63 @@ async function persistFinding(tx: Sql, eventId: string, finding: ObservationEven
 
 async function persistSource(tx: Sql, eventId: string, source: ObservationEvent['source']) {
   const existing = await tx.query<{ id: string }>(
-    'SELECT id FROM "ObservationSourceRecord" WHERE "eventId"=$1 AND "sourceSystem"=$2 AND COALESCE("upstreamRecordId",\'\')=COALESCE($3,\'\') AND COALESCE("versionHash",\'\')=COALESCE($4,\'\') LIMIT 1',
-    [eventId, source.sourceSystem, source.upstreamRecordId ?? null, source.versionHash ?? null],
+    'SELECT id FROM "ObservationSourceRecord" WHERE "eventId"=$1 AND "sourceSystem"=$2 AND "datasetIdentifier" IS NOT DISTINCT FROM $5 AND COALESCE("upstreamRecordId",\'\')=COALESCE($3,\'\') AND COALESCE("versionHash",\'\')=COALESCE($4,\'\') LIMIT 1',
+    [eventId, source.sourceSystem, source.upstreamRecordId ?? null, source.versionHash ?? null, source.datasetIdentifier ?? null],
   )
-  if (existing[0]) return
+  if (existing[0]) return existing[0].id
+  const id = randomUUID()
   await tx.query(
     'INSERT INTO "ObservationSourceRecord" (id,"eventId","sourceSystem",publisher,"datasetIdentifier","upstreamRecordId","upstreamEventId","sourceUrl",licence,"retrievedAt","versionHash") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
-    [randomUUID(), eventId, source.sourceSystem, source.publisher ?? null, source.datasetIdentifier ?? null,
+    [id, eventId, source.sourceSystem, source.publisher ?? null, source.datasetIdentifier ?? null,
       source.upstreamRecordId ?? null, source.upstreamEventId ?? null, source.sourceUrl ?? null, source.licence ?? null,
       new Date(source.retrievedAt), source.versionHash ?? null],
   )
+  return id
 }
 
 export function observationStore(db: Database) {
   return {
     async save(eventInput: ObservationEvent) {
       const event = validateObservationEvent(structuredClone(eventInput))
+      event.source.versionHash = observationContentHash(event)
       return db.transaction(async tx => {
-        const existing = await tx.query<{ id: string }>(
+        // INSERT first makes concurrent first arrivals safe. The following row lock
+        // serialises source/version creation for this canonical event.
+        await tx.query(
+          'INSERT INTO "ObservationEventRecord" (id,"canonicalEventId","assetId",method,"observedAt","observedPrecision","observedBasis","receivedAt","placeLabel",geometry,crs,"spatialUncertaintyMeters","placeScopeNote",effort,"coverageState","coverageNote",lineage) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14::jsonb,$15,$16,$17::jsonb) ON CONFLICT ("canonicalEventId") DO NOTHING',
+          [event.id, event.canonicalEventId, event.place.placeId ?? null, event.method, event.observedTime.value,
+            event.observedTime.precision, event.observedTime.basis, new Date(event.receivedAt), event.place.label ?? null,
+            event.place.geometry == null ? null : json(event.place.geometry), event.place.crs ?? null,
+            event.place.spatialUncertaintyMeters ?? null, event.place.scopeNote ?? null,
+            event.effort == null ? null : json(event.effort), event.coverage.state, event.coverage.note, json(event.lineage)],
+        )
+        const [stored] = await tx.query<{ id: string }>(
           'SELECT id FROM "ObservationEventRecord" WHERE "canonicalEventId"=$1 FOR UPDATE',
           [event.canonicalEventId],
         )
-        let eventId = existing[0]?.id
-        if (!eventId) {
-          eventId = event.id
-          await tx.query(
-            'INSERT INTO "ObservationEventRecord" (id,"canonicalEventId","assetId",method,"observedAt","observedPrecision","observedBasis","receivedAt","placeLabel",geometry,crs,"spatialUncertaintyMeters","placeScopeNote",effort,"coverageState","coverageNote",lineage) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13,$14::jsonb,$15,$16,$17::jsonb)',
-            [eventId, event.canonicalEventId, event.place.placeId ?? null, event.method, event.observedTime.value,
-              event.observedTime.precision, event.observedTime.basis, new Date(event.receivedAt), event.place.label ?? null,
-              event.place.geometry == null ? null : json(event.place.geometry), event.place.crs ?? null,
-              event.place.spatialUncertaintyMeters ?? null, event.place.scopeNote ?? null,
-              event.effort == null ? null : json(event.effort), event.coverage.state, event.coverage.note, json(event.lineage)],
-          )
-        }
+        if (!stored) throw new Error('Observation event was not persisted')
+        const eventId = stored.id
 
         for (const finding of event.findings) await persistFinding(tx, eventId, finding)
-        await persistSource(tx, eventId, event.source)
-        return { id: eventId, canonicalEventId: event.canonicalEventId }
+        const sourceId = await persistSource(tx, eventId, event.source)
+        // Existing finding rows remain first-seen records, not a mutable latest view.
+        // Preserve every distinct representation, including corrected values, geometry,
+        // dates and finding removals. Identical content reuses the source and snapshot.
+        await tx.query(
+          'INSERT INTO "ObservationRevisionRecord" (id,"eventId","sourceId","contentHash",snapshot,"receivedAt") VALUES ($1,$2,$3,$4,$5::jsonb,$6) ON CONFLICT ("sourceId") DO NOTHING',
+          [randomUUID(), eventId, sourceId, event.source.versionHash, json(event), new Date(event.receivedAt)],
+        )
+        return { id: eventId, canonicalEventId: event.canonicalEventId, sourceId, contentHash: event.source.versionHash }
       })
+    },
+
+    // Internal storage API only. Any user-facing caller must enforce place/workspace
+    // access before calling; these snapshots can contain protected event-level data.
+    async versions(eventId: string) {
+      return db.query<{ id: string; sourceId: string; contentHash: string; snapshot: ObservationEvent; receivedAt: Date }>(
+        'SELECT id,"sourceId","contentHash",snapshot,"receivedAt" FROM "ObservationRevisionRecord" WHERE "eventId"=$1 ORDER BY "receivedAt",id',
+        [eventId],
+      )
     },
 
     async recordEvidenceCheck(input: EvidenceCheckInput) {
