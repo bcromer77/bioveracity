@@ -6,6 +6,7 @@ on:
       - 'nextjs_space/lib/observations/**'
       - 'nextjs_space/tests/observation-contract.test.ts'
       - 'nextjs_space/tests/observation-store.test.ts'
+      - 'nextjs_space/tests/source-trains.test.ts'
       - 'nextjs_space/prisma/schema.prisma'
       - '.github/workflows/luogo-observation-contract.yml'
   workflow_dispatch:
@@ -52,8 +53,8 @@ jobs:
           fs.writeFileSync('ci-schema.prisma', schema)
           NODE
           yarn prisma generate --schema ci-schema.prisma
-      - name: Luogo observation contract and persistence tests
-        run: node --import tsx --test tests/observation-contract.test.ts tests/observation-store.test.ts
+      - name: Luogo observation, persistence and source-train tests
+        run: node --import tsx --test tests/observation-contract.test.ts tests/observation-store.test.ts tests/source-trains.test.ts
       - name: Validate Prisma schema
         run: yarn prisma validate --schema ci-schema.prisma
       - name: Full TypeScript check
