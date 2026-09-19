@@ -67,7 +67,7 @@ export function BillingPanel() {
         Status: {data.account?.status.toLowerCase().split('_').join(' ')}
         {data.account?.cancelAtPeriodEnd ? ' · cancels at the end of the current period' : ''}
       </p>
-      {data.account?.currentPeriodEnd && <p className="mt-1 text-sm text-muted-foreground">Current period ends {new Date(data.account.currentPeriodEnd).toLocaleDateString()}</p>}
+      {data.account?.currentPeriodEnd && <p className="mt-1 text-sm text-muted-foreground">Current period ends {new Date(data.account.currentPeriodEnd).toLocaleDateString('en-GB', { timeZone: 'UTC' })}</p>}
       {data.account?.canManage && <Button className="mt-4" variant="outline" disabled={busy === 'portal'} onClick={() => post('/api/billing/portal', {}, 'portal')}>
         {busy === 'portal' ? 'Opening…' : 'Manage billing'}
       </Button>}
