@@ -64,7 +64,7 @@ export function BillingPanel() {
     {active ? <div className="mt-5 rounded-lg border border-border p-4">
       <p className="font-medium">{data.account?.planKey || 'Subscription'}</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Status: {data.account?.status.toLowerCase().replaceAll('_', ' ')}
+        Status: {data.account?.status.toLowerCase().split('_').join(' ')}
         {data.account?.cancelAtPeriodEnd ? ' · cancels at the end of the current period' : ''}
       </p>
       {data.account?.currentPeriodEnd && <p className="mt-1 text-sm text-muted-foreground">Current period ends {new Date(data.account.currentPeriodEnd).toLocaleDateString()}</p>}
