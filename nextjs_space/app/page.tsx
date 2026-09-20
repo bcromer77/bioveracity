@@ -6,7 +6,7 @@ export const metadata = {
   description: 'Nature does not always announce what has changed. BioVeracity gives every place a shared memory — built from local observations, public records and professional evidence.',
   openGraph: {
     title: 'BioVeracity | Give every place a memory.',
-    description: 'The otter hasn’t come back. Did anyone write it down?',
+    description: 'The otter hasn’t come back. When did it leave?',
   },
 }
 
@@ -25,7 +25,7 @@ export default function HomePage() {
       <section className="bv-hero">
         <div className="bv-split">
           <div>
-            <h1>The otter hasn’t come back.<br /><em>Did anyone write it down?</em></h1>
+            <h1>The otter hasn’t come back.<br /><em>When did it leave?</em></h1>
             <p className="bv-intro">Nature does not always announce what has changed. BioVeracity gives every place a shared memory—built from local observations, public records and professional evidence.</p>
             <div className="bv-actions">
               <Link className="bv-button" href="/wild">Explore a living place</Link>
