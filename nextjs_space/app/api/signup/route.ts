@@ -4,12 +4,15 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { normaliseEmail, passwordInput } from '@/lib/workspaces/invitations'
 import { WorkspaceError } from '@/lib/workspaces/service'
+import { validatePassword } from '@/lib/account-recovery/password-policy'
 
 export async function POST(request: Request) {
   try {
     const input = await request.json()
     const email = normaliseEmail(input.email)
     const password = passwordInput(input.password)
+    const policy = validatePassword(password)
+    if (!policy.ok) return NextResponse.json({ error: policy.error }, { status: 400 })
     const name = typeof input.name === 'string' ? input.name.trim() : ''
     if (!name || name.length > 120) return NextResponse.json({ error: 'Valid name is required' }, { status: 400 })
     const existing = await prisma.user.findUnique({ where: { email } })

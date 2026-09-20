@@ -58,7 +58,10 @@ export default function LoginPage() {
             <input type="email" value={email} onChange={(e: any) => setEmail(e?.target?.value ?? '')} placeholder="you@example.com" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <div>
-            <label className="block text-[15px] font-medium text-foreground mb-1.5">Password</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[15px] font-medium text-foreground">Password</label>
+              <Link href="/forgot-password" className="text-[13px] text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Forgot password?</Link>
+            </div>
             <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="Your password" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <Button type="submit" disabled={loading} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">

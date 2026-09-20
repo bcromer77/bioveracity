@@ -7,9 +7,6 @@ const nextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
   outputFileTracingRoot: process.env.NEXT_OUTPUT_MODE ? path.join(__dirname, '../') : '/',
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: { unoptimized: true },
   // Next 16 BLOCKS unlisted origins on /_next/* and /__nextjs* in dev — including the /_next/hmr
   // WEBSOCKET upgrade, and Turbopack gates client module wiring on that socket, so a blocked origin
