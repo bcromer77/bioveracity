@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { authReturnPath } from '@/lib/auth-return-path'
 import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,13 +17,12 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [callbackUrl, setCallbackUrl] = useState('/start')
   const router = useRouter()
-
-  useEffect(() => {
-    const cb = new URLSearchParams(window.location.search).get('callbackUrl')
-    setCallbackUrl(authReturnPath(cb))
-  }, [])
+  // Derive the return path from the request's search params during render. Under
+  // the page's force-dynamic rendering this value is present on both the server
+  // and the client, so it hydrates cleanly without a post-mount state update.
+  const searchParams = useSearchParams()
+  const callbackUrl = authReturnPath(searchParams.get('callbackUrl'))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e?.preventDefault?.()

@@ -127,6 +127,19 @@ test('Login and signup UI follow the same server-computed Google gate', () => {
   }
 })
 
+test('Login and signup forms derive the return path without setting state in an effect', () => {
+  const loginForm = readSource(new URL('../app/login/login-form.tsx', import.meta.url), 'utf8')
+  const signupForm = readSource(new URL('../app/signup/signup-form.tsx', import.meta.url), 'utf8')
+  for (const src of [loginForm, signupForm]) {
+    // The return path is read from the request's search params during render...
+    assert.ok(src.includes('useSearchParams()'))
+    assert.ok(src.includes("authReturnPath(searchParams.get('callbackUrl'))"))
+    // ...so there is no post-mount state update (the set-state-in-effect pattern).
+    assert.ok(!src.includes('setCallbackUrl'))
+    assert.ok(!src.includes('useEffect'))
+  }
+})
+
 // ---------------------------------------------------------------------------
 // Database-backed flow tests (isolated PGlite)
 // ---------------------------------------------------------------------------
