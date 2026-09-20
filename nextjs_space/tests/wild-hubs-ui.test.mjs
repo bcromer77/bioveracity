@@ -1,6 +1,6 @@
 import { after, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { build } from 'esbuild'
@@ -14,7 +14,7 @@ const outfile = path.join(directory, 'components.mjs')
 await build({
   stdin: {
     contents:
-      "export { SeasonalLanding } from './components/wild/seasonal-landing'; export { HubStudio } from './components/wild/hub-studio'; export { generatePlan } from './lib/wild-hubs/domain'; export { authReturnPath } from './lib/auth-return-path'",
+      "export { VenueLaunchDesk } from './components/admin/venue-launch-desk'; export { parseVenueCsv } from './lib/wild-hubs/onboarding-input'; export { SeasonalLanding } from './components/wild/seasonal-landing'; export { HubStudio } from './components/wild/hub-studio'; export { VenueJoin } from './components/wild/venue-join'; export { generatePlan } from './lib/wild-hubs/domain'; export { authReturnPath } from './lib/auth-return-path'",
     resolveDir: process.cwd(),
     loader: 'tsx',
   },
@@ -44,7 +44,7 @@ await build({
     },
   ],
 })
-const { SeasonalLanding, HubStudio, generatePlan, authReturnPath } =
+const { VenueLaunchDesk, parseVenueCsv, SeasonalLanding, HubStudio, VenueJoin, generatePlan, authReturnPath } =
   await import(pathToFileURL(outfile).href)
 const text = (r) => JSON.stringify(r.toJSON())
 const button = (r, label) =>
@@ -92,6 +92,7 @@ test('self-service retry preserves creation identity; saved draft, edits and app
   const originalFetch = globalThis.fetch,
     originalWindow = globalThis.window
   globalThis.window = {
+    location: { search: '' },
     addEventListener() {},
     removeEventListener() {},
     confirm() {
@@ -217,4 +218,94 @@ test('self-service retry preserves creation identity; saved draft, edits and app
     true,
     'approval resets after publishing',
   )
+})
+
+test('studio opens the named place and automatically opens a sole owned place', async () => {
+  const oldFetch = globalThis.fetch, oldWindow = globalThis.window
+  try {
+    const profile = { name: 'Prepared fixture', county: 'down', kind: 'food', story: 'A fictional place.', website: '', interests: ['nature'] }
+    const hub = { id: 'prepared', profile, revision: 1, photos: [], published: null, plan: null, trend: null }
+    for (const search of ['', '?hub=prepared']) {
+      const requests = []
+      globalThis.window = { location: { search }, addEventListener() {}, removeEventListener() {} }
+      globalThis.fetch = async url => {
+        requests.push(url)
+        if (url === '/api/wild/hubs') return Response.json({ hubs: [hub] })
+        if (url === '/api/wild/hubs/prepared') return Response.json({ hub })
+        return Response.json({ status: 'unsupported', records: [], note: 'Fixture' })
+      }
+      let r
+      await act(async () => { r = create(React.createElement(HubStudio)) })
+      assert.equal(r.root.findByProps({ id: 'hub-name' }).props.value, 'Prepared fixture')
+      assert.ok(requests.includes('/api/wild/hubs/prepared'))
+      await act(() => r.unmount())
+    }
+  } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow }
+})
+
+test('studio refuses a requested place outside the owned list without fetching it', async () => {
+  const oldFetch = globalThis.fetch, oldWindow = globalThis.window
+  try {
+    const requests = []
+    globalThis.window = { location: { search: '?hub=someone-elses-place' }, addEventListener() {}, removeEventListener() {} }
+    globalThis.fetch = async url => { requests.push(url); return Response.json({ hubs: [] }) }
+    let r
+    await act(async () => { r = create(React.createElement(HubStudio)) })
+    assert.match(text(r), /not available to your account/)
+    assert.deepEqual(requests, ['/api/wild/hubs'])
+    await act(() => r.unmount())
+  } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow }
+})
+
+test('venue setup token survives login in this tab and is claimed only after confirmation', async () => {
+  const oldFetch = globalThis.fetch, oldWindow = globalThis.window, oldStorage = globalThis.sessionStorage
+  try {
+    const values = new Map(), token = 'a'.repeat(43), destination = '/wild/studio?hub=11111111-1111-4111-8111-111111111111'
+    const requests = []; let navigated = ''
+    globalThis.sessionStorage = { getItem: k => values.get(k) || null, setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k) }
+    globalThis.window = { location: { hash: `#token=${token}`, assign: value => { navigated = value } }, history: { replaceState: () => { globalThis.window.location.hash = '' } } }
+    globalThis.fetch = async (url, init) => { requests.push({ url, body: JSON.parse(init.body) }); return Response.json({ destination }) }
+    let r
+    await act(async () => { r = create(React.createElement(VenueJoin, { signedIn: false })) })
+    assert.equal(requests.length, 0)
+    assert.equal(globalThis.window.location.hash, '')
+    assert.ok(r.root.findAllByType('a').every(a => !a.props.href.includes(token)))
+    await act(() => r.unmount())
+    await act(async () => { r = create(React.createElement(VenueJoin, { signedIn: true })) })
+    assert.equal(button(r, 'Open my prepared place').props.disabled, true)
+    await act(() => r.root.findByType('input').props.onChange({ target: { checked: true } }))
+    await act(() => button(r, 'Open my prepared place').props.onClick())
+    assert.deepEqual(requests, [{ url: '/api/wild/join', body: { token, confirmed: true } }])
+    assert.equal(navigated, destination)
+    assert.equal(values.size, 0)
+    await act(() => r.unmount())
+  } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow; globalThis.sessionStorage = oldStorage }
+})
+
+
+test('launch desk keeps CSV and QR downloads usable through managed links', async () => {
+  const originalFetch = globalThis.fetch
+  let r
+  globalThis.fetch = async () => Response.json({
+    places: [{ id: 'setup-fixture', email: 'owner@example.test', profile: { name: 'Fixture venue', county: 'down' }, status: 'published', acceptedAt: '2026-09-19T00:00:00Z', photoCount: 1, planYear: 2026, publicPath: '/wild/hub/fixture', hubId: 'hub-fixture' }],
+    total: 1, page: 0, photoBytes: '0',
+  })
+  try {
+    await act(async () => { r = create(React.createElement(VenueLaunchDesk)) })
+    const anchors = r.root.findAllByType('a')
+    const template = anchors.find(a => a.children.join('') === 'Download blank intake template')
+    assert.ok(template, 'template must remain a working anchor, not an attribution button')
+    assert.equal(template.props.href, '/venue-intake.csv')
+    assert.equal(template.props.download, 'venue-intake.csv')
+    const csv = await readFile(path.join(process.cwd(), 'public', template.props.href), 'utf8')
+    const places = parseVenueCsv(csv + 'fixture,owner@example.test,Fixture venue,down,food,A fictional venue for testing.,\n')
+    assert.equal(places.length, 1)
+    assert.equal(places[0].reference, 'fixture')
+    const qr = anchors.find(a => a.children.join('') === 'Download QR')
+    assert.ok(qr, 'QR must remain a working download anchor')
+    assert.equal(qr.props.href, '/api/wild/qr/hub-fixture?download=1')
+  } finally {
+    if (r) await act(() => r.unmount())
+    globalThis.fetch = originalFetch
+  }
 })

@@ -61,6 +61,7 @@ jobs:
         run: |
           yarn test:honeycomb
           yarn test:wild-hubs
+          node --import tsx --test tests/venue-onboarding.test.ts
           yarn test:onsite
           node --import tsx --test tests/private-workspaces.test.ts
           node --import tsx --test tests/institutional-arrival.test.ts
