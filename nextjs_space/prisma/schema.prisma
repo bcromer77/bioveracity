@@ -133,6 +133,8 @@ model User {
   leads         Lead[]
   watches       Watch[]
   accessState   String      @default("REGISTERED") // REGISTERED, DEMO, INSTITUTIONAL, ADMIN
+  authVersion   Int         @default(0)
+  passwordResetTokens PasswordResetToken[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }
@@ -169,6 +171,31 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  id             String   @id @default(cuid())
+  bucket         String
+  identifierHash String
+  windowStart    DateTime
+  count          Int      @default(0)
+  updatedAt      DateTime @default(now())
+
+  @@unique([bucket, identifierHash, windowStart])
+  @@index([windowStart])
 }
 
 model Asset {
