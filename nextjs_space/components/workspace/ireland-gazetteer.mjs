@@ -7,6 +7,8 @@
  * Kept free of React/DOM imports so it can be shared by the client and by tests.
  */
 
+import { RIVER_GAZETTEER } from './irish-rivers.mjs';
+
 // [name, county, lat, lng, zoom]
 const COUNTY_ROWS = [
   ['Carlow', 'Carlow', 52.7269, -6.8155, 11],
@@ -82,10 +84,11 @@ const TOWN_ROWS = [
   ['Arklow', 'Wicklow', 52.7931, -6.1417, 13],
 ];
 
-/** Every gazetteer place, county rows first then towns. */
+/** Every gazetteer place, county rows first then towns, then curated rivers. */
 export const GAZETTEER = [
   ...COUNTY_ROWS.map(([name, county, lat, lng, zoom]) => ({ name, county, lat, lng, zoom, kind: 'county' })),
   ...TOWN_ROWS.map(([name, county, lat, lng, zoom]) => ({ name, county, lat, lng, zoom, kind: 'town' })),
+  ...RIVER_GAZETTEER,
 ];
 
 function normalise(value) {
@@ -107,6 +110,20 @@ export function searchGazetteer(query, limit = 6) {
     if (name === q || county === q) score = 0;
     else if (name.startsWith(q)) score = 1;
     else if (name.includes(q) || county.includes(q)) score = 2;
+    // Curated rivers also carry conservative human aliases (e.g. "Dodder",
+    // "Blackwater river Cork"). Match them the same way so an ordinary
+    // river-name search resolves without knowing the canonical label.
+    if (Array.isArray(place.aliases)) {
+      for (const alias of place.aliases) {
+        const a = normalise(alias);
+        if (!a) continue;
+        let s = -1;
+        if (a === q) s = 0;
+        else if (a.startsWith(q)) s = 1;
+        else if (a.includes(q)) s = 2;
+        if (s >= 0 && (score < 0 || s < score)) score = s;
+      }
+    }
     if (score >= 0) scored.push({ place, score });
   }
   scored.sort((a, b) => a.score - b.score || (a.place.kind === 'county' ? -1 : 1));
