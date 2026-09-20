@@ -70,16 +70,61 @@ test('reset link uses the canonical base URL, never a request Host header', () =
   assert.equal(new URL(link).host, 'bioveracity.com')
 })
 
-test('Google sign-in stays hidden unless explicitly enabled with full config', () => {
+test('Google gate: helper only true when flag exactly "true" AND both credentials present', () => {
+  // Flag off (absent or not exactly "true") -> always false, even with creds.
   assert.equal(isGoogleAuthEnabled({}), false)
+  assert.equal(isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'false' }), false)
+  assert.equal(isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'TRUE' }), false)
+  assert.equal(
+    isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'false', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' }),
+    false,
+  )
+  // Flag on but a credential missing -> false (each side, plus empty strings).
   assert.equal(isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'true' }), false)
+  assert.equal(isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'true', GOOGLE_CLIENT_ID: 'id' }), false)
+  assert.equal(isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'true', GOOGLE_CLIENT_SECRET: 'secret' }), false)
+  assert.equal(
+    isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'true', GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: 'secret' }),
+    false,
+  )
+  assert.equal(
+    isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'true', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: '' }),
+    false,
+  )
+  // Flag on AND both credentials present -> true (the only enabling combination).
   assert.equal(
     isGoogleAuthEnabled({ NEXT_PUBLIC_GOOGLE_AUTH_ENABLED: 'true', GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: 'secret' }),
     true,
   )
-  // The login page must keep the Google block behind the public feature flag.
-  const loginSrc = readSource(new URL('../app/login/page.tsx', import.meta.url), 'utf8')
-  assert.ok(loginSrc.includes('NEXT_PUBLIC_GOOGLE_AUTH_ENABLED'))
+})
+
+test('Google provider is registered server-side only through the gate, with no dangerous account linking', () => {
+  const authSrc = readSource(new URL('../auth.ts', import.meta.url), 'utf8')
+  // Registration is conditional on the shared helper, not unconditional.
+  assert.ok(authSrc.includes('isGoogleAuthEnabled(process.env)'))
+  assert.ok(authSrc.includes('googleAuthEnabled'))
+  assert.ok(/googleAuthEnabled[\s\S]*\?[\s\S]*Google\(/.test(authSrc))
+  // Dangerous email account linking must not be enabled anywhere in auth config.
+  assert.ok(!authSrc.includes('allowDangerousEmailAccountLinking'))
+})
+
+test('Login and signup UI follow the same server-computed Google gate', () => {
+  // Pages compute the gate on the server from the full env (flag + creds)...
+  const loginPage = readSource(new URL('../app/login/page.tsx', import.meta.url), 'utf8')
+  const signupPage = readSource(new URL('../app/signup/page.tsx', import.meta.url), 'utf8')
+  assert.ok(loginPage.includes('isGoogleAuthEnabled(process.env)'))
+  assert.ok(signupPage.includes('isGoogleAuthEnabled(process.env)'))
+  // ...and the client forms only render the Google control behind that prop.
+  const loginForm = readSource(new URL('../app/login/login-form.tsx', import.meta.url), 'utf8')
+  const signupForm = readSource(new URL('../app/signup/signup-form.tsx', import.meta.url), 'utf8')
+  assert.ok(loginForm.includes('{googleEnabled &&'))
+  assert.ok(signupForm.includes('{googleEnabled &&'))
+  // The Google sign-in action must sit inside the gated block, never outside it.
+  for (const src of [loginForm, signupForm]) {
+    const gateIdx = src.indexOf('{googleEnabled &&')
+    const googleIdx = src.indexOf("signIn('google'")
+    assert.ok(gateIdx !== -1 && googleIdx !== -1 && googleIdx > gateIdx)
+  }
 })
 
 // ---------------------------------------------------------------------------

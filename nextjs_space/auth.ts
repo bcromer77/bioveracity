@@ -6,6 +6,16 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { normaliseEmail } from '@/lib/account-recovery/email'
 import { sessionAuthorityValid } from '@/lib/account-recovery/session-authority'
+import { isGoogleAuthEnabled } from '@/lib/account-recovery/providers'
+
+// Google is registered server-side ONLY when the feature flag is exactly "true"
+// AND both credentials are non-empty. When disabled the provider is never added,
+// so the /api/auth/*/google route does not exist. Account linking is left at the
+// NextAuth default (disabled): auto-linking a Google identity to an existing
+// credentials account that shares the same email is an account-takeover vector
+// and has no documented, tested requirement, so the dangerous linking option is
+// deliberately omitted.
+const googleAuthEnabled = isGoogleAuthEnabled(process.env)
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -15,11 +25,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: '/login',
   },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      allowDangerousEmailAccountLinking: true,
-    }),
+    ...(googleAuthEnabled
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
