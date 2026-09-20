@@ -2,11 +2,11 @@ import Link from 'next/link'
 import { PublicShell } from '@/components/wild/public-shell'
 
 export const metadata = {
-  title: 'BioVeracity | Environmental evidence, connected to place.',
-  description: 'BioVeracity connects places, people and environmental evidence — from local observations to professional reports and long-term commitments.',
+  title: 'BioVeracity | Give every place a memory.',
+  description: 'Nature does not always announce what has changed. BioVeracity gives every place a shared memory — built from local observations, public records and professional evidence.',
   openGraph: {
-    title: 'BioVeracity | Environmental evidence, connected to place.',
-    description: 'Different reasons to care. The same place. Evidence that stays connected.',
+    title: 'BioVeracity | Give every place a memory.',
+    description: 'The otter hasn’t come back. Did anyone write it down?',
   },
 }
 
@@ -23,9 +23,37 @@ export default function HomePage() {
   return (
     <PublicShell>
       <section className="bv-hero">
-        <p className="bv-eyebrow">Environmental evidence, connected to place</p>
-        <h1>Every place has a story.<br /><em>Keep the evidence connected to it.</em></h1>
-        <p className="bv-intro">BioVeracity brings places, people and environmental evidence together — from local observations to professional reports and long-term commitments.</p>
+        <div className="bv-split">
+          <div>
+            <h1>The otter hasn’t come back.<br /><em>Did anyone write it down?</em></h1>
+            <p className="bv-intro">Nature does not always announce what has changed. BioVeracity gives every place a shared memory—built from local observations, public records and professional evidence.</p>
+            <div className="bv-actions">
+              <Link className="bv-button" href="/wild">Explore a living place</Link>
+              <Link className="bv-text-link" href="/professionals">Follow the evidence →</Link>
+            </div>
+          </div>
+          <figure className="bv-hero-figure bv-wild-hero-photo">
+            <div className="bv-preview-photo">
+              <img src="/hero-otter.jpg" alt="A wild Eurasian otter at the water's edge — the kind of presence a place can lose without anyone recording it" width={1400} height={1138} />
+              <figcaption className="bv-photo-caption">
+                <span className="bv-photo-species">Eurasian otter</span>
+                <span className="bv-photo-credit">Photograph: Byrdyak (CC BY-SA 4.0)</span>
+              </figcaption>
+            </div>
+          </figure>
+        </div>
+      </section>
+
+      <section className="bv-section bv-tinted">
+        <h2>Every place needs<br /><em>people who notice.</em></h2>
+        <div className="bv-perspectives">
+          <p>A walker notices the otter has not returned.</p>
+          <p>A naturalist records fewer bats.</p>
+          <p>A venue sees the seasons changing.</p>
+          <p>A professional finds what was promised years ago.</p>
+        </div>
+        <p>BioVeracity keeps those perspectives distinct, dated and connected to the place they concern.</p>
+        <p className="bv-noticed">What have you noticed?</p>
       </section>
 
       <section className="bv-section">
@@ -42,21 +70,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bv-section bv-tinted">
-        <p className="bv-eyebrow">One place. Many reasons to care.</p>
-        <h2>Different people.<br /><em>The same evidence network.</em></h2>
-        <div className="bv-grid bv-three">
-          <article className="bv-feature"><h3>Places create attention</h3><p>Venues give people a reason to notice the landscape around them and return as it changes.</p></article>
-          <article className="bv-feature"><h3>People and professionals add context</h3><p>Local observations, public records and professional evidence remain distinct, dated and traceable to their sources.</p></article>
-          <article className="bv-feature"><h3>The record stays with the place</h3><p>Reports, observations and long-term commitments can be understood in context rather than disappearing into separate systems.</p></article>
-        </div>
-      </section>
-
       <section className="bv-section bv-pricing">
-        <p className="bv-eyebrow">BioVeracity</p>
-        <h2>Different reasons.<br /><em>Same place.</em></h2>
-        <p>Explore local ecology through Wild Counties, understand a site through professional evidence, or keep long-term environmental records connected to the place they concern.</p>
-        <div className="bv-actions"><Link className="bv-button" href="/wild">Explore Wild Counties</Link><Link className="bv-text-link" href="/professionals">Understand a site →</Link></div>
+        <h2>Give a place<br /><em>a memory.</em></h2>
+        <p>Explore the living record of a place through Wild Counties, or follow the professional evidence behind a site. The same place, seen two ways.</p>
+        <div className="bv-actions"><Link className="bv-button" href="/wild">Explore a living place</Link><Link className="bv-text-link" href="/professionals">Follow the evidence →</Link></div>
       </section>
     </PublicShell>
   )

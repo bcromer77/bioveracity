@@ -332,3 +332,9 @@
 .bv-wild-hero-photo{width:100%;align-items:stretch}
 .bv-wild-hero-photo .bv-preview-photo{max-width:100%;box-shadow:14px 18px 0 #0f3028}
 @media(max-width:640px){.bv-venue-network{margin-top:8px}.bv-network-plaque{max-width:220px}}
+
+/* Homepage: "people who notice" perspectives + prompt */
+.bv-perspectives{margin:30px 0 26px;max-width:640px}
+.bv-perspectives p{font-family:Georgia,'Times New Roman',serif;font-size:clamp(19px,2.1vw,24px);line-height:1.5;color:#173d35;margin:0 0 12px;padding-left:18px;border-left:2px solid var(--gold)}
+.bv-noticed{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:clamp(22px,2.4vw,28px);color:#24573f;margin-top:6px}
+@media(max-width:640px){.bv-perspectives{margin:22px 0 20px}.bv-perspectives p{padding-left:14px}}
