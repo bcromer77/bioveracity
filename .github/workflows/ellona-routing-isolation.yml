@@ -1,0 +1,93 @@
+name: Ellona routing and tenant isolation
+
+on:
+  pull_request:
+    branches: [clarity/usability-release]
+    paths:
+      - 'nextjs_space/lib/ellona/**'
+      - 'nextjs_space/app/api/ingest/opportunities/**'
+      - 'nextjs_space/app/api/ellona/**'
+      - 'nextjs_space/tests/ellona.test.ts'
+      - 'nextjs_space/prisma/schema.prisma'
+      - 'nextjs_space/prisma/migrations/**'
+      - '.github/workflows/ellona-routing-isolation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ellona-routing-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bioveracity_ellona_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bioveracity_ellona_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: nextjs_space
+    env:
+      PRISMA_SKIP_POSTINSTALL_GENERATE: 'true'
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bioveracity_ellona_ci
+      NEXTAUTH_SECRET: isolated-ci-no-production-access
+      AUTH_SECRET: isolated-ci-no-production-access
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_TELEMETRY_DISABLED: '1'
+      BIOVERACITY_EVIDENCE_ENABLED: 'true'
+      OPPORTUNITY_ROUTING_ENABLED: 'true'
+      ELLONA_WATCH_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.13.0'
+          package-manager-cache: false
+      - name: Prepare portable dependency configuration
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          rm -f yarn.lock
+          cp ci/yarn.lock yarn.lock
+          cat > .yarnrc.yml <<'YARNRC'
+          enableGlobalCache: false
+          enableTelemetry: false
+          nodeLinker: node-modules
+          YARNRC
+      - name: Install locked dependencies
+        run: yarn install --immutable
+      - name: Generate isolated Prisma client
+        run: |
+          node <<'NODE'
+          const fs = require('fs')
+          const path = require('path')
+          const schema = fs.readFileSync('prisma/schema.prisma', 'utf8')
+            .replace(/output\s*=\s*"[^"]*"/, 'output = ' + JSON.stringify(path.join(process.cwd(), 'node_modules/.prisma/client')))
+          fs.writeFileSync('ci-schema.prisma', schema)
+          NODE
+          yarn prisma generate --schema ci-schema.prisma
+      - name: Apply migrations to isolated PostgreSQL
+        run: yarn prisma migrate deploy --schema prisma/schema.prisma
+      - name: Run Ellona routing, chronology, alert and tenant-isolation tests
+        run: yarn test:ellona
+      - name: Full TypeScript check
+        run: yarn typecheck
+      - name: Remove isolated Prisma schema
+        if: always()
+        run: rm -f ci-schema.prisma
