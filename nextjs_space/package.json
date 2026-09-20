@@ -25,7 +25,8 @@
     "test:cambridgeshire": "node --import tsx --test tests/cambridgeshire-*.test.ts tests/cambridgeshire-*.test.tsx",
     "ingest:cambridgeshire": "node --import tsx scripts/ingest-cambridgeshire.ts",
     "seed:ellona": "tsx --require dotenv/config scripts/seed-ellona.ts",
-    "test:ellona": "node --import tsx --test tests/ellona.test.ts"
+    "test:ellona": "node --import tsx --test tests/ellona.test.ts",
+    "test:account-recovery": "node --import tsx --test tests/account-recovery.test.ts tests/transactional-email.test.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"

@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
-import { SiteFooter } from '@/components/site-footer'
-import { SiteHeader } from '@/components/site-header'
+import { PublicShell } from '@/components/wild/public-shell'
 import { searchWildCounties } from '@/lib/wild-counties/counties'
 
 export const metadata: Metadata = {
@@ -19,21 +18,30 @@ export default async function WildCountiesPage({
   const counties = searchWildCounties(q)
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f5f2e9] text-[#18332a]">
-      <SiteHeader />
-      <main className="flex-1">
+    <PublicShell>
         <section className="bg-[#173d35] px-5 py-14 text-white md:py-20">
-          <div className="mx-auto max-w-[1100px]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e0c86e]">Powered by BioVeracity</p>
-            <h1 className="mt-4 max-w-4xl font-display text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Find the wild story in every county.</h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-[#dfe9e4]">Discover the nature and stories of a place, with sources you can explore for yourself.</p>
-            <Link href="/wild/partners" className="mt-6 inline-block rounded bg-[#dfc27a] px-5 py-3 font-semibold text-[#173d35]">Run a venue? Discover the Wild community →</Link>
-            <form className="mt-8 flex max-w-2xl overflow-hidden rounded-md bg-white p-1.5 shadow-xl" action="/wild">
-              <Search className="ml-3 mt-3 h-5 w-5 text-[#65736d]" aria-hidden="true" />
-              <label className="sr-only" htmlFor="wild-search">Search Wild Counties</label>
-              <input id="wild-search" name="q" defaultValue={q} placeholder="Try snowdrops, Cambridgeshire or Kilkenny" className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-[#17231e] outline-none" />
-              <button className="rounded bg-[#e0c86e] px-5 py-2.5 text-sm font-bold text-[#17231e]">Search</button>
-            </form>
+          <div className="mx-auto grid max-w-[1100px] gap-10 md:grid-cols-[1.15fr_0.85fr] md:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e0c86e]">Powered by BioVeracity</p>
+              <h1 className="mt-4 max-w-4xl font-display text-4xl font-semibold tracking-[-0.04em] sm:text-6xl">Find the wild story in every county.</h1>
+              <p className="mt-5 max-w-2xl text-lg leading-8 text-[#dfe9e4]">Discover the nature and stories of a place, with sources you can explore for yourself.</p>
+              <Link href="/wild/partners" className="mt-6 inline-block rounded bg-[#dfc27a] px-5 py-3 font-semibold text-[#173d35]">Run a venue? Discover the Wild community →</Link>
+              <form className="mt-8 flex max-w-2xl overflow-hidden rounded-md bg-white p-1.5 shadow-xl" action="/wild">
+                <Search className="ml-3 mt-3 h-5 w-5 text-[#65736d]" aria-hidden="true" />
+                <label className="sr-only" htmlFor="wild-search">Search Wild Counties</label>
+                <input id="wild-search" name="q" defaultValue={q} placeholder="Try snowdrops, Cambridgeshire or Kilkenny" className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-[#17231e] outline-none" />
+                <button className="rounded bg-[#e0c86e] px-5 py-2.5 text-sm font-bold text-[#17231e]">Search</button>
+              </form>
+            </div>
+            <figure className="bv-hero-figure bv-wild-hero-photo">
+              <div className="bv-preview-photo">
+                <img src="/hero-otter.jpg" alt="A wild Eurasian otter at the water's edge, representing the living nature recorded across Wild Counties" width={1400} height={1138} />
+                <figcaption className="bv-photo-caption">
+                  <span className="bv-photo-species">Eurasian otter</span>
+                  <span className="bv-photo-credit">Photograph: Byrdyak (CC BY-SA 4.0)</span>
+                </figcaption>
+              </div>
+            </figure>
           </div>
         </section>
 
@@ -78,9 +86,7 @@ export default async function WildCountiesPage({
             </div>
           )}
         </section>
-      </main>
-      <SiteFooter />
-    </div>
+    </PublicShell>
   )
 }
 
