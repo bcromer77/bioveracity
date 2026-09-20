@@ -318,3 +318,17 @@
 .bv-tag-cat.cat-bioveracity-analysis{background:#e5ecf6;border-color:#adc2df;color:#274268}
 .bv-tag-cat.cat-ellona-input{background:#f6ecdc;border-color:#e0c79a;color:#6b4e17}
 .bv-tag-cat.cat-unknown{background:#efefe9;border-color:#d3d3c8;color:#6a6a5e}
+/* Venue network hero (partners) + Wild Counties hero photo */
+.bv-venue-network{margin:0;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center}
+.bv-network-plaque{position:relative;max-width:280px;width:100%;transform:rotate(-3deg);filter:drop-shadow(0 16px 22px #0005)}
+.bv-network-plaque img{width:100%;height:auto;border-radius:50%}
+.bv-network-tag{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%) rotate(3deg);background:#dfc27a;color:#17372f;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:5px 12px;border-radius:30px;white-space:nowrap}
+.bv-venue-network figcaption{max-width:360px}
+.bv-venue-network figcaption .bv-eyebrow{margin-bottom:6px}
+.bv-venue-network figcaption p{font-size:13px;color:#e6eadd;margin:0 0 12px}
+.bv-network-chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:0;margin:0}
+.bv-network-chips li{border:1px solid #dfc27a;color:#f7f4ec;border-radius:30px;padding:6px 14px;font-size:12px;font-weight:600}
+.bv-network-chips li:last-child{border-style:dashed;opacity:.85;font-weight:500}
+.bv-wild-hero-photo{width:100%;align-items:stretch}
+.bv-wild-hero-photo .bv-preview-photo{max-width:100%;box-shadow:14px 18px 0 #0f3028}
+@media(max-width:640px){.bv-venue-network{margin-top:8px}.bv-network-plaque{max-width:220px}}
