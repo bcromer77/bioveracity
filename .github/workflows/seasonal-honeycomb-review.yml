@@ -1,7 +1,7 @@
 name: Seasonal and honeycomb review
 on:
   pull_request:
-    branches: [clarity/usability-release, feat/identity-first-public-navigation]
+    branches: [clarity/usability-release, feat/identity-first-public-navigation, feat/venue-weekly-photo-review]
 permissions:
   contents: read
 concurrency:
@@ -62,6 +62,7 @@ jobs:
           yarn test:honeycomb
           yarn test:wild-hubs
           yarn test:venue-photos
+          node --import tsx --test tests/seasonal-discovery.test.ts
           node --import tsx --test tests/venue-onboarding.test.ts
           yarn test:onsite
           node --import tsx --test tests/private-workspaces.test.ts
