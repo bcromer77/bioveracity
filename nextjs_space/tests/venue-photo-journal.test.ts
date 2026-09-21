@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { PGlite } from '@electric-sql/pglite'
 import { journalService, publicJournal } from '../lib/venue-journal/service'
-import { contributionInput, completedWeek, hashToken, MAX_PHOTOS } from '../lib/venue-journal/domain'
+import { contributionInput, completedWeek, hashToken, MAX_PHOTOS, type JournalPhoto } from '../lib/venue-journal/domain'
 import { sendWeeklyDigests, emailPhoto, renderDigest } from '../lib/venue-journal/digest'
 import type { Sql, Database } from '../lib/workspaces/service'
 const monday = new Date('2026-09-21T09:00:00Z')
@@ -135,4 +135,14 @@ test('editorial permissions refresh from database and cannot publish a cancelled
 test('email escapes venue, credit and captions and offers a useful empty week',()=>{
  const result=renderDigest({venue:'<script>alert(1)</script>',origin:'https://example.test',hubId:'venue',digestId:'id',token:'token',start:new Date('2026-09-14'),end:new Date('2026-09-21'),photos:[],total:0})
  assert.ok(!result.html.includes('<script>'));assert.match(result.html,/No new photographs/);assert.match(result.text,/Review, publish or download/)
+})
+test('contact sheet email includes each scoped photo once, keeps dates and escapes guest text',()=>{
+ const photos:JournalPhoto[]=Array.from({length:12},(_,i)=>({id:`photo-${i}`,hubId:'venue',caption:`Leaf <${i}>`,credit:'Guest & friend',location:'Pond',observedOn:i===11?null:'2025-04-12',createdAt:new Date('2026-09-20'),status:'RECEIVED',revision:1,reason:''}))
+ const result=renderDigest({venue:'Venue',origin:'https://example.test',hubId:'venue',digestId:'digest',token:'private-token',start:new Date('2026-09-14'),end:new Date('2026-09-21'),photos,total:17})
+ assert.equal((result.html.match(/<img /g)||[]).length,12)
+ for(const p of photos)assert.equal(result.html.split(`/digest/${p.id}?token=`).length-1,1)
+ assert.match(result.html,/Leaf &lt;0&gt;/);assert.match(result.html,/Guest &amp; friend/)
+ assert.match(result.html,/Taken 2025-04-12/);assert.match(result.html,/Date taken unknown/)
+ assert.match(result.html,/Showing 12 of 17/)
+ assert.doesNotMatch(result.html,/object-fit:cover/)
 })

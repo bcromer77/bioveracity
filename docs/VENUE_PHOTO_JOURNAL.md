@@ -149,3 +149,33 @@ validation, scan/storage limits, independent review, unpublication, withdrawal,
 weekly selection, preference suppression, private thumbnail scope/expiry and
 ambiguous-send duplicate prevention. It is not a multi-connection PostgreSQL load
 benchmark or evidence of hosted Resend delivery.
+
+## Photo desk completion — 21 September 2026
+
+The owner journal now presents a full-frame contact sheet with year, UK
+meteorological season, publication state and caption/credit/location filters.
+Selection opens a large inspection area. Up to two photographs can be compared
+across years; filter changes preserve selection, while a venue change clears it.
+The inspector keeps the existing authenticated download and reviewed-publication
+actions. No identification or ecological verification is implied by publication.
+
+The weekly email now uses a lead photograph and a two-column supporting contact
+sheet, preserving full image proportions, credits, capture dates and the existing
+private-preview controls. Lead selection remains chronological, not an automated
+assessment of photographic or ecological quality.
+
+Verification: 4 photo UI interaction tests, 8 photo domain/email tests and full
+TypeScript checking pass locally. GitHub's two workflows passed on the preceding
+PR head. Check the latest head's results before integration. Real browser/email-client
+visual acceptance and hosted delivery are still required.
+
+Deployment investigation found no recorded exact Abacus app/deployment URL or
+rollback receipt in the repository and no signed-in deployment browser session.
+Provide the actual Abacus app/project URL and deployment access to continue the
+hosted acceptance, migration and scheduler setup. Do not infer a deployment route
+from the repository name or substitute a ChatGPT reminder for the application job.
+
+The V2 research and proposed architecture are versioned in
+`docs/BIOVERACITY_V2_BLUEPRINT.md`. Recognition, original-media custody, spatial
+mapping and statutory-report exports remain a proposed follow-on, not implemented
+features of this release.

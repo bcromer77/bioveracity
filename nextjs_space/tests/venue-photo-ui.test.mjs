@@ -59,6 +59,8 @@ test('owner browses observation years, downloads privately and requests reviewed
   await act(()=>r.root.findByProps({id:'photo-year'}).props.onChange({target:{value:'2025'}}))
   assert.doesNotMatch(text(r),/Lichen/);assert.match(text(r),/Branches/)
   await act(()=>r.root.findByProps({id:'photo-year'}).props.onChange({target:{value:'all'}}))
+  await act(()=>r.root.findByProps({'aria-label':'Select photograph: Lichen'}).props.onClick())
+  await act(()=>r.root.findByProps({'aria-label':'Select photograph: Branches'}).props.onClick())
   const downloads=r.root.findAllByType('a').filter(a=>a.props.href.includes('download=1'))
   assert.equal(downloads.length,2);assert.ok(downloads.every(a=>a.props.href.includes('mode=owner')))
   await act(()=>button(r,'Publish to public page').props.onClick())
@@ -98,4 +100,38 @@ test('withdrawal receipt never withdraws on GET or mount; explicit confirmation 
   assert.equal(calls,1);assert.deepEqual(payload,{token:'secret'})
   assert.match(text(r),/Photograph withdrawn/)
  }finally{if(r)await act(()=>r.unmount());globalThis.fetch=oldFetch;globalThis.window=oldWindow}
+})
+
+test('photo desk filters seasons and publication, retains comparisons across years, and limits selection',async()=>{
+ const oldFetch=globalThis.fetch;let r
+ const photos=[
+  {id:'a',caption:'Winter branches',credit:'Guest',location:'Pond',observedOn:'2025-12-10',createdAt:'2026-09-20',status:'PUBLISHED',revision:1,reason:''},
+  {id:'b',caption:'Spring leaves',credit:'Staff',location:'Pond',observedOn:'2026-04-10',createdAt:'2026-09-20',status:'RECEIVED',revision:1,reason:''},
+  {id:'c',caption:'Undated detail',credit:'Guest',location:'Wall',observedOn:null,createdAt:'2026-09-20',status:'RECEIVED',revision:1,reason:''},
+ ]
+ globalThis.fetch=async()=>Response.json({photos,settings:{weeklyEnabled:false,contributionsEnabled:false}})
+ const selection=(caption)=>r.root.findByProps({'aria-label':`Select photograph: ${caption}`})
+ try{
+  await act(()=>{r=create(React.createElement(VenuePhotoJournal,{hubId:'venue'}))})
+  await act(()=>r.root.findByProps({id:'photo-season'}).props.onChange({target:{value:'Winter'}}))
+  assert.match(text(r),/Winter branches/);assert.doesNotMatch(text(r),/Spring leaves|Undated detail/)
+  await act(()=>selection('Winter branches').props.onClick())
+  await act(()=>r.root.findByProps({id:'photo-season'}).props.onChange({target:{value:'Spring'}}))
+  await act(()=>selection('Spring leaves').props.onClick())
+  const inspector=r.root.findByProps({'aria-label':'Selected photographs'})
+  assert.equal(inspector.findAllByType('img').length,2)
+  assert.match(text(r),/Across time/)
+  await act(()=>r.root.findByProps({id:'photo-season'}).props.onChange({target:{value:'all'}}))
+  assert.equal(selection('Undated detail').props.disabled,true)
+  await act(()=>button(r,'Clear selection').props.onClick())
+  await act(()=>r.root.findByProps({id:'photo-status'}).props.onChange({target:{value:'PUBLISHED'}}))
+  assert.doesNotMatch(text(r),/Spring leaves|Undated detail/)
+  await act(()=>r.root.findByProps({id:'photo-search'}).props.onChange({target:{value:'missing'}}))
+  assert.match(text(r),/No photographs match/)
+  await act(()=>button(r,'Clear filters').props.onClick())
+  await act(()=>r.root.findByProps({id:'photo-year'}).props.onChange({target:{value:'unknown'}}))
+  assert.match(text(r),/Undated detail/);assert.doesNotMatch(text(r),/Winter branches|Spring leaves/)
+  await act(()=>r.update(React.createElement(VenuePhotoJournal,{hubId:'other-venue'})))
+  assert.equal(r.root.findAllByProps({'aria-label':'Selected photographs'}).length,0)
+ }finally{if(r)await act(()=>r.unmount());globalThis.fetch=oldFetch}
 })
