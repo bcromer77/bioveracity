@@ -1,0 +1,6 @@
+# TEMPLATE ONLY: install through the confirmed Abacus application's scheduler.
+# Validate the deployment directory, executable and protected environment first.
+# Keep application secrets in the host's existing protected environment.
+# UTC throughout; one run each Monday at 09:00. Monitor failures.
+CRON_TZ=UTC
+0 9 * * 1 cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn photos:weekly

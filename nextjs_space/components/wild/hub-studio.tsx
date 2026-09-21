@@ -33,7 +33,7 @@ const empty: Profile = {
   website: '',
   interests: ['nature'],
 }
-export function HubStudio() {
+export function HubStudio({ photoJournalEnabled = false }: { photoJournalEnabled?: boolean }) {
   const [list, setList] = useState<{ id: string; profile: Profile }[]>([]),
     [hub, setHub] = useState<Hub | null>(null),
     [profile, setProfile] = useState<Profile>(empty),
@@ -224,6 +224,7 @@ export function HubStudio() {
           )}
         </div>
       </fieldset>
+      {hub && photoJournalEnabled && <p><Link className="bv-button bv-green" href={`/wild/studio/${hub.id}/photos`}>Guest photo journal · weekly email · downloads</Link></p>}
       <div className="bv-studio-grid">
         <div>
           <form

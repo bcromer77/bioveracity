@@ -1,3 +1,5 @@
+import { journalEnabled } from '@/lib/venue-journal/http'
+import { publicJournal } from '@/lib/venue-journal/service'
 import { CountyNature } from '@/components/wild/county-nature'
 import { CountyMap } from '@/components/wild/county-map'
 import { EvidenceLink } from '@/components/evidence-link'
@@ -28,7 +30,9 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
     const photos = snapshot.photoIds.length
       ? await hubDb.query<Photo>('SELECT "id","caption","credit" FROM "WildHubPhoto" WHERE "hubId"=$1 AND "id"=ANY($2::text[]) ORDER BY "createdAt","id"', [id, snapshot.photoIds])
       : []
-    return <PublishedHub id={id} snapshot={snapshot} photos={photos} />
+    const journal = journalEnabled() ? await publicJournal(hubDb, id) : []
+    const settings = journalEnabled() ? await hubDb.query<{contributionsEnabled:boolean}>('SELECT "contributionsEnabled" FROM "VenuePhotoSettings" WHERE "hubId"=$1',[id]) : []
+    return <PublishedHub id={id} snapshot={snapshot} photos={photos} journal={journal} contributionsEnabled={settings[0]?.contributionsEnabled || false} />
   }
 
   const origin = publicWildOrigin()

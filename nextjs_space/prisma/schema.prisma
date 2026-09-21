@@ -1220,6 +1220,9 @@ model ScanPacing {
 }
 
 model WildHub {
+  photoSettings VenuePhotoSettings?
+  journalPhotos VenuePhoto[]
+  photoDigests VenuePhotoDigest[]
   venueSetup WildVenueSetup?
   id String @id
   ownerId String
@@ -1583,4 +1586,61 @@ model WildVenueSetupEvent {
   action String
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   @@index([setupId, createdAt])
+}
+
+// Guest contributions are distinct from the owner's twelve-image venue gallery.
+model VenuePhotoSettings {
+  hubId String @id
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  contributionsEnabled Boolean @default(false)
+  weeklyEnabled Boolean @default(false)
+  scanCount Int @default(0)
+  scanWindow DateTime @default(now()) @db.Timestamptz
+  updatedAt DateTime @default(now()) @db.Timestamptz
+}
+model VenuePhoto {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  caption String
+  credit String
+  location String
+  observedOn String?
+  createdAt DateTime @default(now()) @db.Timestamptz
+  hash String
+  bytes Bytes
+  status String @default("RECEIVED")
+  revision Int @default(1)
+  consentVersion String
+  withdrawalHash String
+  reason String @default("")
+  events VenuePhotoEvent[]
+  @@unique([hubId, hash])
+  @@index([hubId, createdAt])
+  @@index([status, createdAt])
+}
+model VenuePhotoEvent {
+  id String @id
+  photoId String
+  photo VenuePhoto @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  actorId String?
+  action String
+  reason String @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz
+  @@index([photoId])
+}
+model VenuePhotoDigest {
+  id String @id
+  hubId String
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  ownerId String
+  emailHash String
+  weekStart DateTime @db.Timestamptz
+  status String
+  tokenHash String
+  photoIds Json
+  expiresAt DateTime @db.Timestamptz
+  createdAt DateTime @default(now()) @db.Timestamptz
+  sentAt DateTime? @db.Timestamptz
+  @@unique([hubId, weekStart])
 }
