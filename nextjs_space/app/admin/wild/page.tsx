@@ -5,6 +5,7 @@ export default function WildReviewPage() {
   return <main className="mx-auto max-w-4xl space-y-6 p-8"><h1 className="text-3xl font-semibold">Ecology hub editorial review</h1>
     <p>Review the venue story, every monthly entry and each selected photo. Approval publishes this exact submission. Check attribution, rights, venue authority and sensitive material; record any limitations. Review does not certify biodiversity or environmental performance.</p>
     <Link className="underline" href="/admin/wild/launch">Prepare venues and track setup →</Link>
+    <Link className="underline" href="/admin/wild/photos">Review guest photographs →</Link>
     <WildReviewQueue />
   </main>
 }

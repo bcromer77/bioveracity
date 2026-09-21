@@ -1,3 +1,5 @@
+import { VenuePhotoContribute } from './venue-photo-contribute'
+import type { JournalPhoto } from '@/lib/venue-journal/domain'
 import { CountyNature } from '@/components/wild/county-nature'
 import { EvidenceLink } from '@/components/evidence-link'
 import Link from 'next/link'
@@ -9,10 +11,14 @@ export function PublishedHub({
   id,
   snapshot,
   photos,
+  journal = [],
+  contributionsEnabled = false,
 }: {
   id: string
   snapshot: Snapshot
   photos: Photo[]
+  journal?: JournalPhoto[]
+  contributionsEnabled?: boolean
 }) {
   const { profile, plan } = snapshot,
     county = getWildCounty(profile.county),
@@ -59,6 +65,8 @@ export function PublishedHub({
           ))}
         </div>
       </section>
+      {!!journal.length && <section className="bv-section"><p className="bv-eyebrow">Your place through time</p><h2>Many ways of seeing.</h2><p>Guest photographs, ordered by the date observed. These are community contributions, not verified species identifications. Not photographed does not mean not present.</p><div className="bv-photo-grid">{journal.map(p=><figure key={p.id}><img src={`/api/wild/journal/photos/${p.id}`} alt={p.caption} loading="lazy"/><figcaption>{p.caption} · {p.credit}<p>{p.observedOn || 'Date taken unknown'} · {p.location}</p></figcaption></figure>)}</div></section>}
+      {contributionsEnabled && <VenuePhotoContribute hubId={id}/>}
       {campaign && (
         <section className="bv-section bv-tinted bv-split">
           <div>
