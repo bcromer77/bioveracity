@@ -26,19 +26,22 @@ export default async function WorkspaceCanvasPage({ params, searchParams }: { pa
   // Read the persisted workspace type so the canvas opens with the saved preset
   // (not whatever the URL happens to carry). Failure falls back to the URL param.
   let initialPersona: string | null = null
+  let workspaceName: string | undefined
   try {
     const service = workspaceService({
       ...adapter(prisma),
       transaction: op => prisma.$transaction(tx => op(adapter(tx)), { isolationLevel: 'Serializable' }),
     }, session.user.id)
-    initialPersona = (await service.getWorkspace(workspaceId)).persona
+    const saved = await service.getWorkspace(workspaceId)
+    initialPersona = saved.persona
+    workspaceName = saved.name
   } catch { initialPersona = null }
   return (
     <div className="min-h-screen flex flex-col">
       <SiteHeader />
       <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 py-10">
         <Suspense fallback={<p role="status">Loading workspace...</p>}>
-          <WorkspaceCanvas workspaceId={workspaceId} initialPersona={initialPersona} />
+          <WorkspaceCanvas workspaceId={workspaceId} initialPersona={initialPersona} workspaceName={workspaceName} />
         </Suspense>
       </main>
       <SiteFooter />

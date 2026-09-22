@@ -11,7 +11,7 @@ type Revision={revision:number;title:string;quote:string;eventDate:string|null;p
 const field='block w-full rounded border border-input bg-background p-2 text-sm'
 async function read(url:string,init:RequestInit={}) {
   const response=await fetch(url,{...init,cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json',...init.headers}})
-  if(!response.ok){let msg='Request failed';try{const data=await response.json();if(typeof data.error==='string')msg=data.error}catch{}throw new Error(msg)}
+  if(!response.ok){let msg='The service is unavailable or your session has ended. This action is not confirmed. Refresh before retrying.';try{const data=await response.json();if(typeof data.error==='string')msg=data.error}catch{}throw new Error(msg)}
   return response
 }
 const textError=(e:unknown)=>e instanceof Error?e.message:'Request failed'

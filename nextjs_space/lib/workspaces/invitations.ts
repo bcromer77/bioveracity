@@ -42,12 +42,12 @@ export function institutionalInviteService(db: Database, actorId: string) {
       return db.transaction(async tx => {
         await ownerAccess(tx, input.workspaceId)
         if (input.caseId) {
-          const rows = await tx.query<{ id: string }>('SELECT id FROM "PrivateCase" WHERE "workspaceId"=$1 AND id=$2 FOR SHARE', [input.workspaceId, input.caseId])
+          const rows = await tx.query<{ id: string }>('SELECT c.id FROM "PrivateCase" c JOIN "PrivateCaseMember" m ON m."workspaceId"=c."workspaceId" AND m."caseId"=c.id WHERE c."workspaceId"=$1 AND c.id=$2 AND m."userId"=$3 AND m.role=\'OWNER\' AND m."revokedAt" IS NULL FOR SHARE OF m', [input.workspaceId, input.caseId, actorId])
           if (!rows[0]) throw new WorkspaceError(404, 'Workspace or case unavailable')
         }
         await tx.query(
-          'UPDATE "PrivateWorkspaceInvitation" SET "revokedAt"=now() WHERE "workspaceId"=$1 AND email=$2 AND "acceptedAt" IS NULL AND "revokedAt" IS NULL',
-          [input.workspaceId, email],
+          'UPDATE "PrivateWorkspaceInvitation" SET "revokedAt"=now() WHERE "workspaceId"=$1 AND email=$2 AND "caseId" IS NOT DISTINCT FROM $3 AND "acceptedAt" IS NULL AND "revokedAt" IS NULL',
+          [input.workspaceId, email, input.caseId ?? null],
         )
         const token = randomBytes(32).toString('base64url')
         const id = randomUUID()

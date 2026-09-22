@@ -16,6 +16,7 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
   try {
     const session = await auth()
     if (!session?.user?.id) throw new WorkspaceError(401, 'Authentication required')
+    if (process.env.PRIVATE_WORKSPACES_ENABLED !== 'true') throw new WorkspaceError(503, 'Private workspaces are unavailable')
     const { workspaceId } = await context.params
     const input = await body(request) as Record<string, unknown>
     const invitation = await institutionalInviteService(db, session.user.id).create({

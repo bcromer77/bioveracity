@@ -24,7 +24,9 @@ export function SignupForm({ googleEnabled, termsEnabled }: { googleEnabled: boo
   // the page's force-dynamic rendering this value is present on both the server
   // and the client, so it hydrates cleanly without a post-mount state update.
   const searchParams = useSearchParams()
-  const callbackUrl = authReturnPath(searchParams.get('callbackUrl'))
+  const requestedReturn = searchParams.get('callbackUrl') && authReturnPath(searchParams.get('callbackUrl')) !== '/start' ? searchParams.get('callbackUrl') : null
+  const [purpose, setPurpose] = useState('')
+  const callbackUrl = requestedReturn ? authReturnPath(requestedReturn) : purpose === 'venue' ? '/wild/studio' : purpose === 'professional' ? '/workspace' : '/start'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e?.preventDefault?.()
@@ -34,17 +36,17 @@ export function SignupForm({ googleEnabled, termsEnabled }: { googleEnabled: boo
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, acceptTerms, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION }),
+        body: JSON.stringify({ name, email, password, acceptTerms, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION, callbackUrl }),
       })
       const data = await res?.json?.()
       if (!res?.ok) {
         setError(data?.error ?? 'Signup failed')
         return
       }
-      if (data.verificationRequired) { router.replace('/verify-email'); return }
+      if (data.verificationRequired) { router.replace(`/verify-email?callbackUrl=${encodeURIComponent(callbackUrl)}`); return }
       const signInRes = await signIn('credentials', { email, password, redirect: false })
       if (signInRes?.error) {
-        setError('Account created but auto-login failed. Please sign in.')
+        router.replace(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
       } else {
         router.replace(callbackUrl)
       }
@@ -63,22 +65,23 @@ export function SignupForm({ googleEnabled, termsEnabled }: { googleEnabled: boo
             <div className="flex h-8 w-8 items-center justify-center rounded bg-accent text-accent-foreground font-display font-bold text-sm">BV</div>
             <span className="font-display font-bold text-lg text-foreground">BioVeracity</span>
           </Link>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Create an account</h1>
-          <p className="text-[15px] text-muted-foreground mt-2">Follow places and produce reports on what happened there.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{callbackUrl.startsWith('/wild/') ? 'Create your venue account' : callbackUrl.startsWith('/workspace') ? 'Create your professional account' : 'Create an account'}</h1>
+          <p className="text-[15px] text-muted-foreground mt-2">{callbackUrl.startsWith('/wild/') ? 'Manage your place and its photographs in your venue studio.' : 'Your venues and private evidence stay connected to your own account.'}</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-[15px]">{error}</div>}
+          {!requestedReturn && <label className="block text-sm font-medium">What brings you here?<select required value={purpose} onChange={e=>setPurpose(e.target.value)} className="mt-2 w-full rounded border p-3"><option value="">Choose your starting point</option><option value="venue">I run a venue or ecology hub</option><option value="professional">I work with professional evidence</option><option value="both">I do both / explore places</option></select></label>}
+          {error && <div role="alert" className="p-3 rounded-lg bg-destructive/10 text-destructive text-[15px]">{error}</div>}
           <div>
-            <label className="block text-[15px] font-medium text-foreground mb-1.5">Full name</label>
-            <input type="text" value={name} onChange={(e: any) => setName(e?.target?.value ?? '')} placeholder="Your name" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
+            <label htmlFor="auth-text" className="block text-[15px] font-medium text-foreground mb-1.5">Full name</label>
+            <input id="auth-text" name="name" autoComplete="name" type="text" value={name} onChange={(e: any) => setName(e?.target?.value ?? '')} placeholder="Your name" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <div>
-            <label className="block text-[15px] font-medium text-foreground mb-1.5">Email</label>
-            <input type="email" value={email} onChange={(e: any) => setEmail(e?.target?.value ?? '')} placeholder="you@example.com" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
+            <label htmlFor="auth-email" className="block text-[15px] font-medium text-foreground mb-1.5">Email</label>
+            <input id="auth-email" name="email" autoComplete="email" type="email" value={email} onChange={(e: any) => setEmail(e?.target?.value ?? '')} placeholder="you@example.com" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <div>
-            <label className="block text-[15px] font-medium text-foreground mb-1.5">Password</label>
-            <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="At least 10 characters" required minLength={10} className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
+            <label htmlFor="auth-password" className="block text-[15px] font-medium text-foreground mb-1.5">Password</label>
+            <input id="auth-password" name="password" autoComplete="new-password" type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="At least 10 characters" required minLength={10} className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           {termsEnabled && <div className="space-y-3 text-sm"><p><Link href="/terms" target="_blank" className="underline">Terms and Conditions</Link> · <Link href="/privacy" target="_blank" className="underline">Privacy Notice</Link></p><label className="flex gap-3 items-start"><input type="checkbox" required checked={acceptTerms} onChange={e=>setAcceptTerms(e.target.checked)}/><span>{TERMS_LABEL}</span></label><p>This is not consent to marketing or future publication of your photographs.</p></div>}
           <Button type="submit" disabled={loading || termsEnabled && !acceptTerms} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">

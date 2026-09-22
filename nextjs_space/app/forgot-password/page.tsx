@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+import { authReturnPath } from '@/lib/auth-return-path'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
+  const params=useSearchParams()
+  const callbackUrl=authReturnPath(params.get('callbackUrl'))
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -19,20 +23,21 @@ export default function ForgotPasswordPage() {
       const res = await fetch('/api/account/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, callbackUrl }),
       })
       if (res.status === 429) {
         setError('Too many requests. Please try again later.')
       } else if (res.status === 400) {
         setError('Please enter a valid email address.')
+      } else if (!res.ok) {
+        setError('Password recovery is temporarily unavailable. Please try again.')
       } else {
         // Any other outcome returns the same confirmation, so account existence
         // is never revealed to the person using the form.
         setSubmitted(true)
       }
     } catch {
-      // Even on a network error, show the neutral confirmation.
-      setSubmitted(true)
+      setError('Unable to connect. No request has been confirmed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -51,7 +56,7 @@ export default function ForgotPasswordPage() {
         </div>
         {submitted ? (
           <div className="p-4 rounded-lg bg-muted text-[15px] text-foreground">
-            If an account exists for that email address, a password reset link has been sent. The link expires in one hour.
+            If an account exists for that email address, we will attempt to send a password reset link. Check your inbox and spam folder. The link expires in one hour.
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,9 +71,11 @@ export default function ForgotPasswordPage() {
           </form>
         )}
         <p className="text-center text-[15px] text-muted-foreground mt-6">
-          <Link href="/login" className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Back to sign in</Link>
+          <Link href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Back to sign in</Link>
         </p>
       </div>
     </div>
   )
 }
+
+export default function ForgotPasswordPage(){return <Suspense fallback={<p role="status">Loading recovery…</p>}><ForgotPasswordForm/></Suspense>}
