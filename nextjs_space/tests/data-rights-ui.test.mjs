@@ -58,6 +58,7 @@ test('signup starts unticked and submits explicit versioned acceptance without o
  assert.doesNotMatch(text(r),/Sign up with Google/)
  const checkbox=r.root.findByProps({type:'checkbox'});assert.equal(checkbox.props.checked,false)
  await act(()=>checkbox.props.onChange({target:{checked:true}}))
+ await act(()=>r.root.findByType('select').props.onChange({target:{value:'venue'}}))
  await act(()=>r.root.findByType('form').props.onSubmit({preventDefault(){}}))
  assert.equal(payload.acceptTerms,true);assert.equal(payload.termsVersion,'2026-09-22.1');assert.equal(payload.privacyVersion,'2026-09-22.1')
  assert.equal('marketingConsent' in payload,false)

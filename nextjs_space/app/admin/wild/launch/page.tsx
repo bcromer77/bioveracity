@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { isAdmin } from '@/lib/access'
@@ -10,5 +11,5 @@ export default async function VenueLaunchPage() {
   if (!session?.user?.id) redirect('/login?callbackUrl=%2Fadmin%2Fwild%2Flaunch')
   const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, role: true, accessState: true } })
   if (!user || !isAdmin({ user, expires: '' })) redirect('/start')
-  return <main className="mx-auto max-w-6xl p-4 sm:p-8"><VenueLaunchDesk /></main>
+  return <main className="mx-auto max-w-6xl p-4 sm:p-8"><Link href="/admin/wild/clubs" className="underline">Club sources and review</Link><VenueLaunchDesk /></main>
 }

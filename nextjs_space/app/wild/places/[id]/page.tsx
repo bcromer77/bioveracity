@@ -1,3 +1,4 @@
+import { watchView } from '@/lib/club-watch/service'
 import { journalEnabled } from '@/lib/venue-journal/http'
 import { publicJournal } from '@/lib/venue-journal/service'
 import { CountyNature } from '@/components/wild/county-nature'
@@ -32,7 +33,8 @@ export default async function VenuePage({ params }: { params: Promise<{ id: stri
       : []
     const journal = journalEnabled() ? await publicJournal(hubDb, id) : []
     const settings = journalEnabled() ? await hubDb.query<{contributionsEnabled:boolean}>('SELECT "contributionsEnabled" FROM "VenuePhotoSettings" WHERE "hubId"=$1',[id]) : []
-    return <PublishedHub id={id} snapshot={snapshot} photos={photos} journal={journal} contributionsEnabled={settings[0]?.contributionsEnabled || false} />
+    const watch = process.env.CLUB_LAUNCH_ENABLED === 'true' ? await watchView(hubDb,id,{public:true}) : null
+    return <PublishedHub clubRecords={watch ? {scope:watch.watch.config.scopeLabel,records:watch.records,runs:watch.runs} : null} id={id} snapshot={snapshot} photos={photos} journal={journal} contributionsEnabled={settings[0]?.contributionsEnabled || false} />
   }
 
   const origin = publicWildOrigin()

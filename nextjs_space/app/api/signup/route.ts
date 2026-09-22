@@ -18,8 +18,7 @@ export async function POST(request: Request) {
     await requireLimit(securityDb, 'signupIp', securityIp(request))
     const input = await body(request) as Record<string, unknown>
     if (!input || typeof input !== 'object') throw new WorkspaceError(400, 'Invalid signup')
-    const termsEnabled = process.env.DATA_RIGHTS_ENABLED === 'true'
-    if (termsEnabled && !validAcceptance(input)) throw new WorkspaceError(400, 'Please read and accept the current terms and acknowledge the privacy notice.')
+    if (!validAcceptance(input)) throw new WorkspaceError(400, 'Please read and accept the current terms and acknowledge the privacy notice.')
     const email = normaliseEmail(input.email)
     const password = passwordInput(input.password)
     const policy = validatePassword(password)
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
     const hashed = await bcrypt.hash(password, 12)
     const user = await prisma.$transaction(async tx => {
       const created = await tx.user.create({data:{email,password:hashed,name,role:'user'}})
-      if (termsEnabled) await recordAcceptance(adapter(tx), created.id, input, 'signup')
+      await recordAcceptance(adapter(tx), created.id, input, 'signup')
       return created
     })
     const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true'

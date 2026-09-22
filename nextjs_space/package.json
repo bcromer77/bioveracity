@@ -32,7 +32,10 @@
     "test:readiness": "node --import tsx --test tests/production-readiness.test.ts",
     "ops:daily": "node --import tsx scripts/operations-daily.ts",
     "ops:check": "node --import tsx scripts/check-production-readiness.ts",
-    "db:release": "node --import tsx scripts/database-release.ts"
+    "db:release": "node --import tsx scripts/database-release.ts",
+    "test:club": "node --import tsx --test tests/club-launch.test.ts",
+    "club:sources": "node --import tsx scripts/club-operations.ts sources",
+    "billing:reconcile": "node --import tsx scripts/club-operations.ts billing"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"

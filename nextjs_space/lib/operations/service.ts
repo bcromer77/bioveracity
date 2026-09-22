@@ -18,7 +18,7 @@ export async function withHeartbeat<T>(db:Sql,name:string,work:()=>Promise<T>):P
 }
 export async function operationalStatus(db:Sql, expected:string[], now=new Date()) {
  const rows=await db.query<{name:string;status:string;startedAt:Date;finishedAt:Date|null}>('SELECT * FROM "JobHeartbeat"',[])
- const jobs=expected.map(name=>{const row=rows.find(r=>r.name===name);const maxAge=name==='venue-photo-digest'?8*86400000:26*3600000;return {name,healthy:Boolean(row?.status==='SUCCEEDED'&&row.finishedAt&&now.getTime()-new Date(row.finishedAt).getTime()<maxAge)}})
+ const jobs=expected.map(name=>{const row=rows.find(r=>r.name===name);const maxAge=name==='venue-photo-digest'?8*86400000:name==='revolut-reconcile'?3600000:26*3600000;return {name,healthy:Boolean(row?.status==='SUCCEEDED'&&row.finishedAt&&now.getTime()-new Date(row.finishedAt).getTime()<maxAge)}})
  const [deliveries]=await db.query<{count:string}>(`SELECT count(*) FROM "OperationalDelivery" WHERE status='UNKNOWN' OR (status='SENDING' AND "startedAt"<now()-interval '30 minutes')`,[])
  const [rights]=await db.query<{overdue:string;dueSoon:string}>(`SELECT count(*) FILTER (WHERE "dueAt"<=$1) AS overdue,count(*) FILTER (WHERE "dueAt">$1 AND "dueAt"<=$1+interval '7 days') AS "dueSoon" FROM "DataRightsRequest" WHERE status IN ('RECEIVED','IN_REVIEW')`,[now])
  const [digests]=await db.query<{count:string}>(`SELECT count(*) FROM "VenuePhotoDigest" WHERE status='UNKNOWN' OR (status='SENDING' AND "createdAt"<now()-interval '30 minutes')`,[])
