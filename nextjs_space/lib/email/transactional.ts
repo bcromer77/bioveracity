@@ -133,7 +133,7 @@ export function createEmailer(config: EmailConfig, fetchImpl: FetchLike = fetch)
     }
     const result = await res.json().catch(() => ({} as any))
     const inner = result?.result ?? result
-    const delivered = inner?.success === true || inner?.notification_disabled === true
+    const delivered = inner?.success === true && inner?.notification_disabled !== true
     if (!delivered) {
       throw new EmailDeliveryError('Abacus delivery was not confirmed')
     }

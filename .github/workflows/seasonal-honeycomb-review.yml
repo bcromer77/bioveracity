@@ -67,6 +67,8 @@ jobs:
           node --import tsx --test tests/seasonal-discovery.test.ts
           node --import tsx --test tests/venue-onboarding.test.ts
           yarn test:onsite
+          yarn test:account-recovery
+          yarn test:readiness
           node --import tsx --test tests/private-workspaces.test.ts
           node --import tsx --test tests/institutional-arrival.test.ts
           node --import tsx --test tests/attention-return.test.ts

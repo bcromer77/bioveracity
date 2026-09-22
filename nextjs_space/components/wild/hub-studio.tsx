@@ -1,8 +1,11 @@
 'use client'
+
+import { EvidenceLink } from '@/components/evidence-link'
+
 import { RELEASE_VERSION, RELEASE_CORE, RELEASE_VENUE, RELEASE_BIO, RELEASE_LIMITS } from '@/lib/venue-journal/release'
 import { CountyNature } from '@/components/wild/county-nature'
 
-import { EvidenceLink } from '@/components/evidence-link'
+
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -430,7 +433,7 @@ export function HubStudio({ photoJournalEnabled = false }: { photoJournalEnabled
                 </label>
                 <label>Your private contact name<input value={contactName} onChange={e=>setContactName(e.target.value)} required maxLength={160}/></label>
                 <label>Your private contact email<input type="email" value={contactEmail} onChange={e=>setContactEmail(e.target.value)} required maxLength={254}/></label>
-                <details><summary>Read the contributor release</summary><p>{RELEASE_CORE}</p><p>{RELEASE_LIMITS}</p><a href="/contributor-release" target="_blank" rel="noreferrer">Release form</a> · <a href="/privacy" target="_blank" rel="noreferrer">Privacy Notice</a></details>
+                <details><summary>Read the contributor release</summary><p>{RELEASE_CORE}</p><p>{RELEASE_LIMITS}</p><EvidenceLink href="/contributor-release" target="_blank" rel="noreferrer">Release form</EvidenceLink> · <EvidenceLink href="/privacy" target="_blank" rel="noreferrer">Privacy Notice</EvidenceLink></details>
                 <label className="bv-check"><input type="checkbox" required checked={releaseAccepted} onChange={e=>setReleaseAccepted(e.target.checked)}/>I am 18 or over, agree to the contributor release and acknowledge the Privacy Notice.</label>
                 <label className="bv-check"><input type="checkbox" checked={venuePublications} onChange={e=>setVenuePublications(e.target.checked)}/>{RELEASE_VENUE}</label>
                 <label className="bv-check"><input type="checkbox" checked={bioPublications} onChange={e=>setBioPublications(e.target.checked)}/>{RELEASE_BIO}</label>

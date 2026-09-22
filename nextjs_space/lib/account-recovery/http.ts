@@ -1,3 +1,4 @@
+import { securityIp } from './security'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import type { Database, Sql } from '../workspaces/service'
@@ -12,16 +13,8 @@ export const recoveryHeaders = {
   'X-Content-Type-Options': 'nosniff',
 }
 
-// Best-effort client IP from the standard proxy headers. Only the first hop of
-// x-forwarded-for is used; the value is hashed before storage by the rate limiter.
-export function clientIp(req: Request): string {
-  const forwarded = req.headers.get('x-forwarded-for')
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim()
-    if (first) return first
-  }
-  return req.headers.get('x-real-ip')?.trim() || 'unknown'
-}
+// Same trusted-proxy policy as login/signup. Raw IPs are hashed by the limiter.
+export function clientIp(req: Request): string { return securityIp(req) }
 
 function database(): Database {
   return {

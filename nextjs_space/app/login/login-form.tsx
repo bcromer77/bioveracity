@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [adminCode, setAdminCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -28,9 +29,9 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
     setLoading(true)
     setError('')
     try {
-      const res = await signIn('credentials', { email, password, redirect: false })
+      const res = await signIn('credentials', { email, password, adminCode, redirect: false })
       if (res?.error) {
-        setError('Invalid email or password')
+        setError('Unable to sign in. Check your details, confirm your email, and enter an administrator code if required. Too many attempts may temporarily prevent sign-in.')
       } else {
         router.replace(callbackUrl)
       }
@@ -65,6 +66,8 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
             </div>
             <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="Your password" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
+          <details className="text-sm space-y-3"><summary>Administrator sign-in</summary><p>Request a code after entering your email and password above.</p><button type="button" disabled={loading} className="underline" onClick={async()=>{setLoading(true);try{const r=await fetch('/api/account/identity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin-code',email,password})});const d=await r.json();setError(d.message||d.error)}catch{setError('Unable to request a code.')}finally{setLoading(false)}}}>Email my sign-in code</button><label className="block">Administrator code<input className="block w-full rounded border p-3" autoComplete="one-time-code" value={adminCode} onChange={e=>setAdminCode(e.target.value.trim())}/></label></details>
+          <Link className="block text-sm underline" href="/verify-email">Confirm your email or resend verification</Link>
           <Button type="submit" disabled={loading} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign in'}
           </Button>

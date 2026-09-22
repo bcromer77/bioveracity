@@ -1,3 +1,5 @@
+import { requireLimit, securityIp } from '@/lib/account-recovery/security'
+import { identities, securityDb } from '@/lib/account-recovery/security-http'
 export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -12,6 +14,7 @@ import { validatePassword } from '@/lib/account-recovery/password-policy'
 
 export async function POST(request: Request) {
   try {
+    await requireLimit(securityDb, 'signupIp', securityIp(request))
     const input = await body(request) as Record<string, unknown>
     if (!input || typeof input !== 'object') throw new WorkspaceError(400, 'Invalid signup')
     const termsEnabled = process.env.DATA_RIGHTS_ENABLED === 'true'
@@ -32,7 +35,12 @@ export async function POST(request: Request) {
       if (termsEnabled) await recordAcceptance(adapter(tx), created.id, input, 'signup')
       return created
     })
-    return NextResponse.json({ id: user.id, email: user.email, name: user.name })
+    const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true'
+    if (verificationRequired) {
+      try { await identities().issue({email:user.email,ip:securityIp(request),purpose:'VERIFY_EMAIL'}) }
+      catch { console.error('signup_verification_issue_failed') }
+    }
+    return NextResponse.json({ id: user.id, email: user.email, name: user.name, verificationRequired })
   } catch (error: unknown) {
     if (error instanceof WorkspaceError) return NextResponse.json({ error: error.message }, { status: error.status })
     return NextResponse.json({ error: 'Signup failed' }, { status: 500 })

@@ -1,6 +1,9 @@
 'use client'
-import { RELEASE_VERSION, RELEASE_CORE, RELEASE_VENUE, RELEASE_BIO, RELEASE_LIMITS } from '@/lib/venue-journal/release'
+
 import { EvidenceLink } from '@/components/evidence-link'
+
+import { RELEASE_VERSION, RELEASE_CORE, RELEASE_VENUE, RELEASE_BIO, RELEASE_LIMITS } from '@/lib/venue-journal/release'
+
 import {useState} from 'react'
 export function VenuePhotoContribute({hubId}:{hubId:string}) {
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[receipt,setReceipt]=useState<{id:string;withdrawalToken:string}|null>(null)
@@ -30,7 +33,7 @@ export function VenuePhotoContribute({hubId}:{hubId:string}) {
    <label className="bv-check"><input name="rights" type="checkbox" required/>I took this photograph or have permission to contribute it. It contains no identifiable children, private personal information or sensitive wildlife locations.</label>
    <label className="bv-check"><input name="permission" type="checkbox" required/>I allow BioVeracity and this venue to store and review this photograph, include a private preview in the venue’s weekly email, publish it with my credit on the venue’s BioVeracity page after approval, and let the venue download it for that purpose.</label>
    <label className="bv-check"><input name="scanner" type="checkbox" required/>I agree to this file being sent to Cloudmersive for security scanning.</label>
-   <details><summary>Read the contributor release</summary><p>{RELEASE_CORE}</p><p>{RELEASE_LIMITS}</p><a href="/contributor-release" target="_blank" rel="noreferrer">Open release form</a> · <a href="/privacy" target="_blank" rel="noreferrer">Privacy Notice</a></details>
+   <details><summary>Read the contributor release</summary><p>{RELEASE_CORE}</p><p>{RELEASE_LIMITS}</p><EvidenceLink href="/contributor-release" target="_blank" rel="noreferrer">Open release form</EvidenceLink> · <EvidenceLink href="/privacy" target="_blank" rel="noreferrer">Privacy Notice</EvidenceLink></details>
    <label className="bv-check"><input name="release" type="checkbox" required/>I have read and agree to the contributor release and acknowledge the Privacy Notice.</label>
    <label className="bv-check"><input name="venuePublications" type="checkbox"/>{RELEASE_VENUE}</label>
    <label className="bv-check"><input name="bioPublications" type="checkbox"/>{RELEASE_BIO}</label>

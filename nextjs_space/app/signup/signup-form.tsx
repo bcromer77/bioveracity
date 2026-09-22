@@ -41,6 +41,7 @@ export function SignupForm({ googleEnabled, termsEnabled }: { googleEnabled: boo
         setError(data?.error ?? 'Signup failed')
         return
       }
+      if (data.verificationRequired) { router.replace('/verify-email'); return }
       const signInRes = await signIn('credentials', { email, password, redirect: false })
       if (signInRes?.error) {
         setError('Account created but auto-login failed. Please sign in.')

@@ -1,6 +1,9 @@
 'use client'
 
 import { EvidenceLink } from '@/components/evidence-link'
+
+
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
@@ -108,7 +111,7 @@ function PhotoDesk({ hubId }: { hubId: string }) {
       <p>{inspected.length === 2 ? 'Compare the recorded dates and places. Different viewpoints, seasons and cameras can change how a place appears.' : 'Select a second photograph to compare. Selections stay here while you browse other years.'}</p>
       <div className={`bv-photo-compare ${inspected.length === 1 ? 'bv-photo-single' : ''}`}>
         {inspected.map(p => <figure key={p.id}>
-          <a href={imageUrl(p.id)} target="_blank" rel="noopener noreferrer" aria-label={`Open full frame: ${p.caption}`}><img src={imageUrl(p.id)} alt={p.caption} /></a>
+          <EvidenceLink href={imageUrl(p.id)} target="_blank" rel="noopener noreferrer" aria-label={`Open full frame: ${p.caption}`}><img src={imageUrl(p.id)} alt={p.caption} /></EvidenceLink>
           <figcaption><p className="bv-eyebrow">{taken(p)} · {p.location}</p><h3>{p.caption}</h3><p>Photograph by {p.credit}</p><p>{statusLabel[p.status] || p.status}</p><p>Community photograph · identification unverified</p>{p.reason && <p>Editorial note: {p.reason}</p>}</figcaption>
           <button className="bv-text-link" onClick={() => select(p.id)} aria-label={`Remove from comparison: ${p.caption}`}>Remove from comparison</button>
           {actions(p)}
