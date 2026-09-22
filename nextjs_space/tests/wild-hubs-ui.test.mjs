@@ -257,25 +257,37 @@ test('studio refuses a requested place outside the owned list without fetching i
   } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow }
 })
 
-test('venue setup token survives login in this tab and is claimed only after confirmation', async () => {
+test('venue setup survives email verification in a new tab and is claimed only after confirmation', async () => {
   const oldFetch = globalThis.fetch, oldWindow = globalThis.window, oldStorage = globalThis.sessionStorage
   try {
     const values = new Map(), token = 'a'.repeat(43), destination = '/wild/studio?hub=11111111-1111-4111-8111-111111111111'
-    const requests = []; let navigated = ''
+    const requests = []; let navigated = '', remembered = false
     globalThis.sessionStorage = { getItem: k => values.get(k) || null, setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k) }
     globalThis.window = { location: { hash: `#token=${token}`, assign: value => { navigated = value } }, history: { replaceState: () => { globalThis.window.location.hash = '' } } }
-    globalThis.fetch = async (url, init) => { requests.push({ url, body: JSON.parse(init.body) }); return Response.json({ destination }) }
+    globalThis.fetch = async (url, init = {}) => {
+      const body = init.body ? JSON.parse(init.body) : null
+      requests.push({ url, method: init.method || 'GET', body })
+      if (body?.action === 'remember') { remembered = true; return Response.json({ remembered: true }) }
+      if ((init.method || 'GET') === 'GET') return Response.json({ available: remembered })
+      remembered = false
+      return Response.json({ destination })
+    }
     let r
     await act(async () => { r = create(React.createElement(VenueJoin, { signedIn: false })) })
-    assert.equal(requests.length, 0)
+    assert.deepEqual(requests, [{ url: '/api/wild/join', method: 'POST', body: { action: 'remember', token } }])
     assert.equal(globalThis.window.location.hash, '')
     assert.ok(r.root.findAllByType('a').every(a => !a.props.href.includes(token)))
+    assert.match(text(r), /verification email in another tab/)
     await act(() => r.unmount())
+    values.clear()
     await act(async () => { r = create(React.createElement(VenueJoin, { signedIn: true })) })
     assert.equal(button(r, 'Open my prepared place').props.disabled, true)
     await act(() => r.root.findByType('input').props.onChange({ target: { checked: true } }))
     await act(() => button(r, 'Open my prepared place').props.onClick())
-    assert.deepEqual(requests, [{ url: '/api/wild/join', body: { token, confirmed: true } }])
+    assert.deepEqual(requests.slice(1), [
+      { url: '/api/wild/join', method: 'GET', body: null },
+      { url: '/api/wild/join', method: 'POST', body: { confirmed: true } },
+    ])
     assert.equal(navigated, destination)
     assert.equal(values.size, 0)
     await act(() => r.unmount())

@@ -9,6 +9,7 @@ import { revolutConfig, revolutApi, checkoutUrl, verifyRevolutWebhook, type Revo
 import { configureWatch, refreshWatch, watchView, reviewRecord, weeklyClubSummary } from '../lib/club-watch/service'
 import { watchConfig, planningRecords, epaRecords, type SourceRecord } from '../lib/club-watch/sources'
 import { sendWeeklyDigests } from '../lib/venue-journal/digest'
+import { venueOnboardingService } from '../lib/wild-hubs/onboarding'
 
 const ids={plan:'00000000-0000-4000-8000-000000000001',variation:'00000000-0000-4000-8000-000000000002',customer:'00000000-0000-4000-8000-000000000003',subscription:'00000000-0000-4000-8000-000000000004',order:'00000000-0000-4000-8000-000000000005',cycle:'00000000-0000-4000-8000-000000000006'}
 const config:RevolutConfig={mode:'sandbox',key:'synthetic-key',signingSecret:'synthetic-signing-secret',origin:'https://qa.example.test',planId:ids.plan,variationId:ids.variation,taxLabel:'Synthetic test tax wording'}
@@ -18,7 +19,7 @@ async function fixture(){
   const pg=new PGlite()
   await pg.exec(`CREATE TABLE "User" (id TEXT PRIMARY KEY,email TEXT,"emailVerified" TIMESTAMPTZ,name TEXT,role TEXT DEFAULT 'user',"accessState" TEXT DEFAULT 'REGISTERED');
     INSERT INTO "User" (id,email,"emailVerified") VALUES ('owner','owner@example.test',now()),('other','other@example.test',now()),('editor','editor@example.test',now());UPDATE "User" SET role='admin' WHERE id='editor';`)
-  for(const migration of ['20260914_wild_hubs','20260919_attention_return','20260919_stripe_billing','20260923_venue_photo_journal','20260924_data_rights','20260929_club_launch'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
+  for(const migration of ['20260914_wild_hubs','20260915_wild_editorial_review','20260919_attention_return','20260919_stripe_billing','20260921_venue_launch','20260923_venue_photo_journal','20260924_data_rights','20260929_club_launch'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
   await pg.exec(`INSERT INTO "WildHub" (id,"ownerId",profile,published) VALUES ('club','owner','{"name":"Fictional QA club"}','{}'),('foreign','other','{"name":"Other club"}','{}');`)
   const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(q:string,v:unknown[])=>(await client.query<T>(q,v)).rows})
   const db:Database={...sql(pg),transaction:fn=>pg.transaction(tx=>fn(sql(tx)))}
@@ -51,6 +52,29 @@ test('checkout is one durable attempt per club; two clicks cannot create two sub
     const [row]=await f.db.query<{amount:number;termsVersion:string;taxLabel:string}>('SELECT amount,"termsVersion","taxLabel" FROM "ClubSubscription"',[])
     assert.equal(row.amount,8000);assert.ok(row.termsVersion);assert.equal(row.taxLabel,config.taxLabel)
     await assert.rejects(clubBilling(f.db,'club','other'),/not found/)
+  }finally{await f.pg.close()}
+})
+test('prepared first-club owner can claim the Dublin venue and reach the €80 hosted checkout',async()=>{
+  const f=await fixture();try{
+    const launches=venueOnboardingService(f.db,'editor')
+    const prepared=await launches.prepare({authorised:true,places:[{
+      reference:'first-dublin-club',email:'owner@example.test',profile:{name:'Fictional Dublin Club',county:'dublin',kind:'community',story:'Synthetic first-customer journey.',website:'',interests:['nature']},
+    }]})
+    const row=(await launches.list()).places.find(place=>place.id===prepared.ids[0])
+    assert.ok(row)
+    const issued=await launches.change(row.id,{action:'issue',revision:row.revision})
+    assert.ok('path' in issued && issued.path)
+    const token=new URL(`https://qa.example.test${issued.path}`).hash.slice('#token='.length)
+    const claimed=await venueOnboardingService(f.db,'owner').claim({confirmed:true,token})
+    const hubId=claimed.hubId
+    assert.ok(hubId)
+    assert.match(claimed.destination,new RegExp(`^/wild/studio\\?hub=${hubId}$`))
+    const [hub]=await f.db.query<{ownerId:string;county:string}>('SELECT "ownerId",profile->>\'county\' AS county FROM "WildHub" WHERE id=$1',[hubId])
+    assert.deepEqual(hub,{ownerId:'owner',county:'dublin'})
+    await configureWatch(f.db,'editor',hubId,scope,true)
+    const checkout=await f.service.checkout(hubId,true)
+    assert.equal(checkout.url,'https://sandbox-checkout.revolut.com/payment-link/synthetic')
+    assert.equal((await clubBilling(f.db,hubId,'owner'))?.state,'pending')
   }finally{await f.pg.close()}
 })
 test('lost customer response is not retried, and unresolved writes are visible to reconciliation',async()=>{

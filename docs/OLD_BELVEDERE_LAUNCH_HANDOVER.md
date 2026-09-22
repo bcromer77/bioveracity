@@ -2,7 +2,7 @@
 
 22 September 2026. Scope: the agreed €80/month club pilot; telemetry is excluded.
 
-This branch is stacked on PR74 (`fix/qa-personal-journeys`, parent `3c08ab229a2e4c76c9b8b17137951b8e700c017f`). It includes PR73/70/71/72 through that ancestry. Do not merge or cherry-pick those components separately. Codex owns the application changes; Abacus owns isolated hosting setup and deployment evidence. This document does not authorise a production deployment, real charge, customer email or migration against production.
+This branch is stacked on PR74 (`fix/qa-personal-journeys`, parent `3c08ab229a2e4c76c9b8b17137951b8e700c017f`). It includes PR73/70/71/72 through that ancestry. Do not merge or cherry-pick those components separately. The application changes are contained in this branch; Abacus owns isolated hosting setup and deployment evidence. This document does not authorise a production deployment, real charge, customer email or migration against production.
 
 ## What the club receives
 
