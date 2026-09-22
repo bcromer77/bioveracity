@@ -11,6 +11,7 @@ export function billingConfig() {
   const secretKey = process.env.STRIPE_SECRET_KEY || ''
   const enabled = envFlag('BIOVERACITY_BILLING_ENABLED')
   const live = secretKey.startsWith('sk_live_')
+  if (enabled && process.env.BILLING_PROVIDER && process.env.BILLING_PROVIDER !== 'stripe') throw new WorkspaceError(503, 'The selected payment provider is not available on this deployment')
   if (enabled && !secretKey) throw new WorkspaceError(503, 'Billing is not configured on this deployment')
   if (live && !envFlag('BIOVERACITY_BILLING_LIVE_ALLOWED')) throw new WorkspaceError(503, 'Live billing is not enabled on this deployment')
   return {
@@ -61,6 +62,7 @@ function stripeHeaders(idempotencyKey?: string) {
 export async function stripeRequest<T>(path: string, params: URLSearchParams, idempotencyKey?: string): Promise<T> {
   const response = await fetch(`https://api.stripe.com/v1/${path.replace(/^\//, '')}`, {
     method: 'POST',
+    signal: AbortSignal.timeout(15000),
     headers: stripeHeaders(idempotencyKey),
     body: params,
     cache: 'no-store',
