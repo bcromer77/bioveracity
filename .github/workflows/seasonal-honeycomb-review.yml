@@ -63,6 +63,7 @@ jobs:
           yarn test:wild-hubs
           yarn test:venue-photos
           yarn test:club
+          node --import tsx --test tests/event-date-precision-migration.test.ts
           node --test tests/club-ui.test.mjs tests/signup-acceptance.test.mjs
           node --import tsx --test tests/data-rights.test.ts
           node --test tests/data-rights-ui.test.mjs
