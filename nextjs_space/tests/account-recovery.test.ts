@@ -108,23 +108,16 @@ test('Google provider is registered server-side only through the gate, with no d
   assert.ok(!authSrc.includes('allowDangerousEmailAccountLinking'))
 })
 
-test('Login and signup UI follow the same server-computed Google gate', () => {
-  // Pages compute the gate on the server from the full env (flag + creds)...
+test('Login UI receives the server-computed Google gate', () => {
+  // Existing-account login computes the gate from the full env (flag + creds).
+  // New accounts use the signup form's explicit terms-acceptance flow.
   const loginPage = readSource(new URL('../app/login/page.tsx', import.meta.url), 'utf8')
-  const signupPage = readSource(new URL('../app/signup/page.tsx', import.meta.url), 'utf8')
   assert.ok(loginPage.includes('isGoogleAuthEnabled(process.env)'))
-  assert.ok(signupPage.includes('isGoogleAuthEnabled(process.env)'))
-  // ...and the client forms only render the Google control behind that prop.
   const loginForm = readSource(new URL('../app/login/login-form.tsx', import.meta.url), 'utf8')
-  const signupForm = readSource(new URL('../app/signup/signup-form.tsx', import.meta.url), 'utf8')
   assert.ok(loginForm.includes('{googleEnabled &&'))
-  assert.ok(signupForm.includes('{googleEnabled &&'))
-  // The Google sign-in action must sit inside the gated block, never outside it.
-  for (const src of [loginForm, signupForm]) {
-    const gateIdx = src.indexOf('{googleEnabled &&')
-    const googleIdx = src.indexOf("signIn('google'")
-    assert.ok(gateIdx !== -1 && googleIdx !== -1 && googleIdx > gateIdx)
-  }
+  const gateIdx = loginForm.indexOf('{googleEnabled &&')
+  const googleIdx = loginForm.indexOf("signIn('google'")
+  assert.ok(gateIdx !== -1 && googleIdx !== -1 && googleIdx > gateIdx)
 })
 
 test('Login and signup forms derive the return path without setting state in an effect', () => {

@@ -12,6 +12,20 @@ await build({stdin:{contents:"export {SignupForm} from './app/signup/signup-form
 const {SignupForm,LoginForm,VerifyEmail,ForgotPassword}=await import(pathToFileURL(path.join(dir,'ui.mjs')))
 const originalFetch=globalThis.fetch;after(()=>{globalThis.fetch=originalFetch;delete globalThis.__journey;delete globalThis.window})
 async function change(tree,id,value){await act(async()=>tree.root.findByProps({id}).props.onChange({target:{value}}))}
+test('Google is offered only for enabled login; new signup retains an unticked terms gate',async()=>{
+ globalThis.__journey={query:'callbackUrl=%2Fwild%2Fstudio'}
+ for(const enabled of [false,true]){
+  let t;await act(async()=>{t=create(React.createElement(LoginForm,{googleEnabled:enabled}))})
+  const buttons=t.root.findAllByType('button').filter(b=>b.children.filter(c=>typeof c==='string').join('').includes('Sign in with Google'))
+  assert.equal(buttons.length,enabled?1:0)
+  if(enabled){await act(async()=>buttons[0].props.onClick());assert.deepEqual(globalThis.__journey.signin,['google',{redirectTo:'/wild/studio'}])}
+  await act(async()=>t.unmount())
+ }
+ let t;await act(async()=>{t=create(React.createElement(SignupForm))})
+ assert.ok(!JSON.stringify(t.toJSON()).includes('Google'))
+ assert.equal(t.root.findByProps({type:'checkbox'}).props.checked,false)
+ await act(async()=>t.unmount())
+})
 test('venue signup keeps its destination through verification and accessible credential fields',async()=>{
  globalThis.__journey={query:'callbackUrl=%2Fwild%2Fstudio'};let body
  globalThis.fetch=async(_,init)=>{body=JSON.parse(init.body);return {ok:true,json:async()=>({verificationRequired:true})}}
