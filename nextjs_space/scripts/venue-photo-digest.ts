@@ -18,7 +18,7 @@ async function main(){
  const db:Database={...adapter(prisma),transaction:fn=>prisma.$transaction(tx=>fn(adapter(tx)),{isolationLevel:'Serializable'})}
  try{
   const results=await withHeartbeat(db,'venue-photo-digest',async()=>{
-   const out=await sendWeeklyDigests(db,emailer.send,origin)
+   const out=await sendWeeklyDigests(db,emailer.send,origin,new Date(),{clubLaunch:process.env.CLUB_LAUNCH_ENABLED==='true'})
    if(out.some(r=>r.status==='UNKNOWN'))throw Error('Digest delivery ambiguous')
    return out
   })

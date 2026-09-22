@@ -94,7 +94,7 @@ function PhotoDesk({ hubId }: { hubId: string }) {
       <fieldset className="bv-form" disabled={busy}><legend>Your preferences</legend>
         <label className="bv-check"><input type="checkbox" checked={settings.contributionsEnabled} onChange={e => setSettings({ ...settings, contributionsEnabled: e.target.checked })} />Accept guest photographs on your published venue page</label>
         <label className="bv-check"><input type="checkbox" checked={settings.weeklyEnabled} onChange={e => setSettings({ ...settings, weeklyEnabled: e.target.checked })} />Email me a weekly photo review</label>
-        <p>One email per venue, covering the previous Monday–Sunday in UTC. Up to twelve previews link to your complete journal. Your account’s weekly-summary preference also applies. Nothing publishes automatically.</p>
+        <p>One email per venue, covering the previous Monday–Sunday in UTC. Up to twelve previews link to your complete journal. Your account’s weekly-summary preference also applies. For club members, this email also includes up to ten newly reviewed council/EPA records and their source-check status. Nothing publishes automatically.</p>
         <button className="bv-button bv-green" onClick={() => change({ action: 'settings', ...settings }, 'Photo and email preferences saved.')}>Save preferences</button>
         <p>This pilot holds 200 journal photographs per venue, separate from your venue gallery. Downloads are processed images with embedded location metadata removed.</p>
       </fieldset>

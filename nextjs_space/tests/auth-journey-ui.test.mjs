@@ -12,11 +12,26 @@ await build({stdin:{contents:"export {SignupForm} from './app/signup/signup-form
 const {SignupForm,LoginForm,VerifyEmail,ForgotPassword}=await import(pathToFileURL(path.join(dir,'ui.mjs')))
 const originalFetch=globalThis.fetch;after(()=>{globalThis.fetch=originalFetch;delete globalThis.__journey;delete globalThis.window})
 async function change(tree,id,value){await act(async()=>tree.root.findByProps({id}).props.onChange({target:{value}}))}
+test('Google is offered only for enabled login; new signup retains an unticked terms gate',async()=>{
+ globalThis.__journey={query:'callbackUrl=%2Fwild%2Fstudio'}
+ for(const enabled of [false,true]){
+  let t;await act(async()=>{t=create(React.createElement(LoginForm,{googleEnabled:enabled}))})
+  const buttons=t.root.findAllByType('button').filter(b=>b.children.filter(c=>typeof c==='string').join('').includes('Sign in with Google'))
+  assert.equal(buttons.length,enabled?1:0)
+  if(enabled){await act(async()=>buttons[0].props.onClick());assert.deepEqual(globalThis.__journey.signin,['google',{redirectTo:'/wild/studio'}])}
+  await act(async()=>t.unmount())
+ }
+ let t;await act(async()=>{t=create(React.createElement(SignupForm))})
+ assert.ok(!JSON.stringify(t.toJSON()).includes('Google'))
+ assert.equal(t.root.findByProps({type:'checkbox'}).props.checked,false)
+ await act(async()=>t.unmount())
+})
 test('venue signup keeps its destination through verification and accessible credential fields',async()=>{
  globalThis.__journey={query:'callbackUrl=%2Fwild%2Fstudio'};let body
  globalThis.fetch=async(_,init)=>{body=JSON.parse(init.body);return {ok:true,json:async()=>({verificationRequired:true})}}
- let t;await act(async()=>{t=create(React.createElement(SignupForm,{googleEnabled:false,termsEnabled:false}))})
+ let t;await act(async()=>{t=create(React.createElement(SignupForm))})
  await change(t,'auth-text','Synthetic owner');await change(t,'auth-email','owner@example.test');await change(t,'auth-password','Synthetic1234')
+ await act(async()=>t.root.findByProps({type:'checkbox'}).props.onChange({target:{checked:true}}))
  await act(async()=>t.root.findByType('form').props.onSubmit({preventDefault(){}}))
  assert.equal(body.callbackUrl,'/wild/studio');assert.equal(globalThis.__journey.destination,'/verify-email?callbackUrl=%2Fwild%2Fstudio')
  assert.equal(t.root.findByProps({id:'auth-password'}).props.autoComplete,'new-password')
@@ -25,9 +40,10 @@ test('venue signup keeps its destination through verification and accessible cre
 test('general signup requires an explicit purpose; a venue choice is not an administrator role',async()=>{
  globalThis.__journey={query:'callbackUrl=%2Fstart'};let body
  globalThis.fetch=async(_,init)=>{body=JSON.parse(init.body);return {ok:true,json:async()=>({verificationRequired:false})}}
- let t;await act(async()=>{t=create(React.createElement(SignupForm,{googleEnabled:false,termsEnabled:false}))})
+ let t;await act(async()=>{t=create(React.createElement(SignupForm))})
  assert.equal(t.root.findByType('select').props.required,true)
  await act(async()=>t.root.findByType('select').props.onChange({target:{value:'venue'}}))
+ await act(async()=>t.root.findByProps({type:'checkbox'}).props.onChange({target:{checked:true}}))
  await act(async()=>t.root.findByType('form').props.onSubmit({preventDefault(){}}))
  assert.equal(globalThis.__journey.destination,'/wild/studio');assert.equal(body.role,undefined)
  await act(async()=>t.unmount())
@@ -62,4 +78,15 @@ test('recovery does not claim delivery after an outage or network failure',async
  assert.match(JSON.stringify(t.toJSON()),/temporarily unavailable|Unable to connect/)
  await act(async()=>t.unmount())
  }
+})
+
+test('legacy venue signup preselects venue purpose and cannot submit without acceptance even when forms are invoked directly',async()=>{
+ globalThis.__journey={query:'type=venue'};let calls=0
+ globalThis.fetch=async()=>{calls++;return Response.json({id:'synthetic'})}
+ let t;await act(async()=>{t=create(React.createElement(SignupForm))})
+ assert.equal(t.root.findByType('select').props.value,'venue')
+ assert.equal(t.root.findByProps({type:'checkbox'}).props.checked,false)
+ await act(async()=>t.root.findByType('form').props.onSubmit({preventDefault(){}}))
+ assert.equal(calls,0);assert.match(JSON.stringify(t.toJSON()),/Please read and accept/)
+ await act(async()=>t.unmount())
 })

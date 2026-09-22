@@ -31,7 +31,7 @@ export default async function StudioPage() {
   if (!session?.user?.id) redirect('/login?callbackUrl=%2Fwild%2Fstudio')
   return (
     <PublicShell>
-      <HubStudio photoJournalEnabled={journalEnabled()} />
+      <HubStudio photoJournalEnabled={journalEnabled()} clubLaunchEnabled={process.env.CLUB_LAUNCH_ENABLED === 'true'} />
     </PublicShell>
   )
 }

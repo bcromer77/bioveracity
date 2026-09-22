@@ -1,3 +1,4 @@
+import { ClubRecords, type ClubRecordView, type ClubRunView } from './club-records'
 import { VenuePhotoContribute } from './venue-photo-contribute'
 import type { JournalPhoto } from '@/lib/venue-journal/domain'
 import { CountyNature } from '@/components/wild/county-nature'
@@ -13,11 +14,13 @@ export function PublishedHub({
   photos,
   journal = [],
   contributionsEnabled = false,
+  clubRecords,
 }: {
   id: string
   snapshot: Snapshot
   photos: Photo[]
   journal?: JournalPhoto[]
+  clubRecords?: {scope:string;records:ClubRecordView[];runs:ClubRunView[]} | null
   contributionsEnabled?: boolean
 }) {
   const { profile, plan } = snapshot,
@@ -46,6 +49,7 @@ export function PublishedHub({
           BioVeracity.
         </p>
       </section>
+      {clubRecords && <section className="bv-section"><ClubRecords {...clubRecords}/></section>}
       <section className="bv-section">
         <p className="bv-eyebrow">Our story</p>
         <h2>A place to discover.</h2>

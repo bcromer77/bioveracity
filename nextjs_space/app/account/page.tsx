@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import { SiteHeader } from '@/components/site-header'
@@ -14,9 +15,10 @@ export default async function AccountPage() {
   return <div className="min-h-screen flex flex-col">
     <SiteHeader />
     <main className="mx-auto w-full max-w-[800px] flex-1 space-y-6 px-4 py-10">
-      {process.env.DATA_RIGHTS_ENABLED === 'true' && <DataRights />}
+      <DataRights />
       <AttentionPreferences />
       <BillingPanel />
+      {process.env.CLUB_LAUNCH_ENABLED === 'true' && <p>Club membership and Revolut billing are managed in <Link className="underline" href="/wild/studio">your venue studio</Link>.</p>}
     </main>
     <SiteFooter />
   </div>

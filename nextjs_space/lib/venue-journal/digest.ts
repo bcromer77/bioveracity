@@ -1,9 +1,10 @@
+import { weeklyClubSummary } from '../club-watch/service'
 import { randomUUID } from 'node:crypto'
 import type { Database } from '../workspaces/service'
 import type { EmailMessage } from '../email/transactional'
 import { completedWeek, hashToken, newToken, photoColumns, type JournalPhoto } from './domain'
 const escape = (s: string) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
-export function renderDigest(input: { venue: string; origin: string; hubId: string; digestId: string; token: string; start: Date; end: Date; photos: JournalPhoto[]; total: number }) {
+export function renderDigest(input: { venue: string; origin: string; hubId: string; digestId: string; token: string; start: Date; end: Date; photos: JournalPhoto[]; total: number; club?: Awaited<ReturnType<typeof weeklyClubSummary>> }) {
  const { venue, origin, hubId, digestId, token, start, end, photos, total } = input
  const reviewUrl = `${origin}/wild/studio/${encodeURIComponent(hubId)}/photos`
  const date = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
@@ -18,15 +19,17 @@ export function renderDigest(input: { venue: string; origin: string; hubId: stri
   rows.push(`<tr><td width="50%" valign="top" style="padding:0 10px 24px 0">${frame(supporting[i], 262)}</td>${supporting[i + 1] ? `<td width="50%" valign="top" style="padding:0 0 24px 10px">${frame(supporting[i + 1], 262)}</td>` : '<td width="50%"></td>'}</tr>`)
  }
  const cards = `${lead}${rows.length ? `<tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="table-layout:fixed">${rows.join('')}</table></td></tr>` : ''}`
+ const clubText = input.club ? `\nCouncil and EPA record — ${input.club.scope}\n${input.club.records.length ? input.club.records.map(r=>`${r.content.title}: ${r.content.summary}\n${r.content.sourceUrl}`).join('\n\n') : 'No newly approved source records in this email. This is not proof of no local changes.'}\n${(['planning','epa'] as const).map(source=>{const run=input.club!.runs.find(r=>r.source===source);return `${source}: ${run ? `${run.status}; checked ${run.checkedAt.toISOString()}` : 'not checked yet'}`}).join('\n')}\nUp to 10 records shown. See current source status and the full club view: ${origin}/wild/studio/${encodeURIComponent(hubId)}/club\nThese are official source records, not measurements of the club or proof of causation.\n` : ''
+ const clubHtml = clubText ? `<tr><td><h2>Council and EPA record</h2><p style="white-space:pre-wrap">${escape(clubText)}</p><p><a href="${origin}/wild/studio/${encodeURIComponent(hubId)}/club">Open your club record</a></p></td></tr>` : ''
  return {
-  subject: title,
-  html: `<html><body style="margin:0;background:#f6f2e8;color:#173b2c;font-family:Arial,sans-serif"><table role="presentation" style="max-width:600px;width:100%;margin:auto;padding:28px"><tr><td><p>BioVeracity</p><h1>Your place. Through their eyes.</h1><h2>${escape(venue)}</h2><p>${period}</p><p>${intro}</p></td></tr>${cards}<tr><td>${total>photos.length?`<p>Showing ${photos.length} of ${total}. See all photographs in your journal.</p>`:''}<p><a style="display:inline-block;padding:14px;background:#173b2c;color:#fff" href="${reviewUrl}">Review photographs · Publish or download</a></p><p>Choose photographs for your public page, subject to editorial review, or download them with their credits. Nothing is published by this email.</p><p>These are guest observations, not verified species identifications. A missing photograph is not proof of absence.</p><p>Private previews expire after eight days. Sign in to revisit your full journal.</p><p><a href="${reviewUrl}#preferences">Manage weekly email</a></p></td></tr></table></body></html>`,
-  text: `${title}\n${period}\n${intro}\n\n${photos.map(p=>`${p.caption} — ${p.credit}; ${p.location}; taken ${p.observedOn || 'date unknown'}`).join('\n')}\n\nReview, publish or download: ${reviewUrl}\nPublication requires your approval and editorial review.\nManage weekly email: ${reviewUrl}#preferences`,
+  subject: input.club ? `${venue}: your weekly club record` : title,
+  html: `<html><body style="margin:0;background:#f6f2e8;color:#173b2c;font-family:Arial,sans-serif"><table role="presentation" style="max-width:600px;width:100%;margin:auto;padding:28px"><tr><td><p>BioVeracity</p><h1>Your place. Through their eyes.</h1><h2>${escape(venue)}</h2><p>${period}</p><p>${intro}</p></td></tr>${cards}${clubHtml}<tr><td>${total>photos.length?`<p>Showing ${photos.length} of ${total}. See all photographs in your journal.</p>`:''}<p><a style="display:inline-block;padding:14px;background:#173b2c;color:#fff" href="${reviewUrl}">Review photographs · Publish or download</a></p><p>Choose photographs for your public page, subject to editorial review, or download them with their credits. Nothing is published by this email.</p><p>These are guest observations, not verified species identifications. A missing photograph is not proof of absence.</p><p>Private previews expire after eight days. Sign in to revisit your full journal.</p><p><a href="${reviewUrl}#preferences">Manage weekly email</a></p></td></tr></table></body></html>`,
+  text: `${title}${clubText}\n${period}\n${intro}\n\n${photos.map(p=>`${p.caption} — ${p.credit}; ${p.location}; taken ${p.observedOn || 'date unknown'}`).join('\n')}\n\nReview, publish or download: ${reviewUrl}\nPublication requires your approval and editorial review.\nManage weekly email: ${reviewUrl}#preferences`,
  }
 }
 // Durable claim before delivery. Never blindly retry ambiguous provider responses:
 // a timeout may have happened AFTER the provider accepted the message.
-export async function sendWeeklyDigests(db: Database, send: (m: EmailMessage)=>Promise<void>, origin: string, now = new Date()) {
+export async function sendWeeklyDigests(db: Database, send: (m: EmailMessage)=>Promise<void>, origin: string, now = new Date(), options: {clubLaunch?:boolean} = {}) {
  const url = new URL(origin)
  if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw Error('An HTTPS application origin is required.')
  origin = url.origin
@@ -43,7 +46,7 @@ export async function sendWeeklyDigests(db: Database, send: (m: EmailMessage)=>P
    const photos = await sql.query<JournalPhoto>(`SELECT ${photoColumns} FROM "VenuePhoto" p WHERE p."hubId"=$1 AND p."createdAt">=$2 AND p."createdAt"<$3 AND p."status" NOT IN ('WITHDRAWN','REJECTED') ORDER BY p."createdAt",p."id" LIMIT 200`, [venue.id,start,end])
    const preview = photos.slice(0,12)
    const rows = await sql.query<{ id: string }>('INSERT INTO "VenuePhotoDigest" ("id","hubId","ownerId","emailHash","weekStart","status","tokenHash","photoIds","expiresAt") VALUES ($1,$2,$3,$4,$5,\'SENDING\',$6,$7::jsonb,$8) ON CONFLICT ("hubId","weekStart") DO NOTHING RETURNING "id"', [id,venue.id,venue.ownerId,hashToken(venue.email),start,hashToken(token),JSON.stringify(preview.map(p=>p.id)),new Date(now.getTime()+8*86400000)])
-   return rows.length ? { photos: preview, total: photos.length } : null
+   return rows.length ? { photos: preview, total: photos.length, club: options.clubLaunch ? await weeklyClubSummary(sql,venue.id,start,end) : null } : null
   })
   if (!claimed) { results.push({hubId:venue.id,status:'SKIPPED'}); continue }
   try {

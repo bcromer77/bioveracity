@@ -4,3 +4,8 @@ CRON_TZ=UTC
 15 8 * * * cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn ops:daily
 0 9 * * 1 cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn photos:weekly
 # Keep execution/error logs private. Route nonzero exit and missing heartbeat to operator/deputy.
+
+# Club pilot: activate only after isolated acceptance and explicit launch approval.
+# Both commands are gated and record heartbeats. Billing does GET reconciliation only.
+*/15 * * * * cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn billing:reconcile
+30 7 * * * cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn club:sources

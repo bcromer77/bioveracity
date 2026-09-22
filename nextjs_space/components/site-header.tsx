@@ -8,6 +8,7 @@ import { PUBLIC_NAV_LINKS } from '@/lib/public-navigation'
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [authError, setAuthError] = useState('')
   const { data: session, status } = useSession() || {}
   const resolving = status === 'loading'
 
@@ -32,12 +33,13 @@ export function SiteHeader() {
                 <Link href="/workspace" className="block rounded-sm px-3 py-2 text-[15px] text-[#f7f4ec] hover:bg-[#34574a]" onClick={() => setMenuOpen(false)}>My workspace</Link>
                 <Link href="/my-places" className="block rounded-sm px-3 py-2 text-[15px] text-[#f7f4ec] hover:bg-[#34574a]" onClick={() => setMenuOpen(false)}>My places</Link>
                 <Link href="/account" className="block rounded-sm px-3 py-2 text-[15px] text-[#f7f4ec] hover:bg-[#34574a]" onClick={() => setMenuOpen(false)}>Account</Link>
-                <button onClick={() => { setMenuOpen(false); signOut({ redirectTo: '/' }) }} className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-[15px] text-[#f7f4ec] hover:bg-[#34574a]"><LogOut className="h-4 w-4 text-muted-foreground" />Sign out</button>
+                <button onClick={() => { setMenuOpen(false); signOut({ redirect: false }).then(() => window.location.assign('/')).catch(() => setAuthError('Sign out could not be confirmed. Please try again.')) }} className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-[15px] text-[#f7f4ec] hover:bg-[#34574a]"><LogOut className="h-4 w-4 text-muted-foreground" />Sign out</button>
               </div>
             </>}
           </div>
         ) : <Link href="/login" className="rounded-md px-3 py-2 text-[15px] font-medium text-[#f7f4ec] hover:bg-[#34574a]">Sign in</Link>}
       </div>
+      {authError && <p role="alert" className="px-4 py-2">{authError}</p>}
       <nav aria-label="Main navigation" className="mx-auto flex max-w-[1100px] flex-wrap gap-x-6 gap-y-1 px-4 pb-3 text-sm">
         {PUBLIC_NAV_LINKS.map((l) => <Link key={l.href} href={l.href} className="py-2 hover:underline">{l.label}</Link>)}
         <Link href="/contact" className="py-2 hover:underline">Contact</Link>

@@ -11,6 +11,8 @@ export async function GET(request:Request){
   const jobs:string[]=[]
   if(process.env.OPERATIONS_SEND_ENABLED==='true')jobs.push('privacy-notifications')
   if(process.env.WILD_PHOTO_DIGEST_SEND_ENABLED==='true')jobs.push('venue-photo-digest')
+  if(process.env.REVOLUT_RECONCILE_ENABLED==='true')jobs.push('revolut-reconcile')
+  if(process.env.CLUB_SOURCE_REFRESH_ENABLED==='true')jobs.push('club-sources')
   const result=await operationalStatus(securityDb,jobs)
   return Response.json(result,{status:result.ok?200:503,headers})
  }catch{return Response.json({ok:false,error:'Operational checks unavailable'},{status:503,headers})}

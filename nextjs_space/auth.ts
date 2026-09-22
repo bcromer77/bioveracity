@@ -80,7 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       // Direct OAuth requests must not bypass the credential-signup release.
       // Existing Google users retain access, including their data-rights controls.
-      if (account?.provider === 'google' && process.env.DATA_RIGHTS_ENABLED === 'true') {
+      if (account?.provider === 'google') {
         const existing = user.email ? await prisma.user.findUnique({where:{email:user.email}}) : null
         if (!existing) return '/signup'
       }

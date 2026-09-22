@@ -102,6 +102,9 @@ model EvidenceSearchQuota {
 }
 
 model User {
+  clubSubscriptions ClubSubscription[]
+  configuredClubWatches ClubWatch[]
+  clubSourceReviews ClubSourceRecord[]
  identityChallenges IdentityChallenge[]
   termsAcceptances TermsAcceptance[]
   dataRightsRequests DataRightsRequest[]
@@ -1224,6 +1227,8 @@ model ScanPacing {
 }
 
 model WildHub {
+  clubSubscription ClubSubscription?
+  clubWatch ClubWatch?
   photoSettings VenuePhotoSettings?
   journalPhotos VenuePhoto[]
   photoDigests VenuePhotoDigest[]
@@ -1735,4 +1740,82 @@ model JobHeartbeat {
  status String
  startedAt DateTime @db.Timestamp(3)
  finishedAt DateTime? @db.Timestamp(3)
+}
+
+
+model ClubSubscription {
+  id String @id
+  hubId String @unique
+  ownerId String
+  mode String
+  planId String
+  variationId String
+  termsVersion String
+  taxLabel String
+  amount Int @default(8000)
+  currency String @default("EUR")
+  customerId String?
+  subscriptionId String? @unique
+  setupOrderId String?
+  state String @default("CREATING")
+  providerUpdatedAt DateTime? @db.Timestamptz(6)
+  paidUntil DateTime? @db.Timestamptz(6)
+  paymentState String @default("unknown")
+  revision Int @default(1)
+  checkedAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Restrict)
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+}
+model RevolutReceipt {
+  hash String @id
+  subscriptionId String
+  event String
+  receivedAt DateTime @default(now()) @db.Timestamptz(6)
+  processedAt DateTime? @db.Timestamptz(6)
+  @@index([processedAt, receivedAt], map: "RevolutReceipt_pending")
+}
+model ClubWatch {
+  hubId String @id
+  config Json
+  version Int @default(1)
+  enabled Boolean @default(false)
+  configuredBy String
+  updatedAt DateTime @default(now()) @db.Timestamptz(6)
+  hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
+  operator User @relation(fields: [configuredBy], references: [id], onDelete: Restrict)
+  records ClubSourceRecord[]
+  runs ClubSourceRun[]
+}
+model ClubSourceRecord {
+  id String @id
+  hubId String
+  configVersion Int
+  source String
+  sourceKey String
+  hash String
+  content Json
+  current Boolean @default(true)
+  review String @default("PENDING")
+  reviewedBy String?
+  reviewNote String?
+  reviewedAt DateTime? @db.Timestamptz(6)
+  firstSeenAt DateTime @db.Timestamptz(6)
+  lastSeenAt DateTime @db.Timestamptz(6)
+  watch ClubWatch @relation(fields: [hubId], references: [hubId], onDelete: Cascade)
+  reviewer User? @relation(fields: [reviewedBy], references: [id], onDelete: Restrict)
+  // Partial unique current-revision index is maintained by the SQL migration.
+  @@index([hubId, review, current], map: "ClubSourceRecord_review")
+}
+model ClubSourceRun {
+  id String @id
+  hubId String
+  configVersion Int
+  source String
+  status String
+  count Int @default(0)
+  note String
+  checkedAt DateTime @db.Timestamptz(6)
+  watch ClubWatch @relation(fields: [hubId], references: [hubId], onDelete: Cascade)
+  @@index([hubId, checkedAt], map: "ClubSourceRun_latest")
 }
