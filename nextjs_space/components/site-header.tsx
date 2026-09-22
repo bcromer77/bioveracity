@@ -26,6 +26,8 @@ export function SiteHeader() {
             {menuOpen && <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
               <div className="absolute right-0 z-50 mt-1 w-52 rounded-md border border-border bg-[#173d35] p-1 shadow-lg">
+                <Link href="/start" className="block rounded-sm px-3 py-2 text-[15px]" onClick={() => setMenuOpen(false)}>My home</Link>
+                <Link href="/wild/studio" className="block rounded-sm px-3 py-2 text-[15px]" onClick={() => setMenuOpen(false)}>My venues</Link>
                 <Link href="/search" className="block rounded-sm px-3 py-2 text-[15px] text-[#f7f4ec] hover:bg-[#34574a]" onClick={() => setMenuOpen(false)}>Search BioVeracity</Link>
                 <Link href="/workspace" className="block rounded-sm px-3 py-2 text-[15px] text-[#f7f4ec] hover:bg-[#34574a]" onClick={() => setMenuOpen(false)}>My workspace</Link>
                 <Link href="/my-places" className="block rounded-sm px-3 py-2 text-[15px] text-[#f7f4ec] hover:bg-[#34574a]" onClick={() => setMenuOpen(false)}>My places</Link>

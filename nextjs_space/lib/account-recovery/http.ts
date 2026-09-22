@@ -1,3 +1,4 @@
+import { authReturnPath } from '../auth-return-path'
 import { securityIp } from './security'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
@@ -32,7 +33,7 @@ async function hashPassword(plain: string): Promise<string> {
 // reveal account existence: if configuration is missing we log server-side and
 // return the generic success response (no token is issued because sendEmail is
 // never reached).
-export function requestResetService() {
+export function requestResetService(returnTo?: string) {
   let deps: RecoveryDeps
   try {
     const emailConfig = resolveEmailConfig(process.env as Record<string, string | undefined>)
@@ -40,7 +41,7 @@ export function requestResetService() {
     const baseUrl = resolveAppBaseUrl(process.env as Record<string, string | undefined>)
     deps = {
       hashPassword,
-      buildResetLink: (rawToken: string) => buildResetLink(baseUrl, rawToken),
+      buildResetLink: (rawToken: string) => { const url = new URL(buildResetLink(baseUrl, rawToken)); url.searchParams.set('callbackUrl', authReturnPath(returnTo || null)); return url.toString() },
       sendEmail: async ({ to, resetUrl }) => {
         const message = buildResetEmail({ resetUrl })
         await emailer.send({ to, subject: message.subject, html: message.html, text: message.text })

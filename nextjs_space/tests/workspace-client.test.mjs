@@ -37,7 +37,7 @@ test('errors expose bounded guidance not arbitrary server error contents', async
   for (const status of [400, 401, 403, 404, 429, 500, 503]) {
     await assert.rejects(workspaceRequest('/api/workspaces', {}, async () => ({ ok: false, status, json: async () => { throw new Error('must not read private server internals'); } })), { message: apiMessage(status) });
   }
-  assert.match(apiMessage(503), /not enabled/);
+  assert.match(apiMessage(503), /not confirmed/);
   assert.equal(apiMessage(403), apiMessage(404));
 });
 test('preserves invalid date as unavailable; displays UTC for creation timestamp', () => {

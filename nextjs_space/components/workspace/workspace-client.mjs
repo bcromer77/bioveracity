@@ -19,7 +19,7 @@ export function casePayload(title, template, siteText) {
 export function apiMessage(status) {
   if (status === 401) return 'Your session has ended. Sign in again to continue.';
   if (status === 403 || status === 404) return 'This workspace or case is unavailable to your account.';
-  if (status === 503) return 'Private workspaces are not enabled on this installation yet. Nothing has been saved by this request.';
+  if (status === 503) return 'The service is temporarily unavailable. Your last change is not confirmed. Refresh before retrying.';
   if (status === 400) return 'The request could not be accepted. Check the field lengths and try again.';
   if (status === 429) return 'Too many requests. Wait a moment before trying again.';
   return 'The request could not be completed. Refresh to check whether it was saved before submitting again.';

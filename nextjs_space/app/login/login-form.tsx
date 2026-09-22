@@ -50,24 +50,24 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
             <div className="flex h-8 w-8 items-center justify-center rounded bg-accent text-accent-foreground font-display font-bold text-sm">BV</div>
             <span className="font-display font-bold text-lg text-foreground">BioVeracity</span>
           </Link>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Sign in</h1>
-          <p className="text-[15px] text-muted-foreground mt-2">Access the places you follow and produce reports.</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{callbackUrl.startsWith('/wild/') ? 'Sign in to your venue' : callbackUrl.startsWith('/workspace') ? 'Sign in to your workspace' : 'Sign in'}</h1>
+          <p className="text-[15px] text-muted-foreground mt-2">{callbackUrl.startsWith('/wild/') ? 'Return to your venue, photographs and publication reviews.' : 'Return to your saved work and the places you follow.'}</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-[15px]">{error}</div>}
+          {error && <div role="alert" className="p-3 rounded-lg bg-destructive/10 text-destructive text-[15px]">{error}</div>}
           <div>
-            <label className="block text-[15px] font-medium text-foreground mb-1.5">Email</label>
-            <input type="email" value={email} onChange={(e: any) => setEmail(e?.target?.value ?? '')} placeholder="you@example.com" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
+            <label htmlFor="auth-email" className="block text-[15px] font-medium text-foreground mb-1.5">Email</label>
+            <input id="auth-email" name="email" autoComplete="email" type="email" value={email} onChange={(e: any) => setEmail(e?.target?.value ?? '')} placeholder="you@example.com" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[15px] font-medium text-foreground">Password</label>
-              <Link href="/forgot-password" className="text-[13px] text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Forgot password?</Link>
+              <label htmlFor="auth-password" className="block text-[15px] font-medium text-foreground">Password</label>
+              <Link href={`/forgot-password?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-[13px] text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Forgot password?</Link>
             </div>
-            <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="Your password" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
+            <input id="auth-password" name="password" autoComplete="current-password" type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="Your password" required className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
           <details className="text-sm space-y-3"><summary>Administrator sign-in</summary><p>Request a code after entering your email and password above.</p><button type="button" disabled={loading} className="underline" onClick={async()=>{setLoading(true);try{const r=await fetch('/api/account/identity',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin-code',email,password})});const d=await r.json();setError(d.message||d.error)}catch{setError('Unable to request a code.')}finally{setLoading(false)}}}>Email my sign-in code</button><label className="block">Administrator code<input className="block w-full rounded border p-3" autoComplete="one-time-code" value={adminCode} onChange={e=>setAdminCode(e.target.value.trim())}/></label></details>
-          <Link className="block text-sm underline" href="/verify-email">Confirm your email or resend verification</Link>
+          <Link className="block text-sm underline" href={`/verify-email?callbackUrl=${encodeURIComponent(callbackUrl)}`}>Confirm your email or resend verification</Link>
           <Button type="submit" disabled={loading} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign in'}
           </Button>

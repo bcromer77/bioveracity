@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { authReturnPath } from '@/lib/auth-return-path'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button'
 function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token') ?? ''
+  const callbackUrl = authReturnPath(searchParams.get('callbackUrl'))
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,7 +61,7 @@ function ResetPasswordForm() {
             <div className="p-4 rounded-lg bg-muted text-[15px] text-foreground">
               Your password has been reset. For your security, any existing sessions have been signed out.
             </div>
-            <Button onClick={() => router.replace('/login')} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
+            <Button onClick={() => router.replace(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
               Go to sign in
             </Button>
           </div>
@@ -81,7 +83,7 @@ function ResetPasswordForm() {
           </form>
         )}
         <p className="text-center text-[15px] text-muted-foreground mt-6">
-          <Link href="/login" className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Back to sign in</Link>
+          <Link href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-[hsl(var(--link))] underline underline-offset-2 hover:decoration-2">Back to sign in</Link>
         </p>
       </div>
     </div>

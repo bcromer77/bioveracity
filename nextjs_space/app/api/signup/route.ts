@@ -8,6 +8,7 @@ import { recordAcceptance } from '@/lib/data-rights/service'
 import { validAcceptance } from '@/lib/data-rights/policy'
 import { adapter } from '@/lib/workspaces/http'
 import bcrypt from 'bcryptjs'
+import { authReturnPath } from '@/lib/auth-return-path'
 import { normaliseEmail, passwordInput } from '@/lib/workspaces/invitations'
 import { WorkspaceError } from '@/lib/workspaces/service'
 import { validatePassword } from '@/lib/account-recovery/password-policy'
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     })
     const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true'
     if (verificationRequired) {
-      try { await identities().issue({email:user.email,ip:securityIp(request),purpose:'VERIFY_EMAIL'}) }
+      try { await identities().issue({email:user.email,ip:securityIp(request),purpose:'VERIFY_EMAIL',returnTo:authReturnPath(typeof input.callbackUrl === 'string' ? input.callbackUrl : null)}) }
       catch { console.error('signup_verification_issue_failed') }
     }
     return NextResponse.json({ id: user.id, email: user.email, name: user.name, verificationRequired })

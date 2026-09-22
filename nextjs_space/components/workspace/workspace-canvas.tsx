@@ -15,6 +15,7 @@ import { expandQuery, rankResults } from './retrieval.mjs'
 import { InvestigationMap, type MapLayers, type MapPoint } from './investigation-map'
 import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximity.mjs'
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
+import { CaseCollaboration } from './case-collaboration'
 import { CaseEvidence } from './case-evidence'
 import { HoneycombPanel } from './honeycomb-panel'
 import { ReportsPanel } from './reports-panel'
@@ -105,7 +106,7 @@ const PROXIMITY_METERS = 2000
 
 async function read(url: string, init: RequestInit = {}) {
   const response = await fetch(url, { ...init, cache: 'no-store', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...init.headers } })
-  if (!response.ok) { let msg = 'The request could not be completed.'; try { const data = await response.json(); if (typeof data.error === 'string') msg = data.error } catch {} throw new Error(msg) }
+  if (!response.ok) { let msg = 'The service is unavailable or your session has ended. This action is not confirmed. Refresh before retrying.'; try { const data = await response.json(); if (typeof data.error === 'string') msg = data.error } catch {} throw new Error(msg) }
   return response
 }
 function toBase64(bytes: ArrayBuffer) { let raw = ''; const values = new Uint8Array(bytes); for (let i = 0; i < values.length; i += 8192) raw += String.fromCharCode(...values.subarray(i, i + 8192)); return btoa(raw) }
@@ -121,7 +122,7 @@ function Failure({ text, signIn = false }: { text: string; signIn?: boolean }) {
   return <div role="alert" className="rounded-md border border-destructive p-3 text-sm"><p>{text}</p>{signIn && <Link className="mt-2 inline-block underline" href="/login?callbackUrl=/workspace">Sign in again</Link>}</div>
 }
 
-export function WorkspaceCanvas({ workspaceId, initialPersona }: { workspaceId: string; initialPersona?: string | null }) {
+export function WorkspaceCanvas({ workspaceId, initialPersona, workspaceName }: { workspaceId: string; initialPersona?: string | null; workspaceName?: string }) {
   const { data: session, status } = useSession()
   const params = useSearchParams()
   // The saved workspace type wins. The ?persona= URL param is only a fallback for
@@ -130,10 +131,10 @@ export function WorkspaceCanvas({ workspaceId, initialPersona }: { workspaceId: 
   const persona = getPersona(personaKey)
   if (status === 'loading') return <p role="status">Loading your workspace…</p>
   if (status !== 'authenticated' || !session?.user?.id) return <Failure text="Sign in to open your private workspace." signIn />
-  return <CanvasBody key={session.user.id} workspaceId={workspaceId} persona={persona} />
+  return <CanvasBody key={session.user.id} workspaceId={workspaceId} persona={persona} workspaceName={workspaceName} />
 }
 
-function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Persona }) {
+function CanvasBody({ workspaceId, persona, workspaceName }: { workspaceId: string; persona: Persona; workspaceName?: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -154,7 +155,7 @@ function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Pe
     <header className="space-y-3">
       <p className="text-sm"><Link href="/workspace" className="underline">← All workspaces</Link></p>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-3xl font-bold tracking-tight">{selectedTitle || persona.title}</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight">{selectedTitle || workspaceName || persona.title}</h1>
         <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-secondary px-3 py-1 text-xs font-medium">🔒 Private workspace</span>
       </div>
       <p className="text-sm text-muted-foreground">Workspace type: <span className="font-medium text-foreground">{persona.key === 'custom' ? 'Custom workspace' : persona.title}</span>{selectedTitle ? <> · Current case: <span className="font-medium text-foreground">{selectedTitle}</span></> : ''}</p>
@@ -162,6 +163,8 @@ function CanvasBody({ workspaceId, persona }: { workspaceId: string; persona: Pe
     </header>
 
     <CaseBoard key={workspaceId} workspaceId={workspaceId} defaultTemplate={persona.template} selected={selected} onSelect={selectCase} onResolved={(_id, title) => setSelectedTitle(title)} />
+
+    {selected && <CaseCollaboration key={selected} workspaceId={workspaceId} caseId={selected}/>}
 
     {selected
       ? <Investigation key={selected} workspaceId={workspaceId} caseId={selected} persona={persona} onSelectCase={setSelectedId} reportTitle={persona.exportTitle} initialCite={params.get('cite') || ''} initialDoc={params.get('doc') || ''} />
@@ -416,32 +419,33 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     } catch (e) { setError(message(e)) } finally { setSearching(false) }
   }
 
+  const [askError,setAskError]=useState(''), [claimError,setClaimError]=useState(''), [reportError,setReportError]=useState('')
   async function submitQuestion(event: FormEvent) {
     event.preventDefault()
     const q = question.trim(); if (!q) return
     const seq = ++askSeq.current
-    setAsking(true); setError(''); setQuestionHits(null)
-    try { const r = await retrieve(q); if (seq === askSeq.current) setQuestionHits(r) } catch (e) { if (seq === askSeq.current) setError(message(e)) } finally { if (seq === askSeq.current) setAsking(false) }
+    setAsking(true); setError(''); setQuestionHits(null); setAskError('')
+    try { const r = await retrieve(q); if (seq === askSeq.current) setQuestionHits(r) } catch (e) { if (seq === askSeq.current) setAskError(message(e)) } finally { if (seq === askSeq.current) setAsking(false) }
   }
 
   async function submitClaim(event: FormEvent) {
     event.preventDefault()
     const q = claim.trim(); if (!q) return
     const seq = ++claimSeq.current
-    setChecking(true); setError(''); setClaimHits(null)
-    try { const r = await retrieve(q); if (seq === claimSeq.current) setClaimHits(r) } catch (e) { if (seq === claimSeq.current) setError(message(e)) } finally { if (seq === claimSeq.current) setChecking(false) }
+    setChecking(true); setError(''); setClaimHits(null); setClaimError('')
+    try { const r = await retrieve(q); if (seq === claimSeq.current) setClaimHits(r) } catch (e) { if (seq === claimSeq.current) setClaimError(message(e)) } finally { if (seq === claimSeq.current) setChecking(false) }
   }
 
   async function enableExport() {
-    setExportBusy(true); setError('')
+    setExportBusy(true); setReportError('')
     try { await (await read(endpoint, { method: 'POST', body: JSON.stringify({ action: 'exportPermission', enabled: true }) })).json(); setNotice('Exports enabled for your case-owner account. Create the audit pack now.') }
-    catch (e) { setError(message(e)) } finally { setExportBusy(false) }
+    catch (e) { setReportError(message(e)) } finally { setExportBusy(false) }
   }
 
   async function produceExport() {
-    setExportBusy(true); setError('')
+    setExportBusy(true); setReportError('')
     try { const result = await (await read(endpoint, { method: 'POST', body: JSON.stringify({ action: 'export', reportTitle }) })).json(); setExportId(result.id); setReportsRefresh(x => x + 1); setNotice('Reviewed audit pack created from accepted entries. Download it below.') }
-    catch (e) { setError(message(e)) } finally { setExportBusy(false) }
+    catch (e) { setReportError(message(e)) } finally { setExportBusy(false) }
   }
 
   // The header "Generate audit pack" button runs the real export (not just a scroll):
@@ -539,16 +543,16 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
     {/* Prominent starting action: the flagship public-evidence investigation. It
         needs no upload — it retrieves REAL bat occurrences and planning
         applications around Enniscorthy and plots them on the map. */}
-    <section className="rounded-lg border-2 border-accent/60 bg-accent/5 p-4 shadow-sm">
+    <details className="rounded-lg border p-4"><summary className="cursor-pointer font-medium">Explore an example public-record search</summary>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Start here — no upload needed</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Example location — separate from your case</p>
           <h2 className="mt-0.5 font-display text-lg font-semibold">🦇 Bats and planning around Enniscorthy</h2>
           <p className="mt-1 text-sm text-muted-foreground">Retrieve genuine bat occurrence records and planning applications around Enniscorthy, Co. Wexford from public sources, plotted on the map with their source dates and links. These public records stay separate from your private case evidence — they are never accepted or exported.</p>
         </div>
         <Button type="button" disabled={publicBusy} onClick={() => selectPlace(ENNISCORTHY)}>{publicBusy && place.name === 'Enniscorthy' ? 'Retrieving…' : 'Open case'}</Button>
       </div>
-    </section>
+    </details>
 
     {error && <Failure text={error} />}
     {loadError && <Failure text={`Could not refresh evidence: ${loadError}`} />}
@@ -817,7 +821,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
 
     {/* Create report (PRIMARY: audit pack) */}
     <section ref={auditRef} className={panel} aria-labelledby="audit-heading">
-      <PanelHeading id="audit-heading">{reportTitle}</PanelHeading>
+      <PanelHeading id="audit-heading">{reportTitle}</PanelHeading>{reportError && <Failure text={reportError}/>}
       <p className="mt-1 text-sm text-muted-foreground">Exports every accepted entry with its source-linked quote, including unknown dates and labelled superseded sources. Draft and rejected entries and originals are excluded. This is not a redaction tool — review personal information before sharing.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button type="button" variant="outline" disabled={exportBusy} onClick={enableExport}>Case owner: enable my exports</Button>
@@ -841,7 +845,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
       <div className="mt-4 space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
           <section className={panel} aria-labelledby="ask-heading">
-            <PanelHeading id="ask-heading">Ask your evidence</PanelHeading>
+            <PanelHeading id="ask-heading">Ask your evidence</PanelHeading>{askError && <Failure text={askError}/>}
             <p className="mt-1 text-xs text-muted-foreground">Keyword + term-expansion retrieval across this case’s source passages — it expands wording (e.g. bats → Pipistrelle, flooding → inundation) to find relevant passages. Not a semantic or AI answer; nothing is sent to an external service.</p>
             <form className="mt-3 space-y-2" onSubmit={submitQuestion}>
               <input className={field} style={{ marginTop: 0 }} value={question} maxLength={160} onChange={e => setQuestion(e.target.value)} placeholder="Find a phrase, permit number or name" />
@@ -867,7 +871,7 @@ function Investigation({ workspaceId, caseId, persona, onSelectCase, reportTitle
 
         {/* Cross-check: internal contradictions vs external records */}
         <section className={panel} aria-labelledby="crosscheck-heading">
-          <PanelHeading id="crosscheck-heading">Cross-check a claim</PanelHeading>
+          <PanelHeading id="crosscheck-heading">Cross-check a claim</PanelHeading>{claimError && <Failure text={claimError}/>}
           <p className="mt-1 text-xs text-muted-foreground">Enter a claim, figure or date to see every source that mentions it, grouped by whether it comes from <em>your own uploaded documents</em> or from <em>external agency records</em>. It surfaces the relevant passages for you to review and compare — it does not detect contradictions or decide which source is correct.</p>
           <form className="mt-3 flex flex-wrap gap-2" onSubmit={submitClaim}>
             <input className={field} style={{ marginTop: 0, maxWidth: 420 }} value={claim} maxLength={160} onChange={e => setClaim(e.target.value)} placeholder="e.g. a date, permit number or measurement" />

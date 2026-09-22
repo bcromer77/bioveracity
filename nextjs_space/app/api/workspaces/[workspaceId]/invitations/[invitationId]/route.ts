@@ -16,6 +16,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ wor
   try {
     const session = await auth()
     if (!session?.user?.id) throw new WorkspaceError(401, 'Authentication required')
+    if (process.env.PRIVATE_WORKSPACES_ENABLED !== 'true') throw new WorkspaceError(503, 'Private workspaces are unavailable')
     const { workspaceId, invitationId } = await context.params
     return Response.json(await institutionalInviteService(db, session.user.id).revoke(workspaceId, invitationId), { headers: privateHeaders })
   } catch (error) {

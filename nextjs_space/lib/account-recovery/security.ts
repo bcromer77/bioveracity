@@ -17,12 +17,12 @@ export async function requireLimit(db: Sql, bucket: RateLimitBucket, key: string
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 export const adminAccount = (user: {role?: string; accessState?: string}) => user.role === 'admin' || user.accessState === 'ADMIN'
 export function identityService(db: Database, deps: {
-  send: (to: string, token: string, purpose: string) => Promise<void>
+  send: (to: string, token: string, purpose: string, returnTo?: string) => Promise<void>
   compare: (password: string, hash: string) => Promise<boolean>
   now?: () => Date
 }) {
   const now = () => deps.now?.() ?? new Date()
-  async function issue(input: {email: unknown; password?: unknown; ip: string; purpose: 'VERIFY_EMAIL' | 'ADMIN_LOGIN'}) {
+  async function issue(input: {email: unknown; password?: unknown; ip: string; purpose: 'VERIFY_EMAIL' | 'ADMIN_LOGIN'; returnTo?: string}) {
     await requireLimit(db, 'verificationIp', input.ip, now())
     const email = normaliseEmail(input.email)
     if (!email) return {ok:true}
@@ -40,7 +40,7 @@ export function identityService(db: Database, deps: {
     const deliveryKey = `identity:${hash(raw)}`
     await db.query('INSERT INTO "OperationalDelivery" (key,status) VALUES ($1,\'SENDING\')',[deliveryKey])
     try {
-      await deps.send(email,raw,input.purpose)
+      await deps.send(email,raw,input.purpose,input.returnTo)
       await db.query('UPDATE "OperationalDelivery" SET status=\'SENT\',"finishedAt"=$2 WHERE key=$1',[deliveryKey,now()])
     }
     catch {
