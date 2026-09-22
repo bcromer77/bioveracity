@@ -6,5 +6,5 @@ import { SignupForm } from './signup-form'
 export const dynamic = 'force-dynamic'
 
 export default function SignupPage() {
-  return <SignupForm googleEnabled={isGoogleAuthEnabled(process.env)} />
+  return <SignupForm termsEnabled={process.env.DATA_RIGHTS_ENABLED === 'true'} googleEnabled={isGoogleAuthEnabled(process.env)} />
 }

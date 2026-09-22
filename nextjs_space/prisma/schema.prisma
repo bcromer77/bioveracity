@@ -102,6 +102,9 @@ model EvidenceSearchQuota {
 }
 
 model User {
+  termsAcceptances TermsAcceptance[]
+  dataRightsRequests DataRightsRequest[]
+  dataRightsEvents DataRightsEvent[]
   venueSetupsCreated WildVenueSetup[] @relation("VenueSetupCreator")
   venueSetupsAccepted WildVenueSetup[] @relation("VenueSetupAcceptor")
   venueSetupEvents WildVenueSetupEvent[]
@@ -1242,6 +1245,7 @@ model WildHub {
   @@index([ownerId])
 }
 model WildHubPhoto {
+  contributorRelease VenuePhotoRelease?
   id String @id
   hubId String
   hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
@@ -1599,6 +1603,7 @@ model VenuePhotoSettings {
   updatedAt DateTime @default(now()) @db.Timestamptz
 }
 model VenuePhoto {
+  contributorRelease VenuePhotoRelease?
   id String @id
   hubId String
   hub WildHub @relation(fields: [hubId], references: [id], onDelete: Cascade)
@@ -1643,4 +1648,62 @@ model VenuePhotoDigest {
   createdAt DateTime @default(now()) @db.Timestamptz
   sentAt DateTime? @db.Timestamptz
   @@unique([hubId, weekStart])
+}
+
+model TermsAcceptance {
+ id String @id
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ termsVersion String
+ privacyVersion String
+ wording String
+ channel String
+ termsText String
+ privacyText String
+ acceptedAt DateTime @default(now()) @db.Timestamptz
+ @@unique([userId,termsVersion,privacyVersion])
+}
+model DataRightsRequest {
+ id String @id
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+ kind String
+ details String @default("")
+ status String @default("RECEIVED")
+ response String @default("")
+ createdAt DateTime @default(now()) @db.Timestamptz
+ dueAt DateTime @db.Timestamptz
+ updatedAt DateTime @default(now()) @db.Timestamptz
+ events DataRightsEvent[]
+ @@index([userId,createdAt],map:"DataRightsRequest_user")
+ @@index([status,dueAt],map:"DataRightsRequest_queue")
+}
+model DataRightsEvent {
+ id String @id
+ requestId String
+ request DataRightsRequest @relation(fields:[requestId],references:[id],onDelete:Cascade)
+ actorId String
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ status String
+ response String @default("")
+ createdAt DateTime @default(now()) @db.Timestamptz
+}
+model VenuePhotoRelease {
+ photoId String @id
+ journalPhotoId String? @unique
+ journalPhoto VenuePhoto? @relation(fields:[journalPhotoId],references:[id],onDelete:Cascade)
+ galleryPhotoId String? @unique
+ galleryPhoto WildHubPhoto? @relation(fields:[galleryPhotoId],references:[id],onDelete:Cascade)
+ contactName String
+ contactEmail String
+ venueName String
+ version String
+ wording String
+ venuePublications Boolean @default(false)
+ bioPublications Boolean @default(false)
+ acceptedAt DateTime @default(now()) @db.Timestamptz
+ withdrawnAt DateTime? @db.Timestamptz
+ contactVerifiedAt DateTime? @db.Timestamptz
+ verifiedBy String?
+ verificationNote String @default("")
 }

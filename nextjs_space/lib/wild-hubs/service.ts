@@ -1,3 +1,4 @@
+import { releaseInput, RELEASE_CORE, RELEASE_VENUE, RELEASE_BIO, RELEASE_LIMITS, type ReleaseInput } from '../venue-journal/release'
 import { randomUUID } from 'node:crypto'
 import type { Database, Sql } from '../workspaces/service'
 import {
@@ -229,15 +230,19 @@ export function hubService(db: Database, ownerId: string) {
     },
     async addPhoto(
       id: string,
-      photo: { caption: string; credit: string; hash: string; bytes: Buffer },
+      photo: { caption: string; credit: string; hash: string; bytes: Buffer } & ReleaseInput,
     ) {
       return db.transaction(async (sql) => {
         const hub = await owned(sql, id, true)
+        const release = releaseInput(photo)
         const duplicate = await sql.query<Photo>(
           'SELECT "id","caption","credit" FROM "WildHubPhoto" WHERE "hubId"=$1 AND "hash"=$2',
           [id, photo.hash],
         )
         if (duplicate.length) {
+          const [prior] = await sql.query<{version:string;contactName:string;contactEmail:string;venuePublications:boolean;bioPublications:boolean;withdrawnAt:Date|null}>('SELECT version,"contactName","contactEmail","venuePublications","bioPublications","withdrawnAt" FROM "VenuePhotoRelease" WHERE "galleryPhotoId"=$1',[duplicate[0].id])
+          if (!prior || prior.withdrawnAt || prior.version !== release.releaseVersion || prior.contactName !== release.contactName || prior.contactEmail !== release.contactEmail || prior.venuePublications !== release.venuePublications || prior.bioPublications !== release.bioPublications)
+            throw new HubError(409,'This image already exists with a different or older release. Contact us to review its permissions.')
           if (
             duplicate[0].caption !== photo.caption ||
             duplicate[0].credit !== photo.credit
@@ -250,10 +255,11 @@ export function hubService(db: Database, ownerId: string) {
         }
         if ((await photos(sql, id)).length >= 12)
           throw new HubError(429, 'A hub can hold up to twelve photos.')
+        const photoId = randomUUID()
         await sql.query(
           'INSERT INTO "WildHubPhoto" ("id","hubId","caption","credit","hash","bytes") VALUES ($1,$2,$3,$4,$5,$6)',
           [
-            randomUUID(),
+            photoId,
             id,
             photo.caption,
             photo.credit,
@@ -261,6 +267,7 @@ export function hubService(db: Database, ownerId: string) {
             photo.bytes,
           ],
         )
+        await sql.query(`INSERT INTO "VenuePhotoRelease" ("photoId","galleryPhotoId","contactName","contactEmail","venueName",version,wording,"venuePublications","bioPublications") VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8)`, [photoId,release.contactName,release.contactEmail,hub.profile.name,release.releaseVersion,[RELEASE_CORE,RELEASE_VENUE,RELEASE_BIO,RELEASE_LIMITS].join('\n\n'),release.venuePublications,release.bioPublications])
         const [saved] = await sql.query<HubRow>(
           `UPDATE "WildHub" SET "revision"="revision"+1,"updatedAt"=now() WHERE "id"=$1 RETURNING ${columns}`,
           [id],

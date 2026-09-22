@@ -1,6 +1,10 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { body } from '@/lib/workspaces/request-body'
+import { recordAcceptance } from '@/lib/data-rights/service'
+import { validAcceptance } from '@/lib/data-rights/policy'
+import { adapter } from '@/lib/workspaces/http'
 import bcrypt from 'bcryptjs'
 import { normaliseEmail, passwordInput } from '@/lib/workspaces/invitations'
 import { WorkspaceError } from '@/lib/workspaces/service'
@@ -8,7 +12,10 @@ import { validatePassword } from '@/lib/account-recovery/password-policy'
 
 export async function POST(request: Request) {
   try {
-    const input = await request.json()
+    const input = await body(request) as Record<string, unknown>
+    if (!input || typeof input !== 'object') throw new WorkspaceError(400, 'Invalid signup')
+    const termsEnabled = process.env.DATA_RIGHTS_ENABLED === 'true'
+    if (termsEnabled && !validAcceptance(input)) throw new WorkspaceError(400, 'Please read and accept the current terms and acknowledge the privacy notice.')
     const email = normaliseEmail(input.email)
     const password = passwordInput(input.password)
     const policy = validatePassword(password)
@@ -20,8 +27,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'An account with this email already exists' }, { status: 409 })
     }
     const hashed = await bcrypt.hash(password, 12)
-    const user = await prisma.user.create({
-      data: { email, password: hashed, name, role: 'user' },
+    const user = await prisma.$transaction(async tx => {
+      const created = await tx.user.create({data:{email,password:hashed,name,role:'user'}})
+      if (termsEnabled) await recordAcceptance(adapter(tx), created.id, input, 'signup')
+      return created
     })
     return NextResponse.json({ id: user.id, email: user.email, name: user.name })
   } catch (error: unknown) {

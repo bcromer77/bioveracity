@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { HubError, record, text } from '../wild-hubs/domain'
-export const CONSENT_VERSION = 'venue-photo-v1'
+export const CONSENT_VERSION = 'venue-photo-release-2026-09-22.1'
 export const MAX_PHOTOS = 200
 export const hashToken = (value: string) => createHash('sha256').update(value).digest('hex')
 export const newToken = () => randomBytes(32).toString('base64url')
