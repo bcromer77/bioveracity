@@ -1,4 +1,4 @@
-import { DM_Sans, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google'
+import './fonts.css'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
@@ -8,9 +8,6 @@ import { SessionProvider } from 'next-auth/react'
 
 export const dynamic = 'force-dynamic'
 
-const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-sans' })
-const jakartaSans = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-display' })
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
@@ -30,8 +27,13 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preload" href="/fonts/web/dm-sans-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/web/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/web/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      </head>
       {/* Do not load third-party scripts into an application carrying private case evidence. */}
-      <body className={`${dmSans.variable} ${jakartaSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <SessionProvider>
           <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange>
             {children}

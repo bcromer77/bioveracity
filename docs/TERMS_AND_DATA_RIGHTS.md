@@ -53,5 +53,11 @@ Assign a named accountable privacy operator and deputy; review `/admin/data-righ
 - 13 UI interaction tests pass (2 new signup/data-panel checks plus 11 venue journal/studio checks).
 - Full application TypeScript check passes using an isolated generated Prisma client and a temporary explicit module mapping. The shared cached runtime’s old generated client lacked authVersion; production source was not weakened to conceal that mismatch.
 - Prisma schema validation passes with a dummy local connection string; no database connection/migration was performed by validation.
-- Actual Next.js 16.3.3 Turbopack production build attempted with the repository’s CI lockfile, then blocked by unreachable Google Fonts (existing next/font dependencies). It is not a successful production build. Hosted build and browser/mobile QA remain outstanding.
+- Actual Next.js 16.3.3 Turbopack production build now passes with the repository’s CI lockfile after bundling the existing fonts locally. The initial Google Fonts download blocker is resolved. The pre-existing parser.ts:58 tracing warning remains. Abacus hosted acceptance and browser/mobile QA remain outstanding.
 - git diff --check passes. No real emails, uploads, contact verification, billing changes, deletion or deployment performed.
+
+## Font build follow-through
+
+The root layout now uses app/fonts.css and 12 unchanged, locally served WOFF2 files under public/fonts/web, with their family OFL licences and checksum manifest. DM Sans, Plus Jakarta Sans and JetBrains Mono retain the prior weight ranges, character subsets, swap display, Latin preloads and fallback metrics. No Google font request is needed by the build or browser. Existing PDF fonts are unchanged.
+
+Verified: production Turbopack build exit 0; separate full TypeScript check exit 0; built /terms route returns 200; all 12 served font files match their manifest checksums; rendered HTML/CSS contain the three families and local preloads without Google font-server references. The tests used a local production server and synthetic environment only. No deployment or production configuration changes.
