@@ -4,6 +4,8 @@ import Google from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { identities, securityDb } from '@/lib/account-recovery/security-http'
+import { requireLimit, securityIp, adminAccount } from '@/lib/account-recovery/security'
 import { normaliseEmail } from '@/lib/account-recovery/email'
 import { sessionAuthorityValid } from '@/lib/account-recovery/session-authority'
 import { isGoogleAuthEnabled } from '@/lib/account-recovery/providers'
@@ -38,16 +40,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        adminCode: { label: 'Administrator code', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
+        try { await requireLimit(securityDb,'loginIp',securityIp(request)) } catch { return null }
+        if (typeof credentials?.password !== 'string' || credentials.password.length > 256) return null
         if (!credentials?.email || !credentials?.password) return null
         const email = normaliseEmail(credentials.email)
         if (!email) return null
+        try { await requireLimit(securityDb,'loginEmail',email) } catch { return null }
         const user = await prisma.user.findUnique({ where: { email } })
         if (!user?.password) return null
         const isValid = await bcrypt.compare(credentials.password as string, user.password)
         if (!isValid) return null
-        return { id: user.id, email: user.email, name: user.name, role: user.role, accessState: user.accessState, authVersion: user.authVersion }
+        if (process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true' && !user.emailVerified) return null
+        if (process.env.AUTH_ADMIN_EMAIL_STEP_UP === 'true' && adminAccount(user)) {
+          if (!await identities().adminCode(credentials.adminCode,user.id)) return null
+        }
+        return { adminStepVerified: process.env.AUTH_ADMIN_EMAIL_STEP_UP === 'true' && adminAccount(user), id: user.id, email: user.email, name: user.name, role: user.role, accessState: user.accessState, authVersion: user.authVersion }
       },
     }),
   ],
@@ -62,6 +72,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
+    async signIn({ account, user }) {
+      if (account?.provider === 'google' && process.env.AUTH_ADMIN_EMAIL_STEP_UP === 'true') {
+        const current = user.email ? await prisma.user.findUnique({where:{email:user.email}}) : null
+        // Google sign-in here does not establish the application's admin second step.
+        if (current && adminAccount(current)) return false
+      }
+      // Direct OAuth requests must not bypass the credential-signup release.
+      // Existing Google users retain access, including their data-rights controls.
+      if (account?.provider === 'google' && process.env.DATA_RIGHTS_ENABLED === 'true') {
+        const existing = user.email ? await prisma.user.findUnique({where:{email:user.email}}) : null
+        if (!existing) return '/signup'
+      }
+      return true
+    },
     async redirect({ url, baseUrl }) {
       if (url.startsWith('/')) return `${baseUrl}${url}`
       if (new URL(url).origin === baseUrl) return url
@@ -70,6 +94,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        token.adminStepVerified = (user as any).adminStepVerified === true
         token.role = (user as any)?.role ?? 'user'
         token.accessState = (user as any)?.accessState ?? 'REGISTERED'
         ;(token as any).authVersion = (user as any)?.authVersion ?? 0
@@ -82,7 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token?.id) {
         const current = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { authVersion: true },
+          select: { authVersion: true, role: true, accessState: true, emailVerified: true },
         })
         const valid = sessionAuthorityValid({
           tokenAuthVersion: (token as any).authVersion,
@@ -90,6 +115,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           userExists: Boolean(current),
         })
         if (!valid) return null
+        // Fresh authority prevents stale role/access claims after demotion.
+        if (process.env.AUTH_ADMIN_EMAIL_STEP_UP === 'true' && adminAccount(current!) && token.adminStepVerified !== true) return null
+        token.role = current!.role
+        token.accessState = current!.accessState
+        if (process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true' && !current!.emailVerified) return null
       }
       return token
     },

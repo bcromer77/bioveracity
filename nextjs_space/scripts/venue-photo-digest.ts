@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { withHeartbeat } from '../lib/operations/service'
 import { PrismaClient } from '@prisma/client'
 import type { Database, Sql } from '../lib/workspaces/service'
 import { createEmailer, resolveEmailConfig } from '../lib/email/transactional'
@@ -16,7 +17,11 @@ async function main(){
  const adapter=(client:Pick<PrismaClient,'$queryRawUnsafe'>):Sql=>({query:<T>(q:string,v:unknown[])=>client.$queryRawUnsafe<T[]>(q,...v)})
  const db:Database={...adapter(prisma),transaction:fn=>prisma.$transaction(tx=>fn(adapter(tx)),{isolationLevel:'Serializable'})}
  try{
-  const results=await sendWeeklyDigests(db,emailer.send,origin)
+  const results=await withHeartbeat(db,'venue-photo-digest',async()=>{
+   const out=await sendWeeklyDigests(db,emailer.send,origin)
+   if(out.some(r=>r.status==='UNKNOWN'))throw Error('Digest delivery ambiguous')
+   return out
+  })
   const counts=results.reduce<Record<string,number>>((acc,r)=>({...acc,[r.status]:(acc[r.status]||0)+1}),{})
   console.log(JSON.stringify(counts))
   if(results.some(r=>r.status==='UNKNOWN'))process.exitCode=1

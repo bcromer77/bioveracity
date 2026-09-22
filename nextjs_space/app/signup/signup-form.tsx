@@ -1,5 +1,6 @@
 'use client'
 
+import { TERMS_VERSION, PRIVACY_VERSION, TERMS_LABEL } from '@/lib/data-rights/policy'
 import { useState } from 'react'
 import { authReturnPath } from '@/lib/auth-return-path'
 import { signIn } from 'next-auth/react'
@@ -11,7 +12,8 @@ import { Button } from '@/components/ui/button'
 // `googleEnabled` is computed on the server from the full gate (feature flag AND
 // both credentials) and passed in as a prop, so the Google control follows the
 // exact same gate as the server-side provider registration.
-export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
+export function SignupForm({ googleEnabled, termsEnabled }: { googleEnabled: boolean; termsEnabled: boolean }) {
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -32,13 +34,14 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, acceptTerms, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION }),
       })
       const data = await res?.json?.()
       if (!res?.ok) {
         setError(data?.error ?? 'Signup failed')
         return
       }
+      if (data.verificationRequired) { router.replace('/verify-email'); return }
       const signInRes = await signIn('credentials', { email, password, redirect: false })
       if (signInRes?.error) {
         setError('Account created but auto-login failed. Please sign in.')
@@ -77,11 +80,12 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
             <label className="block text-[15px] font-medium text-foreground mb-1.5">Password</label>
             <input type="password" value={password} onChange={(e: any) => setPassword(e?.target?.value ?? '')} placeholder="At least 10 characters" required minLength={10} className="w-full px-3.5 py-3 rounded-lg border-2 border-input bg-background text-[17px] focus:outline-none focus:border-foreground transition-colors" />
           </div>
-          <Button type="submit" disabled={loading} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
+          {termsEnabled && <div className="space-y-3 text-sm"><p><Link href="/terms" target="_blank" className="underline">Terms and Conditions</Link> · <Link href="/privacy" target="_blank" className="underline">Privacy Notice</Link></p><label className="flex gap-3 items-start"><input type="checkbox" required checked={acceptTerms} onChange={e=>setAcceptTerms(e.target.checked)}/><span>{TERMS_LABEL}</span></label><p>This is not consent to marketing or future publication of your photographs.</p></div>}
+          <Button type="submit" disabled={loading || termsEnabled && !acceptTerms} size="lg" className="w-full bg-accent text-accent-foreground hover:brightness-95 text-[16px] font-semibold">
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Create account'}
           </Button>
         </form>
-        {googleEnabled && <>
+        {googleEnabled && !termsEnabled && <>
         <div className="flex items-center gap-3 my-5">
           <div className="h-px flex-1 bg-border" />
           <span className="text-[13px] text-muted-foreground">or</span>

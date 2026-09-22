@@ -132,13 +132,13 @@ test('abacus emailer throws when delivery is not confirmed', async () => {
   await assert.rejects(emailer.send(MESSAGE), EmailDeliveryError)
 })
 
-test('abacus emailer treats a disabled notification as delivered', async () => {
+test('abacus emailer rejects disabled notifications instead of reporting delivery', async () => {
   const fetchImpl = mockFetch({ ok: true, status: 200, json: async () => ({ result: { notification_disabled: true } }) })
   const emailer = createEmailer(
     { provider: 'abacus', from: 'hello@bioveracity.com', apiKey: 'ak_test', appId: 'app_test', notificationId: 'notif_test' },
     fetchImpl,
   )
-  await emailer.send(MESSAGE)
+  await assert.rejects(emailer.send(MESSAGE), EmailDeliveryError)
   assert.equal(fetchImpl.calls.length, 1)
 })
 

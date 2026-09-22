@@ -76,14 +76,16 @@ test('owner browses observation years, downloads privately and requests reviewed
 
 test('guest contribution carries dates and every consent; receipt retains secret in fragment',async()=>{
  const oldFetch=globalThis.fetch,oldFormData=globalThis.FormData;let r,payload,reset=false
- const values={photo:new File([new Uint8Array([255,216,255])],'fixture.jpg',{type:'image/jpeg'}),caption:'Leaf',credit:'Guest',location:'Path',observedOn:'2024-04-12',adult:'on',rights:'on',permission:'on',scanner:'on'}
+ const values={contactName:'Guest',contactEmail:'guest@example.test',release:'on',photo:new File([new Uint8Array([255,216,255])],'fixture.jpg',{type:'image/jpeg'}),caption:'Leaf',credit:'Guest',location:'Path',observedOn:'2024-04-12',adult:'on',rights:'on',permission:'on',scanner:'on'}
  globalThis.FormData=class{get(k){return values[k]}}
  globalThis.fetch=async(url,options)=>{payload=JSON.parse(options.body);return Response.json({id:'photo-id',withdrawalToken:'private-token'})}
  try{
   await act(()=>{r=create(React.createElement(VenuePhotoContribute,{hubId:'venue'}))})
   await act(()=>r.root.findByType('form').props.onSubmit({preventDefault(){},currentTarget:{reset(){reset=true}}}))
   assert.equal(reset,true);assert.equal(payload.observedOn,'2024-04-12')
-  for(const k of ['adult','rightsConfirmed','venueUseConsent','scannerConsent'])assert.equal(payload[k],true)
+  assert.equal(payload.venuePublications,false);assert.equal(payload.bioPublications,false)
+  assert.equal(payload.contactEmail,'guest@example.test')
+  for(const k of ['adult','rightsConfirmed','venueUseConsent','scannerConsent','releaseAccepted'])assert.equal(payload[k],true)
   assert.equal(r.root.findByType('a').props.href,'/wild/photos/withdraw?id=photo-id#private-token')
   assert.match(text(r),/private with the venue/)
  }finally{if(r)await act(()=>r.unmount());globalThis.fetch=oldFetch;globalThis.FormData=oldFormData}

@@ -1,8 +1,10 @@
+import { releaseInput, RELEASE_CORE, RELEASE_VENUE, RELEASE_BIO, RELEASE_LIMITS, type ReleaseInput } from './release'
 import { randomUUID } from 'node:crypto'
 import type { Database, Sql } from '../workspaces/service'
 import { isAdmin } from '../access'
 import { HubError } from '../wild-hubs/domain'
 import { CONSENT_VERSION, MAX_PHOTOS, hashToken, newToken, photoColumns, type JournalPhoto } from './domain'
+const releasePhotos = `(SELECT id,caption,credit,status,"hubId" FROM "VenuePhoto" UNION ALL SELECT g.id,g.caption,g.credit,CASE WHEN h.published->'photoIds' ? g.id THEN 'PUBLISHED' ELSE 'RECEIVED' END AS status,g."hubId" FROM "WildHubPhoto" g JOIN "WildHub" h ON h.id=g."hubId")`
 type Settings = { contributionsEnabled: boolean; weeklyEnabled: boolean }
 export function journalService(db: Database, actorId: string | null) {
  async function owner(sql: Sql, hubId: string, lock = false) {
@@ -48,7 +50,7 @@ export function journalService(db: Database, actorId: string | null) {
     if (!slot) throw new HubError(429, 'This venue has reached its hourly photo limit. Please try later.')
    })
   },
-  async contribute(hubId: string, photo: { caption: string; credit: string; location: string; observedOn: string | null; hash: string; bytes: Buffer }) {
+  async contribute(hubId: string, photo: { caption: string; credit: string; location: string; observedOn: string | null; hash: string; bytes: Buffer } & ReleaseInput) {
    return db.transaction(async sql => {
     await sql.query('SELECT "id" FROM "WildHub" WHERE "id"=$1 FOR UPDATE', [hubId])
     await accepting(sql, hubId)
@@ -57,6 +59,9 @@ export function journalService(db: Database, actorId: string | null) {
     const id = randomUUID(), withdrawalToken = newToken()
     const rows = await sql.query<{ id: string }>('INSERT INTO "VenuePhoto" ("id","hubId","caption","credit","location","observedOn","hash","bytes","consentVersion","withdrawalHash") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT ("hubId","hash") DO NOTHING RETURNING "id"', [id,hubId,photo.caption,photo.credit,photo.location,photo.observedOn,photo.hash,photo.bytes,CONSENT_VERSION,hashToken(withdrawalToken)])
     if (!rows.length) throw new HubError(409, 'This photograph has already been contributed. Keep your original receipt.')
+    const release = releaseInput(photo)
+    const [venue] = await sql.query<{name:string}>(`SELECT profile->>'name' AS name FROM "WildHub" WHERE id=$1`,[hubId])
+    await sql.query(`INSERT INTO "VenuePhotoRelease" ("photoId","journalPhotoId","contactName","contactEmail","venueName",version,wording,"venuePublications","bioPublications") VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8)`, [id,release.contactName,release.contactEmail,venue.name,release.releaseVersion,[RELEASE_CORE,RELEASE_VENUE,RELEASE_BIO,RELEASE_LIMITS].join('\n\n'),release.venuePublications,release.bioPublications])
     await event(sql, id, 'CONTRIBUTED', CONSENT_VERSION)
     return { id, withdrawalToken }
    })
@@ -71,6 +76,7 @@ export function journalService(db: Database, actorId: string | null) {
     if (action === 'submit' && !['RECEIVED','REJECTED'].includes(photo.status)) throw new HubError(409, 'This photograph is already submitted or published.')
     const status = action === 'submit' ? 'REVIEW' : action === 'withdraw' ? 'WITHDRAWN' : 'RECEIVED'
     await sql.query('UPDATE "VenuePhoto" SET "status"=$1,"revision"="revision"+1,"bytes"=CASE WHEN $1=\'WITHDRAWN\' THEN \'\'::bytea ELSE "bytes" END WHERE "id"=$2', [status,photoId])
+    if (action === 'withdraw') await sql.query('UPDATE "VenuePhotoRelease" SET "withdrawnAt"=now() WHERE "photoId"=$1', [photoId])
     await event(sql, photoId, action.toUpperCase())
    })
   },
@@ -78,8 +84,42 @@ export function journalService(db: Database, actorId: string | null) {
    return db.transaction(async sql => {
     const [photo] = await sql.query<{ id: string }>('UPDATE "VenuePhoto" SET "status"=\'WITHDRAWN\',"bytes"=\'\'::bytea,"revision"="revision"+1 WHERE "id"=$1 AND "withdrawalHash"=$2 AND "status"<>\'WITHDRAWN\' RETURNING "id"', [photoId, hashToken(token)])
     if (!photo) throw new HubError(404, 'Receipt not found or photograph already withdrawn.')
+    await sql.query('UPDATE "VenuePhotoRelease" SET "withdrawnAt"=now() WHERE "photoId"=$1', [photoId])
     await event(sql, photoId, 'CONTRIBUTOR_WITHDRAWAL')
    })
+  },
+  async releaseReceipt(photoId: string, token: string, withdrawFuture = false) {
+   return db.transaction(async sql => {
+    const [photo] = await sql.query(`SELECT id FROM "VenuePhoto" WHERE id=$1 AND "withdrawalHash"=$2 FOR UPDATE`, [photoId,hashToken(token)])
+    if (!photo) throw new HubError(404,'Receipt not found.')
+    if (withdrawFuture) {
+     await sql.query(`UPDATE "VenuePhotoRelease" SET "withdrawnAt"=COALESCE("withdrawnAt",now()) WHERE "photoId"=$1`, [photoId])
+     await event(sql,photoId,'FUTURE_PUBLICATION_WITHDRAWAL')
+    }
+    const [release] = await sql.query(`SELECT "photoId","contactName","contactEmail","venueName",version,wording,"venuePublications","bioPublications","acceptedAt","withdrawnAt","contactVerifiedAt" FROM "VenuePhotoRelease" WHERE "photoId"=$1`,[photoId])
+    return release || {photoId,legacy:true,message:'This older upload has no future-publication release.'}
+   })
+  },
+  async releaseQueue() {
+   await reviewer(db)
+   return db.query(`SELECT r.*,p.caption,p.credit,p.status,p."hubId" FROM "VenuePhotoRelease" r JOIN ${releasePhotos} p ON p.id=r."photoId" WHERE r."withdrawnAt" IS NULL AND p.status<>'WITHDRAWN' AND (r."venuePublications" OR r."bioPublications") ORDER BY r."acceptedAt" DESC LIMIT 200`,[])
+  },
+  async verifyRelease(photoId: string, note: string) {
+   if (note.trim().length<20 || note.length>2000) throw new HubError(400,'Record how the contributor’s contact and authority were independently verified.')
+   return db.transaction(async sql => {
+    await reviewer(sql)
+    const rows = await sql.query(`UPDATE "VenuePhotoRelease" SET "contactVerifiedAt"=now(),"verifiedBy"=$2,"verificationNote"=$3 WHERE "photoId"=$1 AND "withdrawnAt" IS NULL AND "contactVerifiedAt" IS NULL RETURNING "photoId"`,[photoId,actorId,note.trim()])
+    if (!rows.length) throw new HubError(404,'Active release not found.')
+    const [journal] = await sql.query('SELECT id FROM "VenuePhoto" WHERE id=$1', [photoId])
+    if (journal) await event(sql,photoId,'RELEASE_CONTACT_VERIFIED')
+    return {verified:true}
+   })
+  },
+  async publicationRelease(photoId: string, use: 'venue'|'bioveracity') {
+   await reviewer(db)
+   const [release] = await db.query(`SELECT r."photoId",r."venueName",r.version,r.wording,r."acceptedAt",p.credit,p.caption,p."hubId" FROM "VenuePhotoRelease" r JOIN ${releasePhotos} p ON p.id=r."photoId" WHERE r."photoId"=$1 AND r."withdrawnAt" IS NULL AND r."contactVerifiedAt" IS NOT NULL AND p.status='PUBLISHED' AND (($2='venue' AND r."venuePublications") OR ($2='bioveracity' AND r."bioPublications"))`,[photoId,use])
+   if (!release) throw new HubError(409,'No verified, current permission for this publication use.')
+   return release
   },
   async reviewQueue() {
    await reviewer(db)

@@ -1,3 +1,8 @@
+import { auth } from '@/auth'
+import { body } from '@/lib/workspaces/request-body'
+import { WorkspaceError } from '@/lib/workspaces/service'
+import { securityDb } from '@/lib/account-recovery/security-http'
+import { requireLimit } from '@/lib/account-recovery/security'
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
@@ -34,20 +39,28 @@ You have access to intelligence about these assets and regions:
 - Scotland: Edinburgh Seafield WWTW, Kirkcaldy bathing water
 - Northern Ireland: Lough Neagh and catchment, NI Water assets
 
-Use the provided context data to answer accurately. If the question is outside your knowledge, say so explicitly.`
+The context is a bounded sample, not an exhaustive search. Never describe a missing item as absent from the full database. Use the provided context data to answer accurately. If the question is outside your knowledge, say so explicitly.`
 
 export async function POST(request: Request) {
-  if (!ASK_ENABLED) {
+  if (!ASK_ENABLED || process.env.ASK_SERVER_ENABLED !== 'true') {
     return NextResponse.json({ error: 'The Ask feature is currently unavailable.' }, { status: 503 })
   }
   try {
-    const { question } = await request.json()
+    const session = await auth()
+    if (!session?.user?.id) throw new WorkspaceError(401,'Please sign in.')
+    const input = await body(request,8192) as Record<string,unknown>
+    const question = typeof input?.question === 'string' ? input.question.trim() : ''
+    if (!question || question.length > 2000) throw new WorkspaceError(400,'Use a question of 1–2,000 characters.')
+    await requireLimit(securityDb,'askUser',session.user.id)
+    await requireLimit(securityDb,'askGlobal','deployment')
     if (!question) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 })
     }
 
     // Fetch relevant context from database
     const assets = await prisma.asset.findMany({
+      take: 30,
+      orderBy: { id: 'asc' },
       include: {
         events: { take: 5, orderBy: { date: 'desc' } },
         authorisations: { take: 3 },
@@ -77,10 +90,11 @@ ${regulatory ? 'Regulatory Activity:\n' + regulatory : ''}
 ${auths ? 'Authorisations:\n' + auths : ''}
 ${community ? 'Community Reports:\n' + community : ''}
 ${gaps ? 'Evidence Gaps:\n' + gaps : ''}`
-    }).join('\n\n')
+    }).join('\n\n').slice(0,40000)
 
     const response = await fetch('https://apps.abacus.ai/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(45000),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.ABACUSAI_API_KEY}`,
@@ -97,8 +111,7 @@ ${gaps ? 'Evidence Gaps:\n' + gaps : ''}`
     })
 
     if (!response?.ok) {
-      const errText = await response?.text?.()
-      return NextResponse.json({ error: `LLM API error: ${errText}` }, { status: 502 })
+      return NextResponse.json({ error: 'The answer service is temporarily unavailable.' }, { status: 502 })
     }
 
     const stream = new ReadableStream({
@@ -143,7 +156,7 @@ ${gaps ? 'Evidence Gaps:\n' + gaps : ''}`
             controller.enqueue(encoder.encode(`data: ${finalData}\n\n`))
           }
         } catch (error: any) {
-          const errorData = JSON.stringify({ status: 'error', message: error?.message ?? 'Stream error' })
+          const errorData = JSON.stringify({ status: 'error', message: 'The answer was interrupted. Please try again.' })
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
         } finally {
           controller.close()
@@ -159,6 +172,6 @@ ${gaps ? 'Evidence Gaps:\n' + gaps : ''}`
       },
     })
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error instanceof WorkspaceError ? error.message : 'Unable to answer right now.' }, { status: error instanceof WorkspaceError ? error.status : 500 })
   }
 }

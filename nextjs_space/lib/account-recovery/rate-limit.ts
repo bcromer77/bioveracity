@@ -9,6 +9,14 @@ import type { Sql } from '../workspaces/service'
 export type RateLimitRule = { limit: number; windowMs: number }
 
 export const RATE_LIMITS = {
+  loginIp: { limit: 60, windowMs: 15 * 60 * 1000 },
+  loginEmail: { limit: 12, windowMs: 15 * 60 * 1000 },
+  signupIp: { limit: 10, windowMs: 60 * 60 * 1000 },
+  verificationIp: { limit: 20, windowMs: 60 * 60 * 1000 },
+  verificationEmail: { limit: 5, windowMs: 60 * 60 * 1000 },
+  verificationSubmit: { limit: 30, windowMs: 15 * 60 * 1000 },
+  askUser: { limit: 10, windowMs: 60 * 60 * 1000 },
+  askGlobal: { limit: 100, windowMs: 24 * 60 * 60 * 1000 },
   // Reset requests from one IP address.
   resetRequestIp: { limit: 20, windowMs: 60 * 60 * 1000 },
   // Reset requests targeting one email address.

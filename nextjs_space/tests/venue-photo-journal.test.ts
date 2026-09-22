@@ -1,3 +1,4 @@
+import { RELEASE_VERSION } from '../lib/venue-journal/release'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -7,13 +8,13 @@ import { contributionInput, completedWeek, hashToken, MAX_PHOTOS, type JournalPh
 import { sendWeeklyDigests, emailPhoto, renderDigest } from '../lib/venue-journal/digest'
 import type { Sql, Database } from '../lib/workspaces/service'
 const monday = new Date('2026-09-21T09:00:00Z')
-const photo = {caption:'Lichen on the wall',credit:'Guest A',location:'Garden wall',observedOn:'2026-09-19',hash:'safe-image-hash',bytes:Buffer.from('processed-test-image')}
+const photo = {contactName:'Guest A',contactEmail:'guest@example.test',releaseAccepted:true as const,releaseVersion:RELEASE_VERSION,venuePublications:false,bioPublications:false,caption:'Lichen on the wall',credit:'Guest A',location:'Garden wall',observedOn:'2026-09-19',hash:'safe-image-hash',bytes:Buffer.from('processed-test-image')}
 async function fixture() {
  const pg=new PGlite()
  await pg.exec(`CREATE TABLE "User" (id TEXT PRIMARY KEY,email TEXT,role TEXT DEFAULT 'user',"accessState" TEXT DEFAULT 'REGISTERED');
  INSERT INTO "User" (id,email) VALUES ('owner','owner@example.test'),('other','other@example.test'),('editor','editor@example.test');
  UPDATE "User" SET role='admin' WHERE id='editor';`)
- for(const migration of ['20260914_wild_hubs','20260919_attention_return','20260923_venue_photo_journal'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
+ for(const migration of ['20260914_wild_hubs','20260919_attention_return','20260923_venue_photo_journal','20260924_data_rights'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
  await pg.exec(`INSERT INTO "WildHub" (id,"ownerId",profile,published) VALUES ('venue','owner','{"name":"Fictional cafe"}','{}'),('other-venue','other','{"name":"Other cafe"}','{}');`)
  const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(q:string,v:unknown[])=>(await client.query<T>(q,v)).rows})
  const db:Database={...sql(pg),transaction:fn=>pg.transaction(tx=>fn(sql(tx)))}

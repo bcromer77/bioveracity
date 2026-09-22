@@ -13,9 +13,11 @@ export function SiteFooter() {
             </span>
             <span className="font-display text-[15px] font-bold text-foreground">BioVeracity</span>
           </div>
-          <div className="flex items-center gap-5 text-[15px]">
+          <div className="flex flex-wrap items-center gap-5 text-[15px]">
             <Link href="/search" className="text-muted-foreground hover:text-foreground">Search</Link>
             <Link href="/institutional" className="text-muted-foreground hover:text-foreground">Institutional access</Link>
+            <Link href="/terms" className="text-muted-foreground hover:text-foreground">Terms</Link>
+            <Link href="/account" className="text-muted-foreground hover:text-foreground">Your data</Link>
             <Link href="/privacy" className="text-muted-foreground hover:text-foreground">Privacy</Link>
             <Link href="/contact" className="text-muted-foreground hover:text-foreground">Contact</Link>
           </div>

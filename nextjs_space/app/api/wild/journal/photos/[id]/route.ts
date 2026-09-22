@@ -10,7 +10,7 @@ export async function GET(request:Request,ctx:Ctx) {
   const photo=await s.read((await ctx.params).id,mode==='review'?'review':mode==='owner'||download?'owner':'public')
   if(url.searchParams.get('metadata')==='1') {
    const metadata={id:photo.id,caption:photo.caption,credit:photo.credit,location:photo.location,observedOn:photo.observedOn,contributedAt:photo.createdAt}
-   return new Response(JSON.stringify({...metadata,recordType:'Community photograph — unverified observation'},null,2),{headers:{...privateHeaders,'Content-Type':'application/json','Content-Disposition':`attachment; filename="bioveracity-${photo.id}-credit.json"`}})
+   return new Response(JSON.stringify({...metadata,recordType:'Community photograph — unverified observation',licence:'Venue-page and private review use only. This download does not authorise future publications. Obtain a current publication-permission check from BioVeracity rights administration.'},null,2),{headers:{...privateHeaders,'Content-Type':'application/json','Content-Disposition':`attachment; filename="bioveracity-${photo.id}-credit.json"`}})
   }
   return new Response(new Uint8Array(photo.bytes),{headers:{...privateHeaders,'Content-Type':'image/jpeg','Content-Disposition':download?`attachment; filename="bioveracity-${photo.id}.jpg"`:'inline'}})
  },mode==='owner'||mode==='review'||download)
