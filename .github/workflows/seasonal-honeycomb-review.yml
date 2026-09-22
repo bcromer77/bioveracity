@@ -1,7 +1,7 @@
 name: Seasonal and honeycomb review
 on:
   pull_request:
-    branches: [fix/qa-personal-journeys, release/qa-pr70-pr72, clarity/usability-release, feat/identity-first-public-navigation, feat/venue-weekly-photo-review, feat/venue-seasonal-discovery]
+    branches: [feat/club-launch-revolut, fix/qa-personal-journeys, release/qa-pr70-pr72, clarity/usability-release, feat/identity-first-public-navigation, feat/venue-weekly-photo-review, feat/venue-seasonal-discovery]
 permissions:
   contents: read
 concurrency:
@@ -63,6 +63,7 @@ jobs:
           yarn test:wild-hubs
           yarn test:venue-photos
           yarn test:club
+          node --import tsx --test tests/event-date-precision-migration.test.ts
           node --test tests/club-ui.test.mjs tests/signup-acceptance.test.mjs
           node --import tsx --test tests/data-rights.test.ts
           node --test tests/data-rights-ui.test.mjs
