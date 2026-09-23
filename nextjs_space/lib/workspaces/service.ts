@@ -85,6 +85,20 @@ export function obligationInput(value: unknown) {
   return { sourceObligation, responsibleParty, dueDate, duePrecision, recurrence, expectedEvidence, evidenceStatus, note, passageId, documentId, evidenceCheckId }
 }
 export type ObligationInput = ReturnType<typeof obligationInput>
+// A case-scoped evidence check records exactly what was searched and the bounded scope
+// that was actually reviewed, so "not located" is anchored to a documented search rather
+// than to an absent source. Result status defaults to the honest, scoped negative.
+export const EVIDENCE_CHECK_STATUS = ['NOT_LOCATED_IN_REVIEWED_SCOPE', 'LOCATED', 'PARTIAL', 'UNAVAILABLE', 'OUT_OF_SCOPE'] as const
+export function evidenceCheckInput(value: unknown) {
+  const input = object(value)
+  const question = text(input.question, 2000)
+  const reviewedScope = text(input.reviewedScope, 2000)
+  const resultStatus = String(input.resultStatus ?? 'NOT_LOCATED_IN_REVIEWED_SCOPE')
+  if (!(EVIDENCE_CHECK_STATUS as readonly string[]).includes(resultStatus)) throw new WorkspaceError(400, 'Invalid evidence-check result status')
+  const resultSummary = optionalText(input.resultSummary, 2000)
+  return { question, reviewedScope, resultStatus, resultSummary }
+}
+export type EvidenceCheckRow = { id: string; question: string; reviewedScope: string; resultStatus: string; resultSummary: string; createdBy: string; createdAt: Date }
 export type ObligationRow = {
   id: string; passageId: string | null; documentId: string | null; evidenceCheckId: string | null; createdAt: Date
   passageLocator: string | null; passageDocumentName: string | null; documentName: string | null
@@ -131,7 +145,7 @@ export function workspaceService(db: Database, userId: string) {
   async function validateProvenance(tx: Sql, workspaceId: string, caseId: string, input: Pick<ObligationInput, 'passageId' | 'documentId' | 'evidenceCheckId'>) {
     if (input.passageId && !(await tx.query<{ id: string }>('SELECT id FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3', [workspaceId, caseId, input.passageId]))[0]) throw new WorkspaceError(400, 'Linked source passage was not found in this case')
     if (input.documentId && !(await tx.query<{ id: string }>('SELECT id FROM "PrivateCaseDocument" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3', [workspaceId, caseId, input.documentId]))[0]) throw new WorkspaceError(400, 'Linked source document was not found in this case')
-    if (input.evidenceCheckId && !(await tx.query<{ id: string }>('SELECT id FROM "EvidenceCheckRecord" WHERE id=$1', [input.evidenceCheckId]))[0]) throw new WorkspaceError(400, 'Linked evidence-check record was not found')
+    if (input.evidenceCheckId && !(await tx.query<{ id: string }>('SELECT id FROM "PrivateCaseEvidenceCheck" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3', [workspaceId, caseId, input.evidenceCheckId]))[0]) throw new WorkspaceError(400, 'Linked evidence-check record was not found in this case')
   }
   return {
     async listWorkspaces() {
@@ -212,7 +226,7 @@ export function workspaceService(db: Database, userId: string) {
           ' LEFT JOIN "PrivateCasePassage" p ON p."workspaceId"=o."workspaceId" AND p."caseId"=o."caseId" AND p.id=o."passageId"' +
           ' LEFT JOIN "PrivateCaseDocument" pd ON pd.id=p."documentId"' +
           ' LEFT JOIN "PrivateCaseDocument" d ON d.id=o."documentId"' +
-          ' LEFT JOIN "EvidenceCheckRecord" ec ON ec.id=o."evidenceCheckId"' +
+          ' LEFT JOIN "PrivateCaseEvidenceCheck" ec ON ec."workspaceId"=o."workspaceId" AND ec."caseId"=o."caseId" AND ec.id=o."evidenceCheckId"' +
           ' JOIN LATERAL (SELECT * FROM "PrivateCaseObligationRevision" rev WHERE rev."obligationId"=o.id ORDER BY rev.revision DESC LIMIT 1) r ON TRUE' +
           ' WHERE o."workspaceId"=$1 AND o."caseId"=$2 ORDER BY r."dueDate" ASC NULLS LAST, o."createdAt" ASC, o.id',
           [workspaceId, caseId])
@@ -250,6 +264,22 @@ export function workspaceService(db: Database, userId: string) {
         await tx.query('INSERT INTO "PrivateCaseObligationRevision" ("obligationId",revision,"sourceObligation","responsibleParty","dueDate","duePrecision",recurrence,"expectedEvidence","evidenceStatus","reviewStatus","reviewedBy",note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [obligationId, next, input.sourceObligation, input.responsibleParty, input.dueDate, input.duePrecision, input.recurrence, input.expectedEvidence, input.evidenceStatus, reviewStatus, wantsReview ? userId : null, input.note])
         await audit(tx, workspaceId, caseId, wantsReview ? 'OBLIGATION_REVIEWED' : 'OBLIGATION_REVISED')
         return { revision: next }
+      })
+    },
+    async listEvidenceChecks(workspaceId: string, caseId: string) {
+      return db.transaction(async tx => {
+        await caseAccess(tx, workspaceId, caseId)
+        return tx.query<EvidenceCheckRow>('SELECT id,question,"reviewedScope","resultStatus","resultSummary","createdBy","createdAt" FROM "PrivateCaseEvidenceCheck" WHERE "workspaceId"=$1 AND "caseId"=$2 ORDER BY "createdAt" DESC, id LIMIT 200', [workspaceId, caseId])
+      })
+    },
+    async createEvidenceCheck(workspaceId: string, caseId: string, value: unknown) {
+      const input = evidenceCheckInput(value)
+      return db.transaction(async tx => {
+        await caseAccess(tx, workspaceId, caseId, 'write')
+        const id = randomUUID()
+        await tx.query('INSERT INTO "PrivateCaseEvidenceCheck" (id,"workspaceId","caseId",question,"reviewedScope","resultStatus","resultSummary","createdBy") VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [id, workspaceId, caseId, input.question, input.reviewedScope, input.resultStatus, input.resultSummary, userId])
+        await audit(tx, workspaceId, caseId, 'EVIDENCE_CHECK_CREATED')
+        return { id }
       })
     },
   }

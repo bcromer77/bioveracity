@@ -135,6 +135,7 @@ model User {
   caseReviews PrivateCaseEventRevision[] @relation("CaseEventReviewer")
   obligationRevisionsReviewed PrivateCaseObligationRevision[] @relation("CaseObligationReviewer")
   caseExports PrivateCaseExport[] @relation("CaseExportRequester")
+  caseEvidenceChecks PrivateCaseEvidenceCheck[] @relation("CaseEvidenceCheckCreator")
   accounts      Account[]
   sessions      Session[]
   watchlists    Watchlist[]
@@ -452,7 +453,6 @@ model EvidenceCheckRecord {
   resultSummary  String?
   coverage       Json
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  caseObligations PrivateCaseObligation[]
 
   @@index([assetId, createdAt])
   @@index([resultStatus])
@@ -979,6 +979,7 @@ model PrivateCase {
   exports PrivateCaseExport[]
   invitations PrivateWorkspaceInvitation[]
   obligations PrivateCaseObligation[]
+  evidenceChecks PrivateCaseEvidenceCheck[]
   @@unique([workspaceId, id])
 }
 
@@ -1098,7 +1099,7 @@ model PrivateCaseObligation {
   case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
   passage PrivateCasePassage? @relation(fields: [workspaceId, caseId, passageId], references: [workspaceId, caseId, id], onDelete: Restrict)
   document PrivateCaseDocument? @relation(fields: [workspaceId, caseId, documentId], references: [workspaceId, caseId, id], onDelete: Restrict)
-  evidenceCheck EvidenceCheckRecord? @relation(fields: [evidenceCheckId], references: [id], onDelete: Restrict)
+  evidenceCheck PrivateCaseEvidenceCheck? @relation(fields: [workspaceId, caseId, evidenceCheckId], references: [workspaceId, caseId, id], onDelete: Restrict)
   revisions PrivateCaseObligationRevision[]
   @@unique([workspaceId, caseId, id])
   @@index([workspaceId, caseId])
@@ -1120,6 +1121,22 @@ model PrivateCaseObligationRevision {
   obligation PrivateCaseObligation @relation(fields: [obligationId], references: [id], onDelete: Restrict)
   reviewer User? @relation("CaseObligationReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
   @@id([obligationId, revision])
+}
+model PrivateCaseEvidenceCheck {
+  id String @id
+  workspaceId String
+  caseId String
+  question String
+  reviewedScope String
+  resultStatus String @default("NOT_LOCATED_IN_REVIEWED_SCOPE")
+  resultSummary String @default("")
+  createdBy String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  creator User @relation("CaseEvidenceCheckCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  obligations PrivateCaseObligation[]
+  @@unique([workspaceId, caseId, id])
+  @@index([workspaceId, caseId])
 }
 model AttentionPreference {
   id String @id

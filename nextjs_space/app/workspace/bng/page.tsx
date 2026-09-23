@@ -6,6 +6,7 @@ import { adapter } from '@/lib/workspaces/http'
 import { workspaceService } from '@/lib/workspaces/service'
 import { SiteHeader } from '@/components/site-header'
 import { SiteFooter } from '@/components/site-footer'
+import { createBngRecord } from './actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,12 +46,15 @@ export default async function BngSetupPage({ searchParams }: { searchParams: Pro
   } catch { failed = true }
 
   const requested = typeof sp.workspace === 'string' ? sp.workspace : ''
+  const setupError = sp.error === 'create'
   let target = ''
+  let targetName = ''
   let createError = false
   if (requested) {
-    if (writable.some(w => w.id === requested)) target = requested
+    const match = writable.find(w => w.id === requested)
+    if (match) { target = match.id; targetName = match.name }
   } else if (!failed) {
-    if (writable.length === 1) target = writable[0].id
+    if (writable.length === 1) { target = writable[0].id; targetName = writable[0].name }
     else if (writable.length === 0) {
       try {
         const service = workspaceService({
@@ -59,10 +63,48 @@ export default async function BngSetupPage({ searchParams }: { searchParams: Pro
         }, userId)
         const created = await service.createWorkspace({ name: 'BNG Evidence Record', persona: 'ecology' })
         target = created.id
+        targetName = created.name
       } catch { createError = true }
     }
   }
-  if (target) redirect(`/workspace/${encodeURIComponent(target)}?template=BNG`)
+
+  // A resolved, write-permitted workspace shows the minimal setup form. Submitting it creates
+  // the BNG case and redirects straight into that case; we deliberately do NOT redirect to a
+  // generic templated workspace view here.
+  if (target) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <SiteHeader />
+        <main className="mx-auto w-full max-w-[760px] flex-1 px-4 py-10">
+          <p className="text-sm"><Link href="/professionals" className="underline">← Back to professionals</Link></p>
+          <h1 className="mt-3 font-display text-3xl font-bold tracking-tight">Start a BNG Evidence Record</h1>
+          <p className="mt-4 text-sm text-muted-foreground">This record will be created in <span className="font-medium text-foreground break-words">{targetName || 'your workspace'}</span>. Give it a project name and the site it covers to begin.</p>
+          {setupError && (
+            <div role="alert" className="mt-6 rounded-md border border-destructive p-4 text-sm">
+              <p>We could not create your BNG Evidence Record. Please check the details below and try again.</p>
+            </div>
+          )}
+          <form action={createBngRecord} className="mt-6 space-y-5">
+            <input type="hidden" name="workspaceId" value={target} />
+            <div>
+              <label htmlFor="projectName" className="block text-sm font-medium">Project or scheme name</label>
+              <input id="projectName" name="projectName" required maxLength={180} autoComplete="off" className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="e.g. Meadowbrook link road habitat plan" />
+            </div>
+            <div>
+              <label htmlFor="siteName" className="block text-sm font-medium">Site name or location</label>
+              <input id="siteName" name="siteName" required maxLength={180} autoComplete="off" className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" placeholder="e.g. North field, Meadowbrook Farm" />
+              <p className="mt-1 text-xs text-muted-foreground">You can add precise coordinates and further sites once the record is open.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button type="submit" className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Create evidence record</button>
+              <Link href="/workspace/bng" className="text-sm underline">Use a different workspace</Link>
+            </div>
+          </form>
+        </main>
+        <SiteFooter />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -12,13 +12,14 @@ type Obligation = {
 }
 type EvidenceDoc = { id: string; name: string }
 type EvidenceEvent = { passageId: string; name: string; locator: string; title: string }
+type EvidenceCheck = { id: string; question: string; reviewedScope: string; resultStatus: string; resultSummary: string }
 
 const field = 'block w-full rounded border border-input bg-background p-2 text-sm'
 const DUE_PRECISION = ['UNKNOWN', 'YEAR', 'MONTH', 'DAY']
 const RECURRENCE = ['NONE', 'ANNUAL', 'BIENNIAL', 'FIVE_YEARLY', 'MILESTONE']
 const EVIDENCE_STATUS = ['UNKNOWN', 'LOCATED', 'NOT_LOCATED']
 const recurrenceLabel: Record<string, string> = { NONE: 'One-off', ANNUAL: 'Annual', BIENNIAL: 'Every two years', FIVE_YEARLY: 'Every five years', MILESTONE: 'At a project milestone' }
-const evidenceLabel: Record<string, string> = { UNKNOWN: 'Not yet assessed', LOCATED: 'Evidence located', NOT_LOCATED: 'Evidence not located' }
+const evidenceLabel: Record<string, string> = { UNKNOWN: 'Not yet assessed', LOCATED: 'Evidence located', NOT_LOCATED: 'Evidence not located in reviewed scope' }
 const reviewLabel: Record<string, string> = { DRAFT: 'Draft', UNRESOLVED: 'Unresolved question', REVIEWED: 'Reviewed' }
 
 async function read(url: string, init: RequestInit = {}) {
@@ -35,8 +36,10 @@ const dueLabel = (o: { dueDate: string | null; duePrecision: string; recurrence:
 export function CaseObligations({ workspaceId, caseId }: { workspaceId: string; caseId: string }) {
   const listPath = obligationListPath(workspaceId, caseId)
   const evidencePath = `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/evidence`
+  const evidenceChecksPath = `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/evidence-checks`
   const [items, setItems] = useState<Obligation[]>([])
   const [docs, setDocs] = useState<EvidenceDoc[]>([]), [passages, setPassages] = useState<EvidenceEvent[]>([])
+  const [checks, setChecks] = useState<EvidenceCheck[]>([])
   const [loading, setLoading] = useState(true), [loadError, setLoadError] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [revision, setRevision] = useState(0)
   const [sourceObligation, setSourceObligation] = useState(''), [responsibleParty, setResponsibleParty] = useState('')
   const [duePrecision, setDuePrecision] = useState('UNKNOWN'), [dueDate, setDueDate] = useState(''), [recurrence, setRecurrence] = useState('NONE')
@@ -48,15 +51,17 @@ export function CaseObligations({ workspaceId, caseId }: { workspaceId: string; 
     Promise.all([
       read(listPath, { signal: controller.signal }).then(r => r.json()),
       read(evidencePath, { signal: controller.signal }).then(r => r.json()).catch(() => ({ documents: [], events: [] })),
-    ]).then(([list, ev]) => {
+      read(evidenceChecksPath, { signal: controller.signal }).then(r => r.json()).catch(() => ({ evidenceChecks: [] })),
+    ]).then(([list, ev, ec]) => {
       if (controller.signal.aborted) return
       setItems(list.obligations as Obligation[])
       setDocs((ev.documents ?? []) as EvidenceDoc[])
       setPassages(((ev.events ?? []) as EvidenceEvent[]).filter(e => e.passageId))
+      setChecks((ec.evidenceChecks ?? []) as EvidenceCheck[])
     }).catch(e => { if (!controller.signal.aborted) setLoadError(textError(e)) })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [listPath, evidencePath, revision])
+  }, [listPath, evidencePath, evidenceChecksPath, revision])
 
   async function create(e: FormEvent) {
     e.preventDefault(); if (busy) return; setBusy(true); setError(''); setNotice('')
@@ -74,7 +79,7 @@ export function CaseObligations({ workspaceId, caseId }: { workspaceId: string; 
     {loadError && <p role="alert" className="rounded border border-destructive p-3 text-sm">Could not load commitments: {loadError}</p>}
     {loading ? <p role="status">Loading commitments...</p> : <>
       <form className="space-y-4 rounded border p-4" onSubmit={create}>
-        <div><h4 className="font-semibold">Add a commitment</h4><p className="text-sm text-muted-foreground">Record what was promised, in the words of the source. Everything starts as a draft. “Evidence not located” never means an obligation was missed — only that no source has been attached yet.</p></div>
+        <div><h4 className="font-semibold">Add a commitment</h4><p className="text-sm text-muted-foreground">Record what was promised, in the words of the source. Everything starts as a draft. “Evidence not located in reviewed scope” means a documented search of a stated scope did not find the evidence — never that an obligation was missed.</p></div>
         <label className="block text-sm">What was promised<textarea className={field} rows={3} required maxLength={2000} value={sourceObligation} onChange={e => setSourceObligation(e.target.value)} placeholder="e.g. Maintain 2.1 hectares of restored wet grassland and monitor annually for 30 years."/></label>
         <label className="block text-sm">Who is responsible, if stated<input className={field} maxLength={300} value={responsibleParty} onChange={e => setResponsibleParty(e.target.value)} placeholder="Named party from the source, or leave blank"/></label>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -93,26 +98,38 @@ export function CaseObligations({ workspaceId, caseId }: { workspaceId: string; 
       </form>
       <div className="space-y-4">
         {!items.length && <p className="text-sm">No commitments recorded yet. Add the first promise made for this place.</p>}
-        {items.map(o => <ObligationRow key={`${o.id}/${o.revision}`} item={o} workspaceId={workspaceId} caseId={caseId} docs={docs} passages={passages} onSaved={() => setRevision(x => x + 1)}/>)}
+        {items.map(o => <ObligationRow key={`${o.id}/${o.revision}`} item={o} workspaceId={workspaceId} caseId={caseId} docs={docs} passages={passages} checks={checks} evidenceChecksPath={evidenceChecksPath} onSaved={() => setRevision(x => x + 1)}/>)}
       </div>
     </>}
   </section>
 }
 
-function ObligationRow({ item, workspaceId, caseId, docs, passages, onSaved }: { item: Obligation; workspaceId: string; caseId: string; docs: EvidenceDoc[]; passages: EvidenceEvent[]; onSaved: () => void }) {
+function ObligationRow({ item, workspaceId, caseId, docs, passages, checks, evidenceChecksPath, onSaved }: { item: Obligation; workspaceId: string; caseId: string; docs: EvidenceDoc[]; passages: EvidenceEvent[]; checks: EvidenceCheck[]; evidenceChecksPath: string; onSaved: () => void }) {
   const [sourceObligation, setSourceObligation] = useState(item.sourceObligation)
   const [responsibleParty, setResponsibleParty] = useState(item.responsibleParty)
   const [duePrecision, setDuePrecision] = useState(item.duePrecision), [dueDate, setDueDate] = useState(item.dueDate ?? ''), [recurrence, setRecurrence] = useState(item.recurrence)
   const [expectedEvidence, setExpectedEvidence] = useState(item.expectedEvidence), [evidenceStatus, setEvidenceStatus] = useState(item.evidenceStatus), [note, setNote] = useState(item.note)
   const [passageId, setPassageId] = useState(item.passageId ?? ''), [documentId, setDocumentId] = useState(item.documentId ?? '')
+  const [evidenceCheckId, setEvidenceCheckId] = useState(item.evidenceCheckId ?? '')
+  const [localChecks, setLocalChecks] = useState<EvidenceCheck[]>(checks)
+  const [newCheckQuestion, setNewCheckQuestion] = useState(''), [newCheckScope, setNewCheckScope] = useState(''), [newCheckSummary, setNewCheckSummary] = useState(''), [checkBusy, setCheckBusy] = useState(false)
   const [error, setError] = useState(''), [busy, setBusy] = useState(false)
 
   async function save(reviewStatus: string) {
     setBusy(true); setError('')
     try {
-      await read(obligationPath(workspaceId, caseId, item.id), { method: 'PATCH', body: JSON.stringify({ revision: item.revision, reviewStatus, sourceObligation, responsibleParty, duePrecision, dueDate: duePrecision === 'UNKNOWN' ? '' : dueDate, recurrence, expectedEvidence, evidenceStatus, note, passageId: passageId || undefined, documentId: documentId || undefined }) })
+      await read(obligationPath(workspaceId, caseId, item.id), { method: 'PATCH', body: JSON.stringify({ revision: item.revision, reviewStatus, sourceObligation, responsibleParty, duePrecision, dueDate: duePrecision === 'UNKNOWN' ? '' : dueDate, recurrence, expectedEvidence, evidenceStatus, note, passageId: passageId || undefined, documentId: documentId || undefined, evidenceCheckId: evidenceStatus === 'NOT_LOCATED' ? (evidenceCheckId || undefined) : undefined }) })
       onSaved()
     } catch (e) { setError(textError(e)) } finally { setBusy(false) }
+  }
+
+  async function createCheck() {
+    if (checkBusy) return; setCheckBusy(true); setError('')
+    try {
+      const response = await read(evidenceChecksPath, { method: 'POST', body: JSON.stringify({ question: newCheckQuestion, reviewedScope: newCheckScope, resultStatus: 'NOT_LOCATED_IN_REVIEWED_SCOPE', resultSummary: newCheckSummary }) })
+      const data = await response.json(); const id = data.evidenceCheck?.id as string | undefined
+      if (id) { setLocalChecks(list => [{ id, question: newCheckQuestion, reviewedScope: newCheckScope, resultStatus: 'NOT_LOCATED_IN_REVIEWED_SCOPE', resultSummary: newCheckSummary }, ...list]); setEvidenceCheckId(id); setNewCheckQuestion(''); setNewCheckScope(''); setNewCheckSummary('') }
+    } catch (e) { setError(textError(e)) } finally { setCheckBusy(false) }
   }
 
   return <article className="rounded-lg border p-4 space-y-3">
@@ -130,12 +147,23 @@ function ObligationRow({ item, workspaceId, caseId, docs, passages, onSaved }: {
       <label className="block text-sm">Recurrence<select className={field} value={recurrence} onChange={e => setRecurrence(e.target.value)}>{RECURRENCE.map(v => <option key={v} value={v}>{recurrenceLabel[v]}</option>)}</select></label>
       <label className="block text-sm">Expected evidence<textarea className={field} rows={2} maxLength={2000} value={expectedEvidence} onChange={e => setExpectedEvidence(e.target.value)}/></label>
       <label className="block text-sm">Has that evidence been located?<select className={field} value={evidenceStatus} onChange={e => setEvidenceStatus(e.target.value)}>{EVIDENCE_STATUS.map(v => <option key={v} value={v}>{evidenceLabel[v]}</option>)}</select></label>
+      {evidenceStatus === 'NOT_LOCATED' && <div className="space-y-3 rounded border border-dashed p-3">
+        <p className="text-sm text-muted-foreground">“Evidence not located in reviewed scope” must point to a documented search. Link or record the evidence check that defines exactly what was searched and the scope actually reviewed.</p>
+        <label className="block text-sm">Link an evidence-check record<select className={field} value={evidenceCheckId} onChange={e => setEvidenceCheckId(e.target.value)}><option value="">No evidence check linked</option>{localChecks.map(c => <option key={c.id} value={c.id}>{c.question.slice(0, 80)} · {c.reviewedScope.slice(0, 60)}</option>)}</select></label>
+        <div className="space-y-2 rounded bg-secondary/40 p-3">
+          <p className="text-sm font-medium">Record a new evidence check</p>
+          <label className="block text-sm">What was searched for<textarea className={field} rows={2} maxLength={2000} value={newCheckQuestion} onChange={e => setNewCheckQuestion(e.target.value)} placeholder="e.g. Any monitoring report lodged for the wet grassland between 2020 and 2024."/></label>
+          <label className="block text-sm">Scope actually reviewed<textarea className={field} rows={2} maxLength={2000} value={newCheckScope} onChange={e => setNewCheckScope(e.target.value)} placeholder="e.g. The local planning authority's public portal and the documents supplied for this case."/></label>
+          <label className="block text-sm">Summary of what was found, if any<textarea className={field} rows={2} maxLength={2000} value={newCheckSummary} onChange={e => setNewCheckSummary(e.target.value)}/></label>
+          <Button type="button" variant="outline" disabled={checkBusy} onClick={createCheck}>{checkBusy ? 'Saving...' : 'Record evidence check'}</Button>
+        </div>
+      </div>}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-sm">Linked source passage<select className={field} value={passageId} onChange={e => setPassageId(e.target.value)}><option value="">No passage linked</option>{passages.map(p => <option key={p.passageId} value={p.passageId}>{p.name} · {p.locator}</option>)}</select></label>
         <label className="block text-sm">Linked source document<select className={field} value={documentId} onChange={e => setDocumentId(e.target.value)}><option value="">No document linked</option>{docs.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
       </div>
       <label className="block text-sm">Note / unresolved question<textarea className={field} rows={2} maxLength={2000} value={note} onChange={e => setNote(e.target.value)}/></label>
-      <p className="text-sm text-muted-foreground">Marking a commitment reviewed requires a linked source passage or document (or an evidence-check record showing evidence was not located).</p>
+      <p className="text-sm text-muted-foreground">Marking a commitment reviewed requires a linked source passage or document — or, when evidence was not located in the reviewed scope, an evidence-check record defining what was searched.</p>
       <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => save('REVIEWED')}>Mark reviewed</Button><Button variant="outline" disabled={busy} onClick={() => save('UNRESOLVED')}>Mark unresolved</Button><Button variant="outline" disabled={busy} onClick={() => save('DRAFT')}>Save draft</Button></div>
     </div></details>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

@@ -83,6 +83,42 @@ export async function renderCase(manifest: Record<string, unknown>): Promise<Buf
     if (e.note) draw(`Review note: ${e.note}`)
     y -= 14
   }
+  // BNG issued records append the reviewed obligations. This block only runs when the manifest
+  // carries obligations, so non-BNG exports render exactly as before.
+  const obligations = Array.isArray(manifest.obligations) ? manifest.obligations as Record<string, unknown>[] : []
+  if (obligations.length) {
+    y -= 6
+    draw('Reviewed obligations', { size: 14, font: bold })
+    draw('Reviewed obligations only; draft and unresolved obligations are excluded from this record.')
+    y -= 6
+    for (const o of obligations) {
+      const g = (k: string) => { const v = o[k]; return v == null || v === '' ? '' : String(v) }
+      draw(g('sourceObligation') || 'Obligation', { size: 12, font: bold })
+      draw(`Responsible party: ${g('responsibleParty') || 'Not stated'}`)
+      draw(`Due: ${g('dueDate') || 'Date unknown'} (${g('duePrecision') || 'UNKNOWN'}) | Recurrence: ${g('recurrence') || 'NONE'}`)
+      draw(`Expected evidence: ${g('expectedEvidence') || 'Not stated'}`)
+      draw(`Evidence status: ${g('evidenceStatus') || 'UNKNOWN'}`)
+      const passageDoc = g('passageDocumentName'), passageLoc = g('passageLocator'), docName = g('documentName')
+      if (passageDoc || passageLoc) draw(`Supporting source: ${passageDoc || 'Document'}${passageLoc ? ' — ' + passageLoc : ''}`)
+      else if (docName) draw(`Supporting document: ${docName}`)
+      else draw('Supporting source: none linked')
+      if (g('evidenceStatus') === 'NOT_LOCATED') {
+        const q = g('evidenceCheckQuestion'), scope = g('evidenceCheckScope'), st = g('evidenceCheckStatus'), sum = g('evidenceCheckSummary')
+        if (q || scope || st) {
+          draw('Evidence not located within the explicitly reviewed scope:')
+          if (q) draw(`  Question checked: ${q}`)
+          if (scope) draw(`  Scope reviewed: ${scope}`)
+          if (st) draw(`  Result: ${st}`)
+          if (sum) draw(`  Summary: ${sum}`)
+        } else {
+          draw('Evidence not located within the explicitly reviewed scope.')
+        }
+      }
+      draw(`Review status: ${g('reviewStatus') || 'DRAFT'} | reviewed by ${g('reviewedBy') || 'unrecorded'} | revision ${g('revision') || '1'}`)
+      if (g('note')) draw(`Review note: ${g('note')}`)
+      y -= 14
+    }
+  }
   const pages = pdf.getPages(); pages.forEach((p, i) => p.drawText(`BioVeracity | ${i + 1}/${pages.length}`, { x: 42, y: 28, size: 9, font }))
   return Buffer.from(await pdf.save())
 }
