@@ -15,8 +15,19 @@ export const KINDS = [
   'craft',
   'attraction',
   'community',
+  'sports_club',
   'other',
 ] as const
+export const KIND_LABELS: Record<(typeof KINDS)[number], string> = {
+  hotel: 'Hotel',
+  guesthouse: 'Guesthouse',
+  food: 'Food & drink',
+  craft: 'Craft',
+  attraction: 'Attraction',
+  community: 'Community place',
+  sports_club: 'Sports club',
+  other: 'Other',
+}
 export type Profile = {
   name: string
   county: string
