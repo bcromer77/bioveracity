@@ -7,7 +7,7 @@ import type { Database, Sql } from '../lib/workspaces/service'
 import { clubBillingService, clubBilling, receiveRevolut, reconcileRevolut } from '../lib/billing/club-service'
 import { revolutConfig, revolutApi, checkoutUrl, verifyRevolutWebhook, type RevolutApi, type RevolutConfig, type Subscription } from '../lib/billing/revolut'
 import { configureWatch, refreshWatch, watchView, reviewRecord, weeklyClubSummary } from '../lib/club-watch/service'
-import { watchConfig, planningRecords, epaRecords, type SourceRecord } from '../lib/club-watch/sources'
+import { watchConfig, planningCovered, planningRecords, epaRecords, type SourceRecord } from '../lib/club-watch/sources'
 import { sendWeeklyDigests } from '../lib/venue-journal/digest'
 import { venueOnboardingService } from '../lib/wild-hubs/onboarding'
 
@@ -142,6 +142,33 @@ test('source revisions require independent review; unchanged refresh is idempote
     const after=await watchView(f.db,'club',{userId:'owner'});assert.equal(after!.records[0].id,before.id);assert.equal(after!.runs.find(r=>r.source==='planning')?.status,'FAILED')
     const changed=await configureWatch(f.db,'editor','club',{...scope,scopeLabel:'Another approved area'},true)
     assert.equal(changed.version,2);assert.equal((await watchView(f.db,'club',{userId:'owner'}))?.records.length,0)
+  }finally{await f.pg.close()}
+})
+const kilkenny={scopeLabel:'River Nore · Kilkenny (fictional QA area)',west:-7.27,south:52.64,east:-7.24,north:52.66,waterbodyCode:'IE_TEST_NORE',scopeConfirmed:true as const}
+test('a non-Dublin club is accepted; its geography drives coverage; planning is honestly unavailable while EPA runs nationwide; Dublin behaviour is unchanged',async()=>{
+  // A Kilkenny sports club previously failed the Dublin-only bbox; it must now validate.
+  assert.deepEqual(watchConfig(kilkenny).scopeLabel,kilkenny.scopeLabel)
+  assert.equal(watchConfig(kilkenny).west,-7.27)
+  // Dublin remains valid, and coverage still refuses bounds outside Ireland/UK or too large.
+  assert.doesNotThrow(()=>watchConfig(scope))
+  assert.throws(()=>watchConfig({...kilkenny,west:-40,east:-39.95}),/Ireland or the United Kingdom/)
+  assert.throws(()=>watchConfig({...kilkenny,east:-6}),/bounded/)
+  // Planning is wired for the Dublin pilot only; geography decides availability honestly.
+  assert.equal(planningCovered(scope),true)
+  assert.equal(planningCovered(kilkenny),false)
+  const f=await fixture();try{
+    // Configure the shared watch for the non-Dublin club (admin ≠ owner), then refresh.
+    const watch=await configureWatch(f.db,'editor','club',kilkenny,true)
+    const runs=await refreshWatch(f.db,watch,{planning:async()=>{throw Error('planning must not be called outside the Dublin pilot')},epa:async()=>[record]})
+    assert.deepEqual(runs.find(r=>r.source==='planning'),{source:'planning',status:'UNAVAILABLE',count:0})
+    assert.equal(runs.find(r=>r.source==='epa')?.status,'OK')
+    const stored=await watchView(f.db,'club',{userId:'owner'})
+    const planningRun=stored!.runs.find(r=>r.source==='planning')
+    assert.equal(planningRun?.status,'UNAVAILABLE')
+    assert.match(planningRun!.note,/not yet available for this area/)
+    // EPA record was retrieved and is awaiting review — coverage is partial, not rejected.
+    assert.equal(stored!.records.length,1)
+    assert.equal(stored!.records[0].source,'epa')
   }finally{await f.pg.close()}
 })
 test('weekly club content uses existing opt-in and at-most-once email claim; does not leak unreviewed source cards',async()=>{

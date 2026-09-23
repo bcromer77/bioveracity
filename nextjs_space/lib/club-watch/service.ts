@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { WorkspaceError, type Database, type Sql } from '../workspaces/service'
 import { ownedClub } from '../billing/club-service'
-import { epaRecords, planningRecords, watchConfig, type WatchConfig, type SourceRecord, type SourceId } from './sources'
+import { epaRecords, planningRecords, planningCovered, watchConfig, type WatchConfig, type SourceRecord, type SourceId } from './sources'
 
 export type Watch = {hubId:string;config:WatchConfig;version:number;enabled:boolean}
 export type StoredRecord = {id:string;source:SourceId;sourceKey:string;content:SourceRecord;review:string;firstSeenAt:Date;lastSeenAt:Date;reviewedAt:Date|null}
@@ -43,6 +43,11 @@ export async function reviewRecord(db:Database,adminId:string,id:string,decision
 export async function refreshWatch(db:Database,watch:Watch,loaders:{planning:typeof planningRecords;epa:typeof epaRecords}={planning:planningRecords,epa:epaRecords},now=new Date()){
   const results:{source:SourceId;status:string;count:number}[]=[]
   for(const source of ['planning','epa'] as const){
+    if(source==='planning' && !planningCovered(watch.config)){
+      await db.query('INSERT INTO "ClubSourceRun" (id,"hubId","configVersion",source,status,count,note,"checkedAt") VALUES ($1,$2,$3,$4,\'UNAVAILABLE\',0,$5,$6)',[randomUUID(),watch.hubId,watch.version,source,'Local-authority planning retrieval is not yet available for this area; it is wired for the Dublin pilot only. No claim is made about planning applications here.',now])
+      results.push({source,status:'UNAVAILABLE',count:0})
+      continue
+    }
     try{
       const records=await loaders[source](watch.config)
       if(new Set(records.map(r=>r.key)).size!==records.length)throw Error('Duplicate source identities')

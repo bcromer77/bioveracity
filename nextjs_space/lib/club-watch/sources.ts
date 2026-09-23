@@ -11,8 +11,16 @@ export function watchConfig(value: unknown): WatchConfig {
   if (v.scopeConfirmed !== true || typeof v.scopeLabel !== 'string' || !v.scopeLabel.trim() || v.scopeLabel.length>160 || typeof v.waterbodyCode !== 'string' || !/^IE_[A-Z0-9_]{3,50}$/.test(v.waterbodyCode)) throw new WorkspaceError(400,'Confirm the map area, scope description and exact EPA waterbody code with the club.')
   for (const k of ['west','south','east','north']) if (typeof v[k] !== 'number' || !Number.isFinite(v[k])) throw new WorkspaceError(400,'Valid map bounds are required.')
   const {west,south,east,north}=v as unknown as WatchConfig
-  if (west < -6.7 || east > -6 || south < 52.9 || north > 53.7 || west>=east || south>=north || east-west>.08 || north-south>.06) throw new WorkspaceError(400,'The Dublin pilot needs a bounded local area, at most 0.08° by 0.06°.')
+  if (west>=east || south>=north || east-west>.08 || north-south>.06) throw new WorkspaceError(400,'Confirm a bounded local area for the club, at most 0.08° by 0.06°.')
+  if (west < -11 || east > 2 || south < 49.5 || north > 61) throw new WorkspaceError(400,'Confirm map bounds within Ireland or the United Kingdom.')
   return {scopeLabel:v.scopeLabel.trim(),west,south,east,north,waterbodyCode:v.waterbodyCode,scopeConfirmed:true}
+}
+// Local-authority planning retrieval is wired for the Dublin City Council pilot only.
+// A club's geography still drives its watch; areas outside this window report planning
+// as honestly unavailable rather than failing, while EPA coverage remains nationwide.
+const DUBLIN_PLANNING={west:-6.7,east:-6,south:52.9,north:53.7}
+export function planningCovered(config:{west:number;south:number;east:number;north:number}):boolean{
+  return config.west>=DUBLIN_PLANNING.west && config.east<=DUBLIN_PLANNING.east && config.south>=DUBLIN_PLANNING.south && config.north<=DUBLIN_PLANNING.north
 }
 type ObjectValue = Record<string,unknown>
 const object=(v:unknown):ObjectValue=>v && typeof v==='object' && !Array.isArray(v) ? v as ObjectValue : {}
