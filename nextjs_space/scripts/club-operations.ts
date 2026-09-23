@@ -23,7 +23,7 @@ async function main(){
       }
       const watches=await db.query<Watch>('SELECT w.* FROM "ClubWatch" w JOIN "ClubSubscription" b ON b."hubId"=w."hubId" JOIN "WildHub" h ON h.id=w."hubId" WHERE w.enabled=true AND b."paidUntil">now() AND b.mode=$1 AND b."ownerId"=h."ownerId" ORDER BY w."hubId" LIMIT 100',[config.mode])
       let failed=0,checked=0
-      for(const watch of watches){const results=await refreshWatch(db,watch);checked+=results.length;failed+=results.filter(r=>r.status!=='OK').length}
+      for(const watch of watches){const results=await refreshWatch(db,watch);checked+=results.length;failed+=results.filter(r=>r.status==='ERROR').length}
       if(failed)throw Error('Some source retrievals were incomplete')
       return {checked,failed}
     })

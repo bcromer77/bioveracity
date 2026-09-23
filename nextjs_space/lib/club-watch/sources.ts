@@ -1,9 +1,13 @@
 import { WorkspaceError } from '../workspaces/service'
+import { IRISH_PLANNING } from '../ingest/connectors-ireland'
 
 export type WatchConfig = { scopeLabel: string; west: number; south: number; east: number; north: number; waterbodyCode: string; scopeConfirmed: true }
 export type SourceId = 'planning' | 'epa'
 export type SourceRecord = { key: string; title: string; summary: string; publisher: string; sourceUrl: string; eventDate: string | null; period: string | null; caveat: string }
-export const PLANNING_URL = 'https://services.arcgis.com/NzlPQPKn5QF9v2US/arcgis/rest/services/IrishPlanningApplications/FeatureServer/0/query'
+// The national Irish planning layer is owned by the shared ingestion registry
+// (lib/ingest/connectors-ireland.ts); the club-watch consumes it rather than
+// maintaining a parallel connector. IRISH_PLANNING is the FeatureServer/0 base.
+export const PLANNING_URL = `${IRISH_PLANNING}/query`
 export const EPA_URL = 'https://wfdapi.edenireland.ie/api/waterbody/'
 export function watchConfig(value: unknown): WatchConfig {
   if (!value || typeof value !== 'object') throw new WorkspaceError(400,'Configure the club’s agreed source area.')
@@ -14,13 +18,6 @@ export function watchConfig(value: unknown): WatchConfig {
   if (west>=east || south>=north || east-west>.08 || north-south>.06) throw new WorkspaceError(400,'Confirm a bounded local area for the club, at most 0.08° by 0.06°.')
   if (west < -11 || east > 2 || south < 49.5 || north > 61) throw new WorkspaceError(400,'Confirm map bounds within Ireland or the United Kingdom.')
   return {scopeLabel:v.scopeLabel.trim(),west,south,east,north,waterbodyCode:v.waterbodyCode,scopeConfirmed:true}
-}
-// Local-authority planning retrieval is wired for the Dublin City Council pilot only.
-// A club's geography still drives its watch; areas outside this window report planning
-// as honestly unavailable rather than failing, while EPA coverage remains nationwide.
-const DUBLIN_PLANNING={west:-6.7,east:-6,south:52.9,north:53.7}
-export function planningCovered(config:{west:number;south:number;east:number;north:number}):boolean{
-  return config.west>=DUBLIN_PLANNING.west && config.east<=DUBLIN_PLANNING.east && config.south>=DUBLIN_PLANNING.south && config.north<=DUBLIN_PLANNING.north
 }
 type ObjectValue = Record<string,unknown>
 const object=(v:unknown):ObjectValue=>v && typeof v==='object' && !Array.isArray(v) ? v as ObjectValue : {}
@@ -34,20 +31,25 @@ export async function sourceJson(url: string, transport: typeof fetch=fetch): Pr
   finally {await reader.cancel()}
   return JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown
 }
+// Authority-agnostic: the national layer serves every county and authority, so the
+// query is bounded only by the club's agreed map envelope (where 1=1), and each
+// record's authority is read from the data (a.PlanningAuthority) rather than
+// hard-coded. Whether planning is available for a place is decided upstream by the
+// shared coverage resolver, never by a council name or pilot box embedded here.
 export async function planningRecords(config:WatchConfig,load:(url:string)=>Promise<unknown>=sourceJson):Promise<SourceRecord[]> {
   const records:SourceRecord[]=[]
   for(let offset=0;offset<2000;offset+=200){
-    const params=new URLSearchParams({f:'json',where:"PlanningAuthority='Dublin City Council'",geometry:`${config.west},${config.south},${config.east},${config.north}`,geometryType:'esriGeometryEnvelope',inSR:'4326',outSR:'4326',spatialRel:'esriSpatialRelIntersects',outFields:'OBJECTID,PlanningAuthority,ApplicationNumber,ApplicationStatus,Decision,ReceivedDate,DecisionDate',returnGeometry:'true',orderByFields:'OBJECTID ASC',resultOffset:String(offset),resultRecordCount:'200'})
+    const params=new URLSearchParams({f:'json',where:'1=1',geometry:`${config.west},${config.south},${config.east},${config.north}`,geometryType:'esriGeometryEnvelope',inSR:'4326',outSR:'4326',spatialRel:'esriSpatialRelIntersects',outFields:'OBJECTID,PlanningAuthority,ApplicationNumber,ApplicationStatus,Decision,ReceivedDate,DecisionDate',returnGeometry:'true',orderByFields:'OBJECTID ASC',resultOffset:String(offset),resultRecordCount:'200'})
     const raw=object(await load(`${PLANNING_URL}?${params}`))
     if(raw.error || !Array.isArray(raw.features))throw Error('Planning schema unavailable')
     for(const value of raw.features){
       const f=object(value),a=object(f.attributes),g=object(f.geometry)
-      if(a.PlanningAuthority!=='Dublin City Council' || !Number.isSafeInteger(a.OBJECTID) || !text(a.ApplicationNumber))throw Error('Unexpected planning record')
+      if(!text(a.PlanningAuthority) || !Number.isSafeInteger(a.OBJECTID) || !text(a.ApplicationNumber))throw Error('Unexpected planning record')
       if(typeof g.x!=='number'||typeof g.y!=='number')throw Error('Planning record has no usable point')
       if(g.x<config.west || g.x>config.east || g.y<config.south || g.y>config.north)continue
-      const key=String(a.OBJECTID),received=date(a.ReceivedDate),decision=date(a.DecisionDate)
+      const authority=text(a.PlanningAuthority,120),key=String(a.OBJECTID),received=date(a.ReceivedDate),decision=date(a.DecisionDate)
       const sourceUrl=`${PLANNING_URL}?${new URLSearchParams({f:'json',objectIds:key,outFields:'OBJECTID,PlanningAuthority,ApplicationNumber,ApplicationStatus,Decision,ReceivedDate,DecisionDate',returnGeometry:'false'})}`
-      records.push({key,title:`Dublin City Council planning ${text(a.ApplicationNumber,80)}`,summary:`Application status: ${text(a.ApplicationStatus)||'not provided'}. Decision: ${text(a.Decision)||'not provided'}. Received: ${received||'date unknown'}. Decision date: ${decision||'unknown'}.`,publisher:'Dublin City Council via the National Planning Application Database',sourceUrl,eventDate:decision||received,period:null,caveat:'Official planning metadata within the agreed map area. This does not establish an effect on the club, habitat condition or compliance. Consult the council application file for details.'})
+      records.push({key,title:`${authority} planning ${text(a.ApplicationNumber,80)}`,summary:`Application status: ${text(a.ApplicationStatus)||'not provided'}. Decision: ${text(a.Decision)||'not provided'}. Received: ${received||'date unknown'}. Decision date: ${decision||'unknown'}.`,publisher:`${authority} via the National Planning Application Database`,sourceUrl,eventDate:decision||received,period:null,caveat:'Official planning metadata within the agreed map area. This does not establish an effect on the club, habitat condition or compliance. Consult the council application file for details.'})
     }
     if(!raw.exceededTransferLimit) return records
     if(!raw.features.length)throw Error('Planning pagination did not advance')
