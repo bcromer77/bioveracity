@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-export type Template = 'PLANNING' | 'FARMER' | 'ESG' | 'FREIGHT' | 'GENERAL'
+export type Template = 'PLANNING' | 'FARMER' | 'ESG' | 'FREIGHT' | 'BNG' | 'GENERAL'
 export type Role = 'OWNER' | 'CONTRIBUTOR' | 'REVIEWER' | 'VIEWER'
 export type Action = 'read' | 'write' | 'review' | 'export'
 export interface Sql {
@@ -33,7 +33,7 @@ export function caseInput(value: unknown) {
   const input = object(value)
   const title = text(input.title, 180)
   const template = input.template ?? 'GENERAL'
-  if (!['PLANNING', 'FARMER', 'ESG', 'FREIGHT', 'GENERAL'].includes(String(template))) throw new WorkspaceError(400, 'Invalid template')
+  if (!['PLANNING', 'FARMER', 'ESG', 'FREIGHT', 'BNG', 'GENERAL'].includes(String(template))) throw new WorkspaceError(400, 'Invalid template')
   const rawSites = input.sites ?? []
   if (!Array.isArray(rawSites) || rawSites.length > 20) throw new WorkspaceError(400, 'Maximum 20 sites')
   const sites = rawSites.map(raw => {
@@ -49,6 +49,50 @@ export function caseInput(value: unknown) {
   })
   return { title, template: template as Template, sites }
 }
+// BNG obligation vocabularies. Deliberately small and evidence-led: recurrence never
+// auto-generates future rows; future obligations are derived from documented dates.
+export const DUE_PRECISION = ['UNKNOWN', 'YEAR', 'MONTH', 'DAY'] as const
+export const RECURRENCE = ['NONE', 'ANNUAL', 'BIENNIAL', 'FIVE_YEARLY', 'MILESTONE'] as const
+export const EVIDENCE_STATUS = ['UNKNOWN', 'LOCATED', 'NOT_LOCATED'] as const
+export const REVIEW_STATUS = ['DRAFT', 'UNRESOLVED', 'REVIEWED'] as const
+function optionalText(value: unknown, max: number): string {
+  return value == null || value === '' ? '' : text(value, max)
+}
+function obligationDate(date: unknown, precision: string): string | null {
+  if (precision === 'UNKNOWN' && (date === null || date === undefined || date === '')) return null
+  if (typeof date !== 'string') throw new WorkspaceError(400, 'Supply a due date with its stated precision')
+  const patterns: Record<string, RegExp> = { YEAR: /^\d{4}$/, MONTH: /^\d{4}-(0[1-9]|1[0-2])$/, DAY: /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/ }
+  if (!patterns[precision]?.test(date)) throw new WorkspaceError(400, 'Due date does not match its stated precision')
+  if (precision === 'DAY' && new Date(date + 'T00:00:00Z').toISOString().slice(0, 10) !== date) throw new WorkspaceError(400, 'Invalid calendar date')
+  return date
+}
+export function obligationInput(value: unknown) {
+  const input = object(value)
+  const sourceObligation = text(input.sourceObligation, 2000)
+  const responsibleParty = optionalText(input.responsibleParty, 300)
+  const duePrecision = String(input.duePrecision ?? 'UNKNOWN')
+  if (!(DUE_PRECISION as readonly string[]).includes(duePrecision)) throw new WorkspaceError(400, 'Invalid due date precision')
+  const dueDate = obligationDate(input.dueDate ?? null, duePrecision)
+  const recurrence = String(input.recurrence ?? 'NONE')
+  if (!(RECURRENCE as readonly string[]).includes(recurrence)) throw new WorkspaceError(400, 'Invalid recurrence')
+  const expectedEvidence = optionalText(input.expectedEvidence, 2000)
+  const evidenceStatus = String(input.evidenceStatus ?? 'UNKNOWN')
+  if (!(EVIDENCE_STATUS as readonly string[]).includes(evidenceStatus)) throw new WorkspaceError(400, 'Invalid evidence status')
+  const note = optionalText(input.note, 2000)
+  const passageId = input.passageId == null || input.passageId === '' ? null : text(input.passageId, 64)
+  const documentId = input.documentId == null || input.documentId === '' ? null : text(input.documentId, 64)
+  const evidenceCheckId = input.evidenceCheckId == null || input.evidenceCheckId === '' ? null : text(input.evidenceCheckId, 64)
+  return { sourceObligation, responsibleParty, dueDate, duePrecision, recurrence, expectedEvidence, evidenceStatus, note, passageId, documentId, evidenceCheckId }
+}
+export type ObligationInput = ReturnType<typeof obligationInput>
+export type ObligationRow = {
+  id: string; passageId: string | null; documentId: string | null; evidenceCheckId: string | null; createdAt: Date
+  passageLocator: string | null; passageDocumentName: string | null; documentName: string | null
+  evidenceCheckStatus: string | null; evidenceCheckQuestion: string | null
+  revision: number; sourceObligation: string; responsibleParty: string; dueDate: string | null; duePrecision: string
+  recurrence: string; expectedEvidence: string; evidenceStatus: string; reviewStatus: string; reviewedBy: string | null; note: string; revisedAt: Date
+}
+
 // Recognised workspace presets. Anything else is stored/displayed as "custom".
 export const PERSONA_KEYS = ['custom', 'ecology', 'planning', 'architecture', 'maritime'] as const
 export function normalisePersona(value: unknown): string {
@@ -80,6 +124,14 @@ export function workspaceService(db: Database, userId: string) {
   }
   async function audit(tx: Sql, workspaceId: string, caseId: string | null, action: string) {
     await tx.query('INSERT INTO "PrivateWorkspaceAudit" (id,"workspaceId","caseId","actorId",action) VALUES ($1,$2,$3,$4,$5)', [randomUUID(), workspaceId, caseId, userId, action])
+  }
+  // Provenance may only point at sources that belong to this very case (passage/document)
+  // or at an evidence-check record; anything else is rejected so obligations cannot be
+  // attached to evidence the reviewer never actually has in front of them.
+  async function validateProvenance(tx: Sql, workspaceId: string, caseId: string, input: Pick<ObligationInput, 'passageId' | 'documentId' | 'evidenceCheckId'>) {
+    if (input.passageId && !(await tx.query<{ id: string }>('SELECT id FROM "PrivateCasePassage" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3', [workspaceId, caseId, input.passageId]))[0]) throw new WorkspaceError(400, 'Linked source passage was not found in this case')
+    if (input.documentId && !(await tx.query<{ id: string }>('SELECT id FROM "PrivateCaseDocument" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3', [workspaceId, caseId, input.documentId]))[0]) throw new WorkspaceError(400, 'Linked source document was not found in this case')
+    if (input.evidenceCheckId && !(await tx.query<{ id: string }>('SELECT id FROM "EvidenceCheckRecord" WHERE id=$1', [input.evidenceCheckId]))[0]) throw new WorkspaceError(400, 'Linked evidence-check record was not found')
   }
   return {
     async listWorkspaces() {
@@ -145,6 +197,59 @@ export function workspaceService(db: Database, userId: string) {
         if (!result) throw missing()
         const sites = await tx.query<Site>('SELECT id,name,latitude,longitude FROM "PrivateCaseSite" WHERE "workspaceId"=$1 AND "caseId"=$2 ORDER BY id', [workspaceId, caseId])
         return { ...result, sites }
+      })
+    },
+    async listObligations(workspaceId: string, caseId: string) {
+      return db.transaction(async tx => {
+        await caseAccess(tx, workspaceId, caseId)
+        return tx.query<ObligationRow>(
+          'SELECT o.id, o."passageId", o."documentId", o."evidenceCheckId", o."createdAt",' +
+          ' p.locator AS "passageLocator", pd.name AS "passageDocumentName", d.name AS "documentName",' +
+          ' ec."resultStatus" AS "evidenceCheckStatus", ec.question AS "evidenceCheckQuestion",' +
+          ' r.revision, r."sourceObligation", r."responsibleParty", r."dueDate", r."duePrecision",' +
+          ' r.recurrence, r."expectedEvidence", r."evidenceStatus", r."reviewStatus", r."reviewedBy", r.note, r."createdAt" AS "revisedAt"' +
+          ' FROM "PrivateCaseObligation" o' +
+          ' LEFT JOIN "PrivateCasePassage" p ON p."workspaceId"=o."workspaceId" AND p."caseId"=o."caseId" AND p.id=o."passageId"' +
+          ' LEFT JOIN "PrivateCaseDocument" pd ON pd.id=p."documentId"' +
+          ' LEFT JOIN "PrivateCaseDocument" d ON d.id=o."documentId"' +
+          ' LEFT JOIN "EvidenceCheckRecord" ec ON ec.id=o."evidenceCheckId"' +
+          ' JOIN LATERAL (SELECT * FROM "PrivateCaseObligationRevision" rev WHERE rev."obligationId"=o.id ORDER BY rev.revision DESC LIMIT 1) r ON TRUE' +
+          ' WHERE o."workspaceId"=$1 AND o."caseId"=$2 ORDER BY r."dueDate" ASC NULLS LAST, o."createdAt" ASC, o.id',
+          [workspaceId, caseId])
+      })
+    },
+    async createObligation(workspaceId: string, caseId: string, value: unknown) {
+      const input = obligationInput(value)
+      return db.transaction(async tx => {
+        await caseAccess(tx, workspaceId, caseId, 'write')
+        await validateProvenance(tx, workspaceId, caseId, input)
+        const id = randomUUID()
+        await tx.query('INSERT INTO "PrivateCaseObligation" (id,"workspaceId","caseId","passageId","documentId","evidenceCheckId") VALUES ($1,$2,$3,$4,$5,$6)', [id, workspaceId, caseId, input.passageId, input.documentId, input.evidenceCheckId])
+        await tx.query('INSERT INTO "PrivateCaseObligationRevision" ("obligationId",revision,"sourceObligation","responsibleParty","dueDate","duePrecision",recurrence,"expectedEvidence","evidenceStatus","reviewStatus","reviewedBy",note) VALUES ($1,1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)', [id, input.sourceObligation, input.responsibleParty, input.dueDate, input.duePrecision, input.recurrence, input.expectedEvidence, input.evidenceStatus, 'DRAFT', null, input.note])
+        await audit(tx, workspaceId, caseId, 'OBLIGATION_CREATED')
+        return { id, revision: 1 }
+      })
+    },
+    async reviseObligation(workspaceId: string, caseId: string, obligationId: string, value: unknown) {
+      const raw = object(value)
+      const reviewStatus = String(raw.reviewStatus ?? 'DRAFT')
+      if (!(REVIEW_STATUS as readonly string[]).includes(reviewStatus)) throw new WorkspaceError(400, 'Invalid review status')
+      const wantsReview = reviewStatus === 'REVIEWED'
+      const input = obligationInput(value)
+      return db.transaction(async tx => {
+        await caseAccess(tx, workspaceId, caseId, wantsReview ? 'review' : 'write')
+        const [existing] = await tx.query<{ id: string }>('SELECT id FROM "PrivateCaseObligation" WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3 FOR UPDATE', [workspaceId, caseId, obligationId])
+        if (!existing) throw new WorkspaceError(404, 'Obligation not found')
+        const [latest] = await tx.query<{ revision: number }>('SELECT revision FROM "PrivateCaseObligationRevision" WHERE "obligationId"=$1 ORDER BY revision DESC LIMIT 1', [obligationId])
+        if (!latest) throw new WorkspaceError(404, 'Obligation not found')
+        if (raw.revision != null && Number(raw.revision) !== latest.revision) throw new WorkspaceError(409, 'This obligation was updated by someone else; reload before saving')
+        await validateProvenance(tx, workspaceId, caseId, input)
+        if (wantsReview && !(input.passageId || input.documentId || (input.evidenceStatus === 'NOT_LOCATED' && input.evidenceCheckId))) throw new WorkspaceError(400, 'A reviewed obligation must link a source passage, a source document, or an evidence-check record showing evidence was not located')
+        await tx.query('UPDATE "PrivateCaseObligation" SET "passageId"=$4,"documentId"=$5,"evidenceCheckId"=$6 WHERE "workspaceId"=$1 AND "caseId"=$2 AND id=$3', [workspaceId, caseId, obligationId, input.passageId, input.documentId, input.evidenceCheckId])
+        const next = latest.revision + 1
+        await tx.query('INSERT INTO "PrivateCaseObligationRevision" ("obligationId",revision,"sourceObligation","responsibleParty","dueDate","duePrecision",recurrence,"expectedEvidence","evidenceStatus","reviewStatus","reviewedBy",note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [obligationId, next, input.sourceObligation, input.responsibleParty, input.dueDate, input.duePrecision, input.recurrence, input.expectedEvidence, input.evidenceStatus, reviewStatus, wantsReview ? userId : null, input.note])
+        await audit(tx, workspaceId, caseId, wantsReview ? 'OBLIGATION_REVIEWED' : 'OBLIGATION_REVISED')
+        return { revision: next }
       })
     },
   }

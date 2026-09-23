@@ -133,6 +133,7 @@ model User {
   billingAccount BillingAccount?
   caseDocuments PrivateCaseDocument[] @relation("CaseDocumentImporter")
   caseReviews PrivateCaseEventRevision[] @relation("CaseEventReviewer")
+  obligationRevisionsReviewed PrivateCaseObligationRevision[] @relation("CaseObligationReviewer")
   caseExports PrivateCaseExport[] @relation("CaseExportRequester")
   accounts      Account[]
   sessions      Session[]
@@ -451,6 +452,7 @@ model EvidenceCheckRecord {
   resultSummary  String?
   coverage       Json
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  caseObligations PrivateCaseObligation[]
 
   @@index([assetId, createdAt])
   @@index([resultStatus])
@@ -976,6 +978,7 @@ model PrivateCase {
   documents PrivateCaseDocument[]
   exports PrivateCaseExport[]
   invitations PrivateWorkspaceInvitation[]
+  obligations PrivateCaseObligation[]
   @@unique([workspaceId, id])
 }
 
@@ -1005,6 +1008,7 @@ model PrivateCaseDocument {
   supersedes PrivateCaseDocument? @relation("CaseDocumentVersions", fields: [workspaceId, caseId, supersedesId], references: [workspaceId, caseId, id], onDelete: NoAction, onUpdate: NoAction)
   amendments PrivateCaseDocument[] @relation("CaseDocumentVersions")
   passages PrivateCasePassage[]
+  obligations PrivateCaseObligation[]
   @@unique([workspaceId, caseId, id])
   @@unique([workspaceId, caseId, hash])
 }
@@ -1018,6 +1022,7 @@ model PrivateCasePassage {
   text String
   document PrivateCaseDocument @relation(fields: [workspaceId, caseId, documentId], references: [workspaceId, caseId, id], onDelete: Restrict)
   events PrivateCaseEvent[]
+  obligations PrivateCaseObligation[]
   @@unique([workspaceId, caseId, id])
   @@index([workspaceId, caseId, documentId])
 }
@@ -1081,6 +1086,40 @@ model PrivateCaseSite {
   longitude Float?
   case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
   @@index([workspaceId, caseId])
+}
+model PrivateCaseObligation {
+  id String @id
+  workspaceId String
+  caseId String
+  passageId String?
+  documentId String?
+  evidenceCheckId String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  case PrivateCase @relation(fields: [workspaceId, caseId], references: [workspaceId, id], onDelete: Restrict)
+  passage PrivateCasePassage? @relation(fields: [workspaceId, caseId, passageId], references: [workspaceId, caseId, id], onDelete: Restrict)
+  document PrivateCaseDocument? @relation(fields: [workspaceId, caseId, documentId], references: [workspaceId, caseId, id], onDelete: Restrict)
+  evidenceCheck EvidenceCheckRecord? @relation(fields: [evidenceCheckId], references: [id], onDelete: Restrict)
+  revisions PrivateCaseObligationRevision[]
+  @@unique([workspaceId, caseId, id])
+  @@index([workspaceId, caseId])
+}
+model PrivateCaseObligationRevision {
+  obligationId String
+  revision Int
+  sourceObligation String
+  responsibleParty String @default("")
+  dueDate String?
+  duePrecision String @default("UNKNOWN")
+  recurrence String @default("NONE")
+  expectedEvidence String @default("")
+  evidenceStatus String @default("UNKNOWN")
+  reviewStatus String @default("DRAFT")
+  reviewedBy String?
+  note String @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  obligation PrivateCaseObligation @relation(fields: [obligationId], references: [id], onDelete: Restrict)
+  reviewer User? @relation("CaseObligationReviewer", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  @@id([obligationId, revision])
 }
 model AttentionPreference {
   id String @id

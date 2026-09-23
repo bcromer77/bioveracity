@@ -17,6 +17,7 @@ import { pairPlanningNearBats, countImprecise, haversineMeters } from './proximi
 import type { MapLayerResult } from '@/lib/ingest/connectors-ireland'
 import { CaseCollaboration } from './case-collaboration'
 import { CaseEvidence } from './case-evidence'
+import { CaseObligations } from './case-obligations'
 import { HoneycombPanel } from './honeycomb-panel'
 import { ReportsPanel } from './reports-panel'
 import { SourceViewer } from './source-viewer'
@@ -162,7 +163,7 @@ function CanvasBody({ workspaceId, persona, workspaceName }: { workspaceId: stri
       <div className="rounded-md bg-secondary p-3 text-sm">This is a private evidence workspace — it organises the sources you upload and shows what still needs review. It does not determine compliance, calculate CBAM liability or promise grant eligibility. Everything below is driven by the sources in the case you select; nothing is pre-filled with sample findings.</div>
     </header>
 
-    <CaseBoard key={workspaceId} workspaceId={workspaceId} defaultTemplate={persona.template} selected={selected} onSelect={selectCase} onResolved={(_id, title) => setSelectedTitle(title)} />
+    <CaseBoard key={workspaceId} workspaceId={workspaceId} defaultTemplate={(() => { const t = params.get('template'); return t && templates.some(item => item.id === t) ? t : persona.template })()} selected={selected} onSelect={selectCase} onResolved={(_id, title) => setSelectedTitle(title)} />
 
     {selected && <CaseCollaboration key={selected} workspaceId={workspaceId} caseId={selected}/>}
 
@@ -934,5 +935,5 @@ function CaseSummary({ workspaceId, caseId, onSelectCase, reportTitle, externalR
   }, [workspaceId, caseId])
   if (error) return <Failure text={error} />
   if (!item) return <p role="status">Loading case details...</p>
-  return <section className={panel} aria-labelledby="case-detail-heading"><h2 id="case-detail-heading" className="font-display text-xl font-semibold break-words">{item.title}</h2><p className="mt-1 text-xs text-muted-foreground">Case created {displayDate(item.createdAt)} — not an event date.</p><details className="mt-4"><summary className="cursor-pointer font-medium">Sites and facilities ({item.sites.length})</summary>{item.sites.length ? <ul className="mt-2 space-y-2">{item.sites.map(site => <li key={site.id} className="rounded bg-secondary p-3 text-sm break-words">{site.name}<span className="block text-xs text-muted-foreground">{site.latitude !== null && site.longitude !== null ? `${site.latitude}, ${site.longitude} — supplied coordinates` : 'Coordinates not supplied'}</span></li>)}</ul> : <p className="mt-2 text-sm text-muted-foreground">No sites were added to this case.</p>}</details><CaseEvidence key={caseId} workspaceId={workspaceId} caseId={caseId} onSelectCase={onSelectCase} reportTitle={reportTitle} externalRevision={externalRevision} onChanged={onChanged} /></section>
+  return <section className={panel} aria-labelledby="case-detail-heading"><h2 id="case-detail-heading" className="font-display text-xl font-semibold break-words">{item.title}</h2><p className="mt-1 text-xs text-muted-foreground">Case created {displayDate(item.createdAt)} — not an event date.</p><details className="mt-4"><summary className="cursor-pointer font-medium">Sites and facilities ({item.sites.length})</summary>{item.sites.length ? <ul className="mt-2 space-y-2">{item.sites.map(site => <li key={site.id} className="rounded bg-secondary p-3 text-sm break-words">{site.name}<span className="block text-xs text-muted-foreground">{site.latitude !== null && site.longitude !== null ? `${site.latitude}, ${site.longitude} — supplied coordinates` : 'Coordinates not supplied'}</span></li>)}</ul> : <p className="mt-2 text-sm text-muted-foreground">No sites were added to this case.</p>}</details><CaseEvidence key={caseId} workspaceId={workspaceId} caseId={caseId} onSelectCase={onSelectCase} reportTitle={reportTitle} externalRevision={externalRevision} onChanged={onChanged} />{item.template === 'BNG' && <CaseObligations key={`obligations-${caseId}`} workspaceId={workspaceId} caseId={caseId} />}</section>
 }

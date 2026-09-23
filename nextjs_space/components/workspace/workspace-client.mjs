@@ -4,6 +4,7 @@ export const templates = [
   { id: 'FARMER', label: 'Farm decision', question: 'Which records do I need to discuss funding, costs and constraints with my adviser?' },
   { id: 'ESG', label: 'ESG evidence', question: 'Which documents support a commitment, and what is still missing?' },
   { id: 'FREIGHT', label: 'Freight / trade evidence', question: 'Which shipment and supplier records are needed for the importer’s review?' },
+  { id: 'BNG', label: 'BNG Evidence Record', question: 'What was promised for this place, which source records it, and what happens next?' },
   { id: 'GENERAL', label: 'Other decision', question: 'What must I establish before making this decision?' },
 ];
 
@@ -36,6 +37,14 @@ export async function workspaceRequest(path, options = {}, fetcher = fetch) {
 
 export function caseListPath(workspaceId) {
   return `/api/workspaces/${encodeURIComponent(workspaceId)}/cases`;
+}
+
+export function obligationListPath(workspaceId, caseId) {
+  return `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/obligations`;
+}
+
+export function obligationPath(workspaceId, caseId, obligationId) {
+  return `/api/workspaces/${encodeURIComponent(workspaceId)}/cases/${encodeURIComponent(caseId)}/obligations/${encodeURIComponent(obligationId)}`;
 }
 
 export function displayDate(value) {
