@@ -29,10 +29,12 @@ export function PublishedHub({
   return (
     <PublicShell>
       <section className="bv-hero">
-        <p className="bv-eyebrow">{county?.brandName} · Ecology hub</p>
+        <p className="bv-eyebrow">{county?.brandName} · {profile.kind === 'sports_club' ? 'Club ecology record' : 'Ecology hub'}</p>
         <h1>{profile.name}</h1>
         <p className="bv-intro">
-          Your starting point for local stories and seasonal discoveries.
+          {profile.kind === 'sports_club'
+            ? 'A living record of wildlife, grounds and environmental change around the club.'
+            : 'Your starting point for local stories and seasonal discoveries.'}
         </p>
         {profile.website && (
           <EvidenceLink
