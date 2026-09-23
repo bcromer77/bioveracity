@@ -321,3 +321,26 @@ test('launch desk keeps CSV and QR downloads usable through managed links', asyn
     globalThis.fetch = originalFetch
   }
 })
+
+
+test('sports club venue shows a dedicated simple club ecology area', async () => {
+  const oldFetch = globalThis.fetch, oldWindow = globalThis.window
+  try {
+    const profile = { name: 'Fictional Rugby Club', county: 'down', kind: 'sports_club', story: 'A fictional sports club.', website: '', interests: ['nature'] }
+    const hub = { id: 'sports-club', profile, revision: 1, photos: [], published: null, plan: null, trend: null }
+    globalThis.window = { location: { search: '?hub=sports-club' }, addEventListener() {}, removeEventListener() {} }
+    globalThis.fetch = async url => {
+      if (url === '/api/wild/hubs') return Response.json({ hubs: [hub] })
+      if (url === '/api/wild/hubs/sports-club') return Response.json({ hub })
+      return Response.json({ status: 'unsupported', records: [], note: 'Fixture' })
+    }
+    let r
+    await act(async () => { r = create(React.createElement(HubStudio, { clubLaunchEnabled: true, photoJournalEnabled: true })) })
+    assert.equal(r.root.findByProps({ id: 'hub-kind' }).props.value, 'sports_club')
+    assert.match(text(r), /Your club ecology record/)
+    assert.match(text(r), /wildlife, flooding, waterlogging, pitch damage/)
+    assert.ok(r.root.findAllByType('a').some(a => a.props.href === '/wild/studio/sports-club/club'))
+    assert.ok(r.root.findAllByType('a').some(a => a.props.href === '/wild/studio/sports-club/photos'))
+    await act(() => r.unmount())
+  } finally { globalThis.fetch = oldFetch; globalThis.window = oldWindow }
+})

@@ -78,6 +78,7 @@ test('profiles, date precision, editorial plans and optional measured demand sta
     () => profileInput({ ...profile, website: 'javascript:alert(1)' }),
     HubError,
   )
+  assert.equal(profileInput({ ...profile, kind: 'sports_club' }).kind, 'sports_club')
   assert.throws(
     () => profileInput({ ...profile, county: 'not-a-county' }),
     HubError,

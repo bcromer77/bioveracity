@@ -8,6 +8,7 @@ import { clubBillingService, clubBilling, receiveRevolut, reconcileRevolut } fro
 import { revolutConfig, revolutApi, checkoutUrl, verifyRevolutWebhook, type RevolutApi, type RevolutConfig, type Subscription } from '../lib/billing/revolut'
 import { configureWatch, refreshWatch, watchView, reviewRecord, weeklyClubSummary } from '../lib/club-watch/service'
 import { watchConfig, planningRecords, epaRecords, type SourceRecord } from '../lib/club-watch/sources'
+import { resolveCoverage } from '../lib/ingest/coverage'
 import { sendWeeklyDigests } from '../lib/venue-journal/digest'
 import { venueOnboardingService } from '../lib/wild-hubs/onboarding'
 
@@ -18,9 +19,9 @@ const record:SourceRecord={key:'synthetic-1',title:'Synthetic planning record',s
 async function fixture(){
   const pg=new PGlite()
   await pg.exec(`CREATE TABLE "User" (id TEXT PRIMARY KEY,email TEXT,"emailVerified" TIMESTAMPTZ,name TEXT,role TEXT DEFAULT 'user',"accessState" TEXT DEFAULT 'REGISTERED');
-    INSERT INTO "User" (id,email,"emailVerified") VALUES ('owner','owner@example.test',now()),('other','other@example.test',now()),('editor','editor@example.test',now());UPDATE "User" SET role='admin' WHERE id='editor';`)
+    INSERT INTO "User" (id,email,"emailVerified") VALUES ('owner','owner@example.test',now()),('other','other@example.test',now()),('owner2','owner2@example.test',now()),('editor','editor@example.test',now());UPDATE "User" SET role='admin' WHERE id='editor';`)
   for(const migration of ['20260914_wild_hubs','20260915_wild_editorial_review','20260919_attention_return','20260919_stripe_billing','20260921_venue_launch','20260923_venue_photo_journal','20260924_data_rights','20260929_club_launch'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
-  await pg.exec(`INSERT INTO "WildHub" (id,"ownerId",profile,published) VALUES ('club','owner','{"name":"Fictional QA club"}','{}'),('foreign','other','{"name":"Other club"}','{}');`)
+  await pg.exec(`INSERT INTO "WildHub" (id,"ownerId",profile,published) VALUES ('club','owner','{"name":"Fictional QA club","county":"dublin"}','{}'),('foreign','other','{"name":"Other club","county":"dublin"}','{}'),('kk','owner2','{"name":"Fictional Kilkenny club","county":"kilkenny"}',NULL),('cork','owner2','{"name":"Fictional Cork club","county":"cork"}',NULL);`)
   const sql=(client:Pick<PGlite,'query'>):Sql=>({query:async<T>(q:string,v:unknown[])=>(await client.query<T>(q,v)).rows})
   const db:Database={...sql(pg),transaction:fn=>pg.transaction(tx=>fn(sql(tx)))}
   let customerCalls=0,createCalls=0,cancelCalls=0,state='pending',payment='pending',failCustomer=false,reference=''
@@ -139,9 +140,51 @@ test('source revisions require independent review; unchanged refresh is idempote
     assert.equal((await f.db.query('SELECT id FROM "ClubSourceRecord"',[])).length,2)
     const before=(await watchView(f.db,'club',{userId:'owner'}))!.records[0]
     await refreshWatch(f.db,watch,{planning:async()=>{throw Error('outage')},epa:async()=>[]},new Date(Date.now()+1000))
-    const after=await watchView(f.db,'club',{userId:'owner'});assert.equal(after!.records[0].id,before.id);assert.equal(after!.runs.find(r=>r.source==='planning')?.status,'FAILED')
+    const after=await watchView(f.db,'club',{userId:'owner'});assert.equal(after!.records[0].id,before.id);assert.equal(after!.runs.find(r=>r.source==='planning')?.status,'ERROR')
     const changed=await configureWatch(f.db,'editor','club',{...scope,scopeLabel:'Another approved area'},true)
     assert.equal(changed.version,2);assert.equal((await watchView(f.db,'club',{userId:'owner'}))?.records.length,0)
+  }finally{await f.pg.close()}
+})
+const kilkenny={scopeLabel:'River Nore · Kilkenny (fictional QA area)',west:-7.27,south:52.64,east:-7.24,north:52.66,waterbodyCode:'IE_TEST_NORE',scopeConfirmed:true as const}
+const cork={scopeLabel:'River Lee · Cork (fictional QA area)',west:-8.50,south:51.89,east:-8.47,north:51.91,waterbodyCode:'IE_TEST_LEE',scopeConfirmed:true as const}
+test('coverage resolves through the one shared registry: the venue county selects connectors, multi-authority counties are honoured, Ireland reuses the national planning layer, and gaps stay honest',()=>{
+  // Geography still validates any Irish/UK map box and refuses out-of-region or oversized bounds.
+  assert.deepEqual(watchConfig(kilkenny).scopeLabel,kilkenny.scopeLabel)
+  assert.equal(watchConfig(kilkenny).west,-7.27)
+  assert.doesNotThrow(()=>watchConfig(scope))
+  assert.throws(()=>watchConfig({...kilkenny,west:-40,east:-39.95}),/Ireland or the United Kingdom/)
+  assert.throws(()=>watchConfig({...kilkenny,east:-6}),/bounded/)
+  // Dublin, Kilkenny and Cork all resolve to CONNECTED planning through the shared national Irish connector.
+  assert.equal(resolveCoverage('dublin','planning').status,'CONNECTED')
+  assert.equal(resolveCoverage('kilkenny','planning').status,'CONNECTED')
+  const corkPlanning=resolveCoverage('cork','planning')
+  assert.equal(corkPlanning.status,'CONNECTED')
+  // A multi-authority county is never assumed to equal a single council.
+  assert.equal(corkPlanning.authorities.length,2)
+  assert.equal(resolveCoverage('dublin','planning').authorities.length,4)
+  // EPA is nationwide for the Republic of Ireland.
+  assert.equal(resolveCoverage('kilkenny','epa').status,'CONNECTED')
+  // A county with no wired planning connector is an honest coverage gap, never an absence.
+  const gap=resolveCoverage('down','planning')
+  assert.equal(gap.status,'UNAVAILABLE')
+  assert.match(gap.note,/coverage gap/)
+})
+test('a non-Dublin club connects end to end through the shared layer; a multi-authority county connects too; Dublin behaviour is unchanged',async()=>{
+  const f=await fixture();try{
+    // The Kilkenny club (previously blocked by the Dublin-only box) now configures and refreshes; its county drives CONNECTED coverage.
+    const watch=await configureWatch(f.db,'editor','kk',kilkenny,true)
+    const runs=await refreshWatch(f.db,watch,{planning:async()=>[record],epa:async()=>[record]})
+    assert.equal(runs.find(r=>r.source==='planning')?.status,'CONNECTED')
+    assert.equal(runs.find(r=>r.source==='epa')?.status,'CONNECTED')
+    const stored=await watchView(f.db,'kk',{userId:'owner2'})
+    const planningRun=stored!.runs.find(r=>r.source==='planning')
+    assert.equal(planningRun?.status,'CONNECTED')
+    assert.match(planningRun!.note,/national Irish planning connector/)
+    assert.equal(stored!.records.length,2)
+    // A multi-authority Cork club connects through the same shared resolver, no parallel connector.
+    const corkWatch=await configureWatch(f.db,'editor','cork',cork,true)
+    const corkRuns=await refreshWatch(f.db,corkWatch,{planning:async()=>[record],epa:async()=>[]})
+    assert.equal(corkRuns.find(r=>r.source==='planning')?.status,'CONNECTED')
   }finally{await f.pg.close()}
 })
 test('weekly club content uses existing opt-in and at-most-once email claim; does not leak unreviewed source cards',async()=>{

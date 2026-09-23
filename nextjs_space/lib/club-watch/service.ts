@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { WorkspaceError, type Database, type Sql } from '../workspaces/service'
 import { ownedClub } from '../billing/club-service'
 import { epaRecords, planningRecords, watchConfig, type WatchConfig, type SourceRecord, type SourceId } from './sources'
+import { resolveCoverage } from '../ingest/coverage'
 
 export type Watch = {hubId:string;config:WatchConfig;version:number;enabled:boolean}
 export type StoredRecord = {id:string;source:SourceId;sourceKey:string;content:SourceRecord;review:string;firstSeenAt:Date;lastSeenAt:Date;reviewedAt:Date|null}
@@ -42,7 +43,17 @@ export async function reviewRecord(db:Database,adminId:string,id:string,decision
 }
 export async function refreshWatch(db:Database,watch:Watch,loaders:{planning:typeof planningRecords;epa:typeof epaRecords}={planning:planningRecords,epa:epaRecords},now=new Date()){
   const results:{source:SourceId;status:string;count:number}[]=[]
+  // PLACE -> coverage: the venue's county (not its map box) decides, through the one
+  // shared resolver, which connectors apply. No council names or pilot boxes live here.
+  const [hub]=await db.query<{county:string|null}>('SELECT profile->>\'county\' AS county FROM "WildHub" WHERE id=$1',[watch.hubId])
   for(const source of ['planning','epa'] as const){
+    const coverage=resolveCoverage(hub?.county??null,source)
+    if(coverage.status==='UNAVAILABLE'){
+      // Unavailable is a coverage gap recorded with its provenance note, never an absence.
+      await db.query('INSERT INTO "ClubSourceRun" (id,"hubId","configVersion",source,status,count,note,"checkedAt") VALUES ($1,$2,$3,$4,\'UNAVAILABLE\',0,$5,$6)',[randomUUID(),watch.hubId,watch.version,source,coverage.note,now])
+      results.push({source,status:'UNAVAILABLE',count:0})
+      continue
+    }
     try{
       const records=await loaders[source](watch.config)
       if(new Set(records.map(r=>r.key)).size!==records.length)throw Error('Duplicate source identities')
@@ -58,12 +69,15 @@ export async function refreshWatch(db:Database,watch:Watch,loaders:{planning:typ
         }
         // Missing records remain in the chronology with their last-seen date;
         // a successful empty retrieval never asserts that nothing exists locally.
-        await tx.query('INSERT INTO "ClubSourceRun" (id,"hubId","configVersion",source,status,count,note,"checkedAt") VALUES ($1,$2,$3,$4,\'OK\',$5,$6,$7)',[randomUUID(),watch.hubId,watch.version,source,records.length,source==='planning'?'All pages within the agreed bounds retrieved; records without usable source geometry cannot establish local coverage.':'Published EPA assessment periods retrieved; publication dates are not supplied by this endpoint.',now])
+        // The run note carries the connector's coverage provenance plus retrieval discipline.
+        const detail=source==='planning'?'All pages within the agreed bounds retrieved; records without usable source geometry cannot establish local coverage.':'Published EPA assessment periods retrieved; publication dates are not supplied by this endpoint.'
+        await tx.query('INSERT INTO "ClubSourceRun" (id,"hubId","configVersion",source,status,count,note,"checkedAt") VALUES ($1,$2,$3,$4,\'CONNECTED\',$5,$6,$7)',[randomUUID(),watch.hubId,watch.version,source,records.length,`${coverage.note} ${detail}`,now])
       })
-      results.push({source,status:'OK',count:records.length})
+      results.push({source,status:'CONNECTED',count:records.length})
     }catch{
-      await db.query('INSERT INTO "ClubSourceRun" (id,"hubId","configVersion",source,status,note,"checkedAt") VALUES ($1,$2,$3,$4,\'FAILED\',$5,$6)',[randomUUID(),watch.hubId,watch.version,source,'Retrieval incomplete or source/configuration changed. Previous records retained; no claim of current coverage.',now])
-      results.push({source,status:'FAILED',count:0})
+      // A wired connector was reached but retrieval did not complete: ERROR, not absence.
+      await db.query('INSERT INTO "ClubSourceRun" (id,"hubId","configVersion",source,status,note,"checkedAt") VALUES ($1,$2,$3,$4,\'ERROR\',$5,$6)',[randomUUID(),watch.hubId,watch.version,source,'Retrieval incomplete or source/configuration changed. Previous records retained; no claim of current coverage.',now])
+      results.push({source,status:'ERROR',count:0})
     }
   }
   return results
