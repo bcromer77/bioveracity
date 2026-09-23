@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react'
 import { WILD_COUNTIES } from '@/lib/wild-counties/counties'
 import {
   KINDS,
+  KIND_LABELS,
   MONTHS,
   trendSummary,
   type Profile,
@@ -229,8 +230,29 @@ export function HubStudio({ photoJournalEnabled = false, clubLaunchEnabled = fal
           )}
         </div>
       </fieldset>
-      {hub && clubLaunchEnabled && <p><Link className="bv-button bv-green" href={`/wild/studio/${hub.id}/club`}>Club source records and Revolut billing</Link></p>}
-      {hub && photoJournalEnabled && <p><Link className="bv-button bv-green" href={`/wild/studio/${hub.id}/photos`}>Guest photo journal · weekly email · downloads</Link></p>}
+      {hub && clubLaunchEnabled && profile.kind === 'sports_club' && (
+        <section className="bv-topic">
+          <p className="bv-eyebrow">Sports club</p>
+          <h2>Your club ecology record</h2>
+          <p>
+            Keep one continuous record of wildlife, flooding, waterlogging, pitch
+            damage and environmental change around the club. BioVeracity links
+            approved local source updates to the same record.
+          </p>
+          <div className="bv-actions">
+            <Link className="bv-button bv-green" href={`/wild/studio/${hub.id}/club`}>
+              Open club record
+            </Link>
+            {photoJournalEnabled && (
+              <Link className="bv-button" href={`/wild/studio/${hub.id}/photos`}>
+                Open observations and photographs
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
+      {hub && clubLaunchEnabled && profile.kind !== 'sports_club' && <p><Link className="bv-button bv-green" href={`/wild/studio/${hub.id}/club`}>Club source records and Revolut billing</Link></p>}
+      {hub && photoJournalEnabled && profile.kind !== 'sports_club' && <p><Link className="bv-button bv-green" href={`/wild/studio/${hub.id}/photos`}>Guest photo journal · weekly email · downloads</Link></p>}
       <div className="bv-studio-grid">
         <div>
           <form
@@ -279,7 +301,7 @@ export function HubStudio({ photoJournalEnabled = false, clubLaunchEnabled = fal
               >
                 {KINDS.map((k) => (
                   <option key={k} value={k}>
-                    {k}
+                    {KIND_LABELS[k]}
                   </option>
                 ))}
               </select>
