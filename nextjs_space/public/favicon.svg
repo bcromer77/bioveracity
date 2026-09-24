@@ -1,4 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <circle cx="128" cy="128" r="128" fill="#0B1426"/>
-  <text x="128" y="128" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">BV</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+<title>BioVeracity fuchsia mark</title>
+<rect width="256" height="256" rx="36" fill="#050705"/>
+<path d="M56 164C72 130 79 94 108 58" fill="none" stroke="#C69A2B" stroke-width="7" stroke-linecap="round"/>
+<path d="M108 58C135 37 169 38 192 60C214 81 219 112 207 138" fill="none" stroke="#D5A62E" stroke-width="5" stroke-linecap="round"/>
+<path d="M109 58C91 65 75 78 63 96C81 93 98 81 109 58Z" fill="#174C2B" stroke="#C69A2B" stroke-width="2"/>
+<path d="M128 62C137 72 142 84 142 96" fill="none" stroke="#245D35" stroke-width="7" stroke-linecap="round"/>
+<path d="M142 94C119 104 102 121 92 143C113 139 128 131 142 117C156 131 171 139 192 143C182 121 165 104 142 94Z" fill="#D81258"/>
+<path d="M142 112C128 124 119 140 117 160C128 156 136 149 142 139C148 149 156 156 167 160C165 140 156 124 142 112Z" fill="#63206F"/>
+<path d="M130 154L126 189M142 150L142 198M154 154L159 189" stroke="#D81258" stroke-width="4" stroke-linecap="round"/>
+<circle cx="126" cy="192" r="5" fill="#D5A62E"/><circle cx="142" cy="202" r="5" fill="#D5A62E"/><circle cx="159" cy="192" r="5" fill="#D5A62E"/>
 </svg>
