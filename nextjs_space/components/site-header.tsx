@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { ChevronDown, LogOut } from 'lucide-react'
@@ -13,9 +14,7 @@ export function SiteHeader() {
     <header className="w-full border-b border-border bg-white">
       <div className="mx-auto flex h-16 max-w-[1100px] items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded bg-accent font-display text-xs font-bold text-accent-foreground">
-            BV
-          </span>
+          <Image src="/bioveracity-mark.svg" alt="" width={32} height={32} className="h-8 w-8 rounded-md" priority />
           <span className="font-display text-[17px] font-bold text-foreground">BioVeracity</span>
         </Link>
 
