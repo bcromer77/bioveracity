@@ -223,9 +223,12 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
         if (ev) return { evidence: ev }
       }
     }
+    // Dedup boundary is per-key: (apiKeyId, mode, payloadFingerprint). Two
+    // independent keys submitting an identical payload must NEVER collide, and
+    // one key must never resolve to another key's evidence object.
     const rawRows = await tx.query<any>(
-      'SELECT "id" FROM "PlatformRawEvidence" WHERE "mode" = $1 AND "payloadFingerprint" = $2',
-      [apiKey.mode, fp],
+      'SELECT "id" FROM "PlatformRawEvidence" WHERE "apiKeyId" = $1 AND "mode" = $2 AND "payloadFingerprint" = $3',
+      [apiKey.id, apiKey.mode, fp],
     )
     if (rawRows[0]) {
       const ev = await loadEvidenceByRaw(tx, rawRows[0].id)

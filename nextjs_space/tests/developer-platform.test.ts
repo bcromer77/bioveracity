@@ -86,6 +86,59 @@ test('test/live isolation: a test key cannot read live evidence and payloads do 
   }
 })
 
+// ---- Per-key dedup isolation (release blocker: PR #81) --------------------
+
+test('two independent keys in the same mode submitting an identical payload never collide or cross-resolve', async () => {
+  const h = await harness()
+  try {
+    // Two DISTINCT keys, SAME mode. Dedup must be scoped per key, not global.
+    const keyA = await h.service.createKey({ name: 'tenant-a', mode: 'test' })
+    const keyB = await h.service.createKey({ name: 'tenant-b', mode: 'test' })
+    assert.notEqual(keyA.id, keyB.id)
+
+    const a = await h.handle('POST', '/api/v1/evidence', { token: keyA.token, body: sampleEvidence })
+    const b = await h.handle('POST', '/api/v1/evidence', { token: keyB.token, body: sampleEvidence })
+
+    // Both submissions succeed as genuinely NEW records (201, never a replay).
+    assert.equal(a.status, 201)
+    assert.equal(b.status, 201)
+    assert.notEqual(b.json.replayed, true)
+
+    // Each key receives its own distinct canonical + raw ids.
+    assert.notEqual(a.json.id, b.json.id)
+    assert.notEqual(a.json.raw_evidence_id, b.json.raw_evidence_id)
+
+    // Two separate raw rows and two separate evidence rows exist — no global dedup.
+    const raws = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformRawEvidence"', [])
+    const ev = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformEvidence"', [])
+    assert.equal(Number(raws[0].c), 2)
+    assert.equal(Number(ev[0].c), 2)
+
+    // Neither key can RETRIEVE the other key's evidence object.
+    const bReadsA = await h.handle('GET', `/api/v1/evidence/${a.json.id}`, { token: keyB.token })
+    const aReadsB = await h.handle('GET', `/api/v1/evidence/${b.json.id}`, { token: keyA.token })
+    assert.equal(bReadsA.status, 404)
+    assert.equal(aReadsB.status, 404)
+
+    // Each key can still read its OWN evidence — the object returned is its own id.
+    const aReadsA = await h.handle('GET', `/api/v1/evidence/${a.json.id}`, { token: keyA.token })
+    const bReadsB = await h.handle('GET', `/api/v1/evidence/${b.json.id}`, { token: keyB.token })
+    assert.equal(aReadsA.status, 200)
+    assert.equal(bReadsB.status, 200)
+    assert.equal(aReadsA.json.id, a.json.id)
+    assert.equal(bReadsB.json.id, b.json.id)
+
+    // Per-key idempotency is preserved: the SAME key resubmitting the identical
+    // payload still dedups to its own single record (no new row).
+    const aAgain = await h.handle('POST', '/api/v1/evidence', { token: keyA.token, body: sampleEvidence })
+    assert.equal(aAgain.json.id, a.json.id)
+    const rawsAfter = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformRawEvidence"', [])
+    assert.equal(Number(rawsAfter[0].c), 2)
+  } finally {
+    await h.pg.close()
+  }
+})
+
 // ---- Evidence submission + validation ------------------------------------
 
 test('valid evidence submission returns ev_* id, req_* id and preserved uncertainty', async () => {
