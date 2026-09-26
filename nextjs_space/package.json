@@ -170,6 +170,7 @@
     "node": ">=22.13.0"
   },
   "resolutions": {
+    "jszip@npm:^3.7.1": "npm:3.10.2",
     "motion-dom": "12.23.12",
     "motion-utils": "12.23.6"
   },
