@@ -1,7 +1,7 @@
 name: Seasonal and honeycomb review
 on:
   pull_request:
-    branches: [feat/club-launch-revolut, fix/qa-personal-journeys, release/qa-pr70-pr72, clarity/usability-release, feat/identity-first-public-navigation, feat/venue-weekly-photo-review, feat/venue-seasonal-discovery]
+    branches: [feat/sports-club-venues, feat/club-launch-revolut, fix/qa-personal-journeys, release/qa-pr70-pr72, clarity/usability-release, feat/identity-first-public-navigation, feat/venue-weekly-photo-review, feat/venue-seasonal-discovery]
 permissions:
   contents: read
 concurrency:
@@ -59,6 +59,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends zbar-tools
       - name: Isolated source and application tests
         run: |
+          node --import tsx --test tests/mara-connector.test.ts
           yarn test:honeycomb
           yarn test:wild-hubs
           yarn test:venue-photos
