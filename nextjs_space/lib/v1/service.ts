@@ -83,9 +83,36 @@ export interface ServiceOptions {
   processor?: (evidence: EvidencePublic) => Promise<void>
 }
 
+// A unique violation must be recognised across drivers. Prisma's raw-query path
+// ($queryRawUnsafe) wraps the underlying Postgres error as P2010, with the real
+// SQLSTATE (23505) and phrasing ("... already exists") only in the MESSAGE — the
+// top-level code is NOT 23505. Prisma's typed path uses P2002. PGlite surfaced yet
+// another shape. So we match on code AND on the message text to be driver-agnostic.
 const isUniqueViolation = (e: unknown): boolean => {
   const err = e as { code?: string; message?: string }
-  return err?.code === '23505' || /duplicate key|unique constraint/i.test(err?.message ?? '')
+  const msg = err?.message ?? ''
+  return (
+    err?.code === '23505' ||
+    err?.code === 'P2002' ||
+    /\b23505\b|already exists|duplicate key|unique constraint/i.test(msg)
+  )
+}
+
+// Under real Postgres SERIALIZABLE isolation, a concurrent identical write may
+// lose the race with a serialization failure (SQLSTATE 40001, surfaced by Prisma
+// as P2034 or wrapped in a P2010 message) rather than a unique violation. Either
+// way the loser's transaction rolled back and the winner committed, so the correct
+// idempotent response is to re-read the winner's row — not to return a 500. PGlite
+// never exercised this path.
+const isRaceLoss = (e: unknown): boolean => {
+  if (isUniqueViolation(e)) return true
+  const err = e as { code?: string; message?: string }
+  const msg = err?.message ?? ''
+  return (
+    err?.code === '40001' ||
+    err?.code === 'P2034' ||
+    /\b40001\b|serialization failure|could not serialize|write conflict|deadlock/i.test(msg)
+  )
 }
 
 const asJson = (v: unknown): unknown => {
@@ -152,7 +179,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
     const scopes = input.scopes?.trim() || 'evidence:write,evidence:read'
     await db.query(
       `INSERT INTO "PlatformApiKey" ("id","name","mode","lookupId","secretHash","scopes","createdAt","ownerLabel")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8)`,
       [gen.id, input.name, input.mode, gen.lookupId, gen.secretHash, scopes, nowIso(), input.ownerLabel ?? null],
     )
     // The plaintext token is returned exactly once, here, and never stored.
@@ -168,7 +195,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
 
   async function revokeKey(id: string): Promise<boolean> {
     const rows = await db.query<{ id: string }>(
-      'UPDATE "PlatformApiKey" SET "revokedAt" = $1 WHERE "id" = $2 AND "revokedAt" IS NULL RETURNING "id"',
+      'UPDATE "PlatformApiKey" SET "revokedAt" = $1::timestamptz WHERE "id" = $2 AND "revokedAt" IS NULL RETURNING "id"',
       [nowIso(), id],
     )
     return rows.length > 0
@@ -184,10 +211,10 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
     await db.transaction(async (tx) => {
       await tx.query(
         `INSERT INTO "PlatformApiKey" ("id","name","mode","lookupId","secretHash","scopes","createdAt","rotatedFrom","ownerLabel")
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9)`,
         [gen.id, old.name, old.mode, gen.lookupId, gen.secretHash, old.scopes, nowIso(), old.id, old.ownerLabel ?? null],
       )
-      await tx.query('UPDATE "PlatformApiKey" SET "revokedAt" = $1 WHERE "id" = $2 AND "revokedAt" IS NULL', [nowIso(), old.id])
+      await tx.query('UPDATE "PlatformApiKey" SET "revokedAt" = $1::timestamptz WHERE "id" = $2 AND "revokedAt" IS NULL', [nowIso(), old.id])
     })
     return { id: gen.id, name: old.name, mode: old.mode, scopes: old.scopes, created_at: nowIso(), token: gen.token, rotated_from: old.id }
   }
@@ -198,7 +225,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
   }
 
   async function markKeyUsed(id: string): Promise<void> {
-    await db.query('UPDATE "PlatformApiKey" SET "lastUsedAt" = $1 WHERE "id" = $2', [nowIso(), id])
+    await db.query('UPDATE "PlatformApiKey" SET "lastUsedAt" = $1::timestamptz WHERE "id" = $2', [nowIso(), id])
   }
 
   // ---- EVIDENCE (raw-first + idempotent) --------------------------------
@@ -260,7 +287,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
         // RAW FIRST — the untouched submission is durable before anything else.
         await tx.query(
           `INSERT INTO "PlatformRawEvidence" ("id","apiKeyId","mode","payloadFingerprint","rawBody","idempotencyKey","requestId","createdAt")
-           VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8)`,
+           VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8::timestamptz)`,
           [rawId, apiKey.id, apiKey.mode, fp, JSON.stringify(rawBody), idempotencyKey, requestId, nowIso()],
         )
         // Canonical evidence id, marked RAW_PERSISTED (processing not yet run).
@@ -269,7 +296,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
              ("id","apiKeyId","mode","rawEvidenceId","contractVersion","provider","sourceExternalId","evidenceType",
               "publisher","sourceUrl","geography","observationTime","observationPrecision","publicationTime","retrievalTime",
               "sourceData","metadata","provenance","processingStatus","idempotencyKey","requestId","createdAt")
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12,$13,$14,$15,$16::jsonb,$17::jsonb,$18::jsonb,$19,$20,$21,$22)`,
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::timestamptz,$13,$14::timestamptz,$15::timestamptz,$16::jsonb,$17::jsonb,$18::jsonb,$19,$20,$21,$22::timestamptz)`,
           [
             evId, apiKey.id, apiKey.mode, rawId, CONTRACT_VERSION,
             body.provider, body.source_external_id ?? null, body.evidence_type,
@@ -286,16 +313,22 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
         if (idempotencyKey) {
           await tx.query(
             `INSERT INTO "PlatformIdempotency" ("id","apiKeyId","mode","idempotencyKey","requestHash","evidenceId","rawEvidenceId","requestId","createdAt")
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz)`,
             [genId('idem'), apiKey.id, apiKey.mode, idempotencyKey, fp, evId, rawId, requestId, nowIso()],
           )
         }
       })
     } catch (e) {
-      // Concurrent retry lost the race — re-read the winner's committed result.
-      if (isUniqueViolation(e)) {
-        const existing = await resolveExisting(db, apiKey, fp, idempotencyKey)
-        if (existing) return { evidence: existing.evidence, replayed: true }
+      // Concurrent retry lost the race (unique violation OR serialization failure
+      // under real SERIALIZABLE isolation) — re-read the winner's committed result.
+      // The winner has committed by the time either error surfaces; a couple of
+      // bounded re-read attempts absorb any brief read-visibility timing.
+      if (isRaceLoss(e)) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const existing = await resolveExisting(db, apiKey, fp, idempotencyKey)
+          if (existing) return { evidence: existing.evidence, replayed: true }
+          await new Promise((r) => setTimeout(r, 20))
+        }
       }
       throw e
     }
@@ -347,7 +380,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
     await db.query(
       `INSERT INTO "PlatformRequest"
          ("id","apiKeyId","mode","method","path","status","errorType","errorCode","evidenceId","rawEvidenceId","idempotencyKey","trace","createdAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::timestamptz)`,
       [
         entry.id, entry.apiKeyId, entry.mode, entry.method, entry.path, entry.status,
         entry.errorType ?? null, entry.errorCode ?? null, entry.evidenceId ?? null,
