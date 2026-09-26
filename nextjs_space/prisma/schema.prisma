@@ -1819,3 +1819,148 @@ model ClubSourceRun {
   watch ClubWatch @relation(fields: [hubId], references: [hubId], onDelete: Cascade)
   @@index([hubId, checkedAt], map: "ClubSourceRun_latest")
 }
+
+
+// ==========================================================================
+// DEVELOPER PLATFORM V1 — SDK-first ingestion boundary (Stripe-inspired).
+//
+// Additive only. These tables place a clean, versioned public contract in
+// front of the proven raw-first / dedup / provenance logic. Nothing here
+// alters or drops any existing table, column or constraint. Secrets are
+// never stored in plaintext (only a SHA-256 hash of the key secret is kept).
+// See docs migration 20261001_developer_platform_v1.
+// ==========================================================================
+
+// Named, scoped, revocable, rotatable API credential with strict test/live
+// isolation. The plaintext secret is shown once at creation and never stored.
+model PlatformApiKey {
+  id          String    @id // ak_*
+  name        String
+  mode        String // "test" | "live"
+  // Public, non-secret lookup handle embedded in the token for O(1) auth.
+  lookupId    String    @unique
+  // SHA-256 hash of the token secret component. Plaintext is never persisted.
+  secretHash  String
+  // Comma-separated scopes, e.g. "evidence:write,evidence:read".
+  scopes      String    @default("evidence:write,evidence:read")
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  // Optional rotation link: the key this one replaced (for auditability).
+  rotatedFrom String?
+  ownerLabel  String? // free-form owner/team label, never a secret
+
+  rawEvidence     PlatformRawEvidence[]
+  evidence        PlatformEvidence[]
+  idempotencyKeys PlatformIdempotency[]
+  requests        PlatformRequest[]
+
+  @@index([mode])
+  @@index([revokedAt])
+}
+
+// RAW FIRST: every valid authenticated submission is durably recorded here
+// before any downstream interpretation. Downstream failure never destroys it.
+model PlatformRawEvidence {
+  id                 String          @id // raw_*
+  apiKeyId           String
+  apiKey             PlatformApiKey  @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  mode               String // "test" | "live"
+  // Deterministic SHA-256 fingerprint of the submitted body. Unique per mode
+  // so identical resubmissions dedup rather than duplicate.
+  payloadFingerprint String
+  rawBody            Json
+  idempotencyKey     String?
+  requestId          String
+  createdAt          DateTime        @default(now())
+  evidence           PlatformEvidence?
+
+  @@unique([mode, payloadFingerprint])
+  @@index([apiKeyId])
+  @@index([requestId])
+}
+
+// Canonical evidence record with a durable public ev_* identifier. Uncertainty
+// is preserved explicitly: nullable observation/publication times, precision
+// and geography are never invented.
+model PlatformEvidence {
+  id                 String              @id // ev_*
+  apiKeyId           String
+  apiKey             PlatformApiKey      @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  mode               String // "test" | "live"
+  rawEvidenceId      String              @unique
+  rawEvidence        PlatformRawEvidence @relation(fields: [rawEvidenceId], references: [id], onDelete: Cascade)
+  contractVersion    String              @default("v1")
+  // Provenance / identity
+  provider           String
+  sourceExternalId   String?
+  evidenceType       String
+  publisher          String?
+  sourceUrl          String?
+  // Geography (stored verbatim; precision preserved, never invented)
+  geography          Json?
+  // Time (nullable to preserve uncertainty; precision recorded separately)
+  observationTime    DateTime?
+  observationPrecision String?
+  publicationTime    DateTime?
+  retrievalTime      DateTime?
+  // Payloads
+  sourceData         Json
+  metadata           Json?
+  provenance         Json?
+  // Downstream processing status — independent of raw persistence.
+  // RAW_PERSISTED, PROCESSING, PROCESSED, PROCESSING_FAILED
+  processingStatus   String              @default("RAW_PERSISTED")
+  processingError    String?
+  idempotencyKey     String?
+  requestId          String
+  createdAt          DateTime            @default(now())
+
+  @@index([apiKeyId])
+  @@index([mode])
+  @@index([processingStatus])
+  @@index([requestId])
+}
+
+// First-class idempotency. A key is unique per (apiKey, mode). Replaying the
+// same key with the same payload returns the same evidence; a materially
+// different payload under the same key is a deterministic conflict.
+model PlatformIdempotency {
+  id             String         @id @default(cuid())
+  apiKeyId       String
+  apiKey         PlatformApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  mode           String
+  idempotencyKey String
+  requestHash    String // fingerprint of the payload the key first committed
+  evidenceId     String?
+  rawEvidenceId  String?
+  requestId      String
+  createdAt      DateTime       @default(now())
+
+  @@unique([apiKeyId, mode, idempotencyKey])
+  @@index([apiKeyId])
+}
+
+// REQUEST TRACEABILITY: one row per API request with a public req_* id and a
+// stage trace. Never stores credentials or raw secret material.
+model PlatformRequest {
+  id             String          @id // req_*
+  apiKeyId       String?
+  apiKey         PlatformApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  mode           String?
+  method         String
+  path           String
+  status         Int
+  errorType      String?
+  errorCode      String?
+  evidenceId     String?
+  rawEvidenceId  String?
+  idempotencyKey String?
+  // Ordered lifecycle stages: received → authenticated → validated →
+  // persisted → evidence_id → processing.
+  trace          Json
+  createdAt      DateTime        @default(now())
+
+  @@index([apiKeyId])
+  @@index([createdAt])
+}
