@@ -39,8 +39,10 @@ CREATE TABLE IF NOT EXISTS "PlatformRawEvidence" (
   "createdAt"          TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "PlatformRawEvidence_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "PlatformRawEvidence_mode_payloadFingerprint_key"
-  ON "PlatformRawEvidence"("mode", "payloadFingerprint");
+-- Dedup uniqueness is per-key: identical payloads from two independent API keys
+-- must not collide. Scope = (apiKeyId, mode, payloadFingerprint).
+CREATE UNIQUE INDEX IF NOT EXISTS "PlatformRawEvidence_apiKeyId_mode_payloadFingerprint_key"
+  ON "PlatformRawEvidence"("apiKeyId", "mode", "payloadFingerprint");
 CREATE INDEX IF NOT EXISTS "PlatformRawEvidence_apiKeyId_idx" ON "PlatformRawEvidence"("apiKeyId");
 CREATE INDEX IF NOT EXISTS "PlatformRawEvidence_requestId_idx" ON "PlatformRawEvidence"("requestId");
 
