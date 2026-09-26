@@ -437,6 +437,8 @@ test('strict ISO validation rejects ambiguous, non-padded, impossible and tz-les
       '2024-04-31',            // April has 30 days
       '2023-02-29',            // not a leap year
       '2024-06-15T12:00:00',   // no timezone
+      '2024-01-01T12:34:60Z',  // second 60 outside a leap-second instant
+      '2016-12-31T23:59:60Z',  // PostgreSQL-compatible subset excludes leap seconds
       'not-a-date',
       '2024/06/15',
     ]

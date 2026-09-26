@@ -27,7 +27,8 @@ const boundedString = (max: number) =>
 // impossible ("2024-02-30") values, rolling them into a different date. Instead
 // we accept ONLY:
 //   * a calendar date  YYYY-MM-DD                       (zero-padded, real date)
-//   * an RFC3339 date-time with a UTC offset or 'Z'     (fractional secs ok)
+//   * a PostgreSQL-compatible RFC3339 date-time with a UTC offset or 'Z'
+//     (fractional seconds are accepted; leap seconds are not)
 // and reject everything else. This keeps uncertainty explicit: a bad string is
 // a validation error, never a silently-adjusted date.
 const ISO_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -60,8 +61,9 @@ function isStrictIsoDateOrDateTime(s: string): boolean {
     const hour = Number(hh)
     const minute = Number(mm)
     const second = Number(ss)
-    // Allow 60 to accommodate leap seconds; reject anything beyond.
-    if (hour > 23 || minute > 59 || second > 60) return false
+    // PostgreSQL does not preserve leap seconds, so this public contract uses
+    // the storage-compatible RFC3339 subset with seconds limited to 00-59.
+    if (hour > 23 || minute > 59 || second > 59) return false
     // If an explicit numeric offset is present, validate its range.
     if (offSign) {
       if (Number(offHH) > 23 || Number(offMM) > 59) return false
@@ -77,7 +79,7 @@ const isoDateTime = z
   .max(40)
   .refine(
     isStrictIsoDateOrDateTime,
-    'Must be a calendar date (YYYY-MM-DD) or an RFC3339 date-time with a UTC offset or Z',
+    'Must be a calendar date (YYYY-MM-DD) or a PostgreSQL-compatible RFC3339 date-time with a UTC offset or Z; leap seconds are not supported',
   )
 
 // Geography is stored verbatim. We validate coordinate ranges only when both
