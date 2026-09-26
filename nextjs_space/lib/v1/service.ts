@@ -232,12 +232,18 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
 
   // Look up an already-committed result for this operation, if any. Throws on
   // an idempotency-key/payload conflict. Returns null when nothing matches.
+  //
+  // `viaKey` reports HOW the result was resolved: true when an existing
+  // PlatformIdempotency ledger entry for the supplied key was matched (so the
+  // key is already durably bound), false when resolution came only from
+  // payload-fingerprint dedup (so a supplied key still needs binding). The
+  // caller uses this to decide whether to bind the key before replaying.
   async function resolveExisting(
     tx: Sql,
     apiKey: ApiKeyRow,
     fp: string,
     idempotencyKey: string | null,
-  ): Promise<{ evidence: EvidencePublic } | null> {
+  ): Promise<{ evidence: EvidencePublic; viaKey: boolean } | null> {
     if (idempotencyKey) {
       const rows = await tx.query<any>(
         'SELECT * FROM "PlatformIdempotency" WHERE "apiKeyId" = $1 AND "mode" = $2 AND "idempotencyKey" = $3',
@@ -247,7 +253,7 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
       if (rec) {
         if (rec.requestHash !== fp) throw idempotencyConflict()
         const ev = rec.evidenceId ? await loadEvidenceById(tx, rec.evidenceId) : null
-        if (ev) return { evidence: ev }
+        if (ev) return { evidence: ev, viaKey: true }
       }
     }
     // Dedup boundary is per-key: (apiKeyId, mode, payloadFingerprint). Two
@@ -259,9 +265,85 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
     )
     if (rawRows[0]) {
       const ev = await loadEvidenceByRaw(tx, rawRows[0].id)
-      if (ev) return { evidence: ev }
+      if (ev) return { evidence: ev, viaKey: false }
     }
     return null
+  }
+
+  // Durably bind a supplied idempotency key to the payload/evidence it first
+  // represented. Called when a replay was resolved by payload-fingerprint dedup
+  // but the key itself is not yet in the ledger. Safe to call repeatedly and
+  // under concurrency: the unique constraint (apiKeyId, mode, idempotencyKey)
+  // makes the first writer win. A loser re-reads the committed row and either
+  // accepts an identical binding (idempotent no-op) or raises the structured
+  // 409 when the same key is being reused for a materially different payload.
+  async function bindIdempotencyKey(
+    apiKey: ApiKeyRow,
+    idempotencyKey: string,
+    fp: string,
+    evidenceId: string,
+    rawEvidenceId: string,
+    requestId: string,
+  ): Promise<void> {
+    const readBinding = async () => {
+      const rows = await db.query<any>(
+        'SELECT * FROM "PlatformIdempotency" WHERE "apiKeyId" = $1 AND "mode" = $2 AND "idempotencyKey" = $3',
+        [apiKey.id, apiKey.mode, idempotencyKey],
+      )
+      return rows[0] ?? null
+    }
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        await db.query(
+          `INSERT INTO "PlatformIdempotency" ("id","apiKeyId","mode","idempotencyKey","requestHash","evidenceId","rawEvidenceId","requestId","createdAt")
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::timestamptz)`,
+          [genId('idem'), apiKey.id, apiKey.mode, idempotencyKey, fp, evidenceId, rawEvidenceId, requestId, nowIso()],
+        )
+        return
+      } catch (e) {
+        // A concurrent writer already bound this key (unique violation) or the
+        // write lost a serialization race — re-read and reconcile.
+        if (!isRaceLoss(e)) throw e
+        const rec = await readBinding()
+        if (rec) {
+          if (rec.requestHash !== fp) throw idempotencyConflict()
+          return // identical binding already present — idempotent no-op
+        }
+        await new Promise((r) => setTimeout(r, 20))
+      }
+    }
+    // Exhausted retries without the row becoming visible — final reconciliation.
+    const rec = await readBinding()
+    if (rec) {
+      if (rec.requestHash !== fp) throw idempotencyConflict()
+      return
+    }
+    throw internalError()
+  }
+
+  // Resolve an already-committed result AND ensure any supplied idempotency key
+  // is durably bound to it before returning the replay. This closes the gap
+  // where a fingerprint-dedup replay returned without recording the new key,
+  // which would let that key later be reused with a different payload.
+  async function resolveAndBind(
+    apiKey: ApiKeyRow,
+    fp: string,
+    idempotencyKey: string | null,
+    requestId: string,
+  ): Promise<{ evidence: EvidencePublic } | null> {
+    const found = await resolveExisting(db, apiKey, fp, idempotencyKey)
+    if (!found) return null
+    if (idempotencyKey && !found.viaKey) {
+      await bindIdempotencyKey(
+        apiKey,
+        idempotencyKey,
+        fp,
+        found.evidence.id,
+        found.evidence.raw_evidence_id,
+        requestId,
+      )
+    }
+    return { evidence: found.evidence }
   }
 
   async function createEvidence(input: {
@@ -275,8 +357,10 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
     const idempotencyKey = input.idempotencyKey ?? null
     const fp = fingerprint(rawBody)
 
-    // Fast path: already committed?
-    const pre = await resolveExisting(db, apiKey, fp, idempotencyKey)
+    // Fast path: already committed? Bind the supplied key to the existing
+    // result before replaying, so a fingerprint-dedup hit never leaves a fresh
+    // key unbound.
+    const pre = await resolveAndBind(apiKey, fp, idempotencyKey, requestId)
     if (pre) return { evidence: pre.evidence, replayed: true }
 
     const rawId = genId('raw')
@@ -325,7 +409,10 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
       // bounded re-read attempts absorb any brief read-visibility timing.
       if (isRaceLoss(e)) {
         for (let attempt = 0; attempt < 3; attempt++) {
-          const existing = await resolveExisting(db, apiKey, fp, idempotencyKey)
+          // Bind the supplied key to the winner's result as part of recovery,
+          // so every concurrent submission's key is durably recorded even
+          // though only one raw/evidence row was written.
+          const existing = await resolveAndBind(apiKey, fp, idempotencyKey, requestId)
           if (existing) return { evidence: existing.evidence, replayed: true }
           await new Promise((r) => setTimeout(r, 20))
         }

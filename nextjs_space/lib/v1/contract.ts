@@ -22,13 +22,63 @@ export type ObservationPrecision = (typeof PRECISION)[number]
 const boundedString = (max: number) =>
   z.string().min(1).max(max).refine((s) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(s), 'Control characters are not permitted')
 
-// An ISO-8601 date or date-time. We do not coerce; an invalid string is a
-// validation error rather than a silently-adjusted date.
+// An ISO-8601 date or date-time. We do not coerce with `new Date(...)` because
+// that silently accepts ambiguous ("01/02/2020"), non-padded ("2024-1-1") and
+// impossible ("2024-02-30") values, rolling them into a different date. Instead
+// we accept ONLY:
+//   * a calendar date  YYYY-MM-DD                       (zero-padded, real date)
+//   * an RFC3339 date-time with a UTC offset or 'Z'     (fractional secs ok)
+// and reject everything else. This keeps uncertainty explicit: a bad string is
+// a validation error, never a silently-adjusted date.
+const ISO_DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+const ISO_DATE_TIME =
+  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:[Zz]|([+-])(\d{2}):(\d{2}))$/
+
+function isLeapYear(y: number): boolean {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
+}
+
+// True only for a real, zero-padded Gregorian calendar date. Rejects month 00,
+// month 13, day 00, Feb 30, Apr 31, etc.
+function isRealCalendarDate(y: number, m: number, d: number): boolean {
+  if (m < 1 || m > 12) return false
+  if (d < 1) return false
+  const monthLengths = [31, isLeapYear(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  return d <= monthLengths[m - 1]
+}
+
+function isStrictIsoDateOrDateTime(s: string): boolean {
+  const dateOnly = ISO_DATE_ONLY.exec(s)
+  if (dateOnly) {
+    const [, y, m, d] = dateOnly
+    return isRealCalendarDate(Number(y), Number(m), Number(d))
+  }
+  const dateTime = ISO_DATE_TIME.exec(s)
+  if (dateTime) {
+    const [, y, m, d, hh, mm, ss, offSign, offHH, offMM] = dateTime
+    if (!isRealCalendarDate(Number(y), Number(m), Number(d))) return false
+    const hour = Number(hh)
+    const minute = Number(mm)
+    const second = Number(ss)
+    // Allow 60 to accommodate leap seconds; reject anything beyond.
+    if (hour > 23 || minute > 59 || second > 60) return false
+    // If an explicit numeric offset is present, validate its range.
+    if (offSign) {
+      if (Number(offHH) > 23 || Number(offMM) > 59) return false
+    }
+    return true
+  }
+  return false
+}
+
 const isoDateTime = z
   .string()
-  .min(4)
+  .min(10)
   .max(40)
-  .refine((s) => !Number.isNaN(new Date(s).getTime()), 'Must be an ISO-8601 date or date-time')
+  .refine(
+    isStrictIsoDateOrDateTime,
+    'Must be a calendar date (YYYY-MM-DD) or an RFC3339 date-time with a UTC offset or Z',
+  )
 
 // Geography is stored verbatim. We validate coordinate ranges only when both
 // are present, and never fabricate a missing pair.

@@ -266,6 +266,226 @@ test('reusing an idempotency key with a different payload is a deterministic con
   }
 })
 
+// ---- Idempotency-key binding on replay (release blocker) -----------------
+// Every supplied idempotency key must become durably bound to the first payload
+// it represents — even when the replay was resolved by payload-fingerprint
+// dedup rather than an existing ledger entry. Otherwise a key could be "used"
+// on a replay yet remain free to be reused later with a DIFFERENT payload.
+
+test('A: submit P without a key, replay P with key K, then K reused with a different payload Q is a 409', async () => {
+  const h = await harness()
+  try {
+    const key = await keyFor(h)
+    // P first with NO idempotency key — dedups purely by fingerprint.
+    const p1 = await h.handle('POST', '/api/v1/evidence', { token: key.token, body: sampleEvidence })
+    assert.equal(p1.status, 201)
+
+    // P again WITH a fresh key K — resolves via fingerprint dedup and must now
+    // bind K to the existing evidence.
+    const p2 = await h.handle('POST', '/api/v1/evidence', {
+      token: key.token, body: sampleEvidence, headers: { 'idempotency-key': 'K' },
+    })
+    assert.equal(p2.status, 200)
+    assert.equal(p2.json.replayed, true)
+    assert.equal(p2.json.id, p1.json.id)
+
+    // K is now durably bound: reusing it with a materially different payload Q
+    // must return the structured 409.
+    const q = await h.handle('POST', '/api/v1/evidence', {
+      token: key.token, body: { ...sampleEvidence, evidence_type: 'different' }, headers: { 'idempotency-key': 'K' },
+    })
+    assert.equal(q.status, 409)
+    assert.equal(q.json.error.type, 'idempotency_error')
+
+    // Exactly one ledger row for K, pointing at P's evidence; no duplicate rows.
+    const idem = await h.db.query<any>('SELECT * FROM "PlatformIdempotency" WHERE "idempotencyKey" = $1', ['K'])
+    assert.equal(idem.length, 1)
+    assert.equal(idem[0].evidenceId, p1.json.id)
+    const raws = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformRawEvidence"', [])
+    const ev = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformEvidence"', [])
+    assert.equal(Number(raws[0].c), 1)
+    assert.equal(Number(ev[0].c), 1)
+  } finally {
+    await h.pg.close()
+  }
+})
+
+test('B: submit P with K1, replay P with K2, then K2 reused with a different payload Q is a 409', async () => {
+  const h = await harness()
+  try {
+    const key = await keyFor(h)
+    const p1 = await h.handle('POST', '/api/v1/evidence', {
+      token: key.token, body: sampleEvidence, headers: { 'idempotency-key': 'K1' },
+    })
+    assert.equal(p1.status, 201)
+
+    // Same payload under a DIFFERENT key K2 — replay by fingerprint, binds K2.
+    const p2 = await h.handle('POST', '/api/v1/evidence', {
+      token: key.token, body: sampleEvidence, headers: { 'idempotency-key': 'K2' },
+    })
+    assert.equal(p2.status, 200)
+    assert.equal(p2.json.replayed, true)
+    assert.equal(p2.json.id, p1.json.id)
+
+    // K2 is now bound; reusing it with a different payload must 409.
+    const q = await h.handle('POST', '/api/v1/evidence', {
+      token: key.token, body: { ...sampleEvidence, evidence_type: 'different' }, headers: { 'idempotency-key': 'K2' },
+    })
+    assert.equal(q.status, 409)
+    assert.equal(q.json.error.type, 'idempotency_error')
+
+    // Two ledger rows (K1, K2) both bound to the SAME single evidence object.
+    const idem = await h.db.query<any>('SELECT * FROM "PlatformIdempotency" ORDER BY "idempotencyKey"', [])
+    assert.equal(idem.length, 2)
+    assert.deepEqual(idem.map((r: any) => r.idempotencyKey), ['K1', 'K2'])
+    assert.equal(idem[0].evidenceId, p1.json.id)
+    assert.equal(idem[1].evidenceId, p1.json.id)
+    const ev = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformEvidence"', [])
+    assert.equal(Number(ev[0].c), 1)
+  } finally {
+    await h.pg.close()
+  }
+})
+
+test('C: concurrent identical submissions with distinct keys => one raw, one evidence, a ledger row per key', async () => {
+  const h = await harness()
+  try {
+    const key = await keyFor(h)
+    const apiKey = await h.service.findKeyByLookup(parseToken(key.token)!.lookupId)
+    const keys = ['c-1', 'c-2', 'c-3', 'c-4', 'c-5', 'c-6']
+
+    const results = await Promise.all(
+      keys.map((k, i) =>
+        h.service.createEvidence({
+          apiKey: apiKey!, body: sampleEvidence as any, rawBody: sampleEvidence, idempotencyKey: k, requestId: `req_c_${i}`,
+        }),
+      ),
+    )
+
+    // Every concurrent submission resolves to the SAME single evidence object.
+    const evidenceIds = new Set(results.map((r) => r.evidence.id))
+    assert.equal(evidenceIds.size, 1)
+    const theEvidenceId = [...evidenceIds][0]
+
+    // Exactly one raw row and one evidence row — no duplicates despite the race.
+    const raws = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformRawEvidence"', [])
+    const ev = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformEvidence"', [])
+    assert.equal(Number(raws[0].c), 1)
+    assert.equal(Number(ev[0].c), 1)
+
+    // Durable ledger entry for EVERY supplied key, each bound to that one evidence.
+    const idem = await h.db.query<any>('SELECT * FROM "PlatformIdempotency"', [])
+    assert.equal(idem.length, keys.length)
+    const distinctKeys = new Set(idem.map((r: any) => r.idempotencyKey))
+    assert.equal(distinctKeys.size, keys.length)
+    for (const row of idem) {
+      assert.equal(row.evidenceId, theEvidenceId)
+      assert.equal(row.requestHash, idem[0].requestHash)
+    }
+  } finally {
+    await h.pg.close()
+  }
+})
+
+test('D: row counts and evidence ids prove no duplicate evidence across many keyed replays', async () => {
+  const h = await harness()
+  try {
+    const key = await keyFor(h)
+    // First submission with no key.
+    const first = await h.handle('POST', '/api/v1/evidence', { token: key.token, body: sampleEvidence })
+    assert.equal(first.status, 201)
+
+    // A series of replays under distinct keys — each binds, none duplicates.
+    for (const k of ['d-1', 'd-2', 'd-3']) {
+      const r = await h.handle('POST', '/api/v1/evidence', {
+        token: key.token, body: sampleEvidence, headers: { 'idempotency-key': k },
+      })
+      assert.equal(r.status, 200)
+      assert.equal(r.json.replayed, true)
+      assert.equal(r.json.id, first.json.id)
+    }
+
+    // Still a single raw + single evidence row; ledger holds one row per key.
+    const raws = await h.db.query<any>('SELECT * FROM "PlatformRawEvidence"', [])
+    const ev = await h.db.query<any>('SELECT * FROM "PlatformEvidence"', [])
+    assert.equal(raws.length, 1)
+    assert.equal(ev.length, 1)
+    assert.equal(ev[0].id, first.json.id)
+    const idem = await h.db.query<any>('SELECT * FROM "PlatformIdempotency" ORDER BY "idempotencyKey"', [])
+    assert.equal(idem.length, 3)
+    assert.deepEqual(idem.map((r: any) => r.idempotencyKey), ['d-1', 'd-2', 'd-3'])
+    for (const row of idem) assert.equal(row.evidenceId, first.json.id)
+  } finally {
+    await h.pg.close()
+  }
+})
+
+// ---- Strict ISO date validation (release blocker) ------------------------
+// The contract must reject ambiguous, non-padded, impossible, or timezone-less
+// date/date-time values instead of letting `new Date(...)` silently coerce them.
+
+test('strict ISO validation rejects ambiguous, non-padded, impossible and tz-less dates with a 400', async () => {
+  const h = await harness()
+  try {
+    const key = await keyFor(h)
+    const bad = [
+      '01/02/2020',            // ambiguous slash date
+      '2024-1-1',              // non-padded
+      '2024-02-30',            // impossible calendar date
+      '2024-13-01',            // impossible month
+      '2024-00-10',            // month 00
+      '2024-04-31',            // April has 30 days
+      '2023-02-29',            // not a leap year
+      '2024-06-15T12:00:00',   // no timezone
+      'not-a-date',
+      '2024/06/15',
+    ]
+    for (const value of bad) {
+      const res = await h.handle('POST', '/api/v1/evidence', {
+        token: key.token, body: { ...sampleEvidence, observation_time: value },
+      })
+      assert.equal(res.status, 400, `expected 400 for ${value}`)
+      assert.equal(res.json.error.type, 'validation_error')
+      assert.equal(res.json.error.param, 'observation_time')
+    }
+    // No rows written for any rejected submission.
+    const raws = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformRawEvidence"', [])
+    const ev = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformEvidence"', [])
+    const idem = await h.db.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM "PlatformIdempotency"', [])
+    assert.equal(Number(raws[0].c), 0)
+    assert.equal(Number(ev[0].c), 0)
+    assert.equal(Number(idem[0].c), 0)
+  } finally {
+    await h.pg.close()
+  }
+})
+
+test('strict ISO validation accepts valid calendar dates and RFC3339 date-times', async () => {
+  const h = await harness()
+  try {
+    const key = await keyFor(h)
+    const good = [
+      '2022-04-03',                    // calendar date
+      '2024-02-29',                    // valid leap day
+      '2024-06-15T12:00:00Z',          // Z
+      '2024-06-15T12:00:00.500Z',      // fractional seconds
+      '2024-06-15T12:00:00+01:00',     // explicit offset
+      '2024-06-15T12:00:00-05:30',     // negative offset
+    ]
+    let i = 0
+    for (const value of good) {
+      const res = await h.handle('POST', '/api/v1/evidence', {
+        token: key.token,
+        // Vary source_data so each is a distinct payload (own record).
+        body: { ...sampleEvidence, observation_time: value, source_data: { n: i++ } },
+      })
+      assert.equal(res.status, 201, `expected 201 for ${value}: ${JSON.stringify(res.json)}`)
+    }
+  } finally {
+    await h.pg.close()
+  }
+})
+
 // ---- Downstream failure isolation ---------------------------------------
 
 test('downstream processing failure leaves raw and canonical evidence intact', async () => {
