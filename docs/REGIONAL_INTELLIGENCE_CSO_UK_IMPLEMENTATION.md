@@ -26,6 +26,31 @@ The first release must support a compelling demonstration for councils/destinati
 
 # P0 — repair the railway before adding cargo
 
+## Authoritative ingest contract from read-only audit (26 Sep 2026)
+
+Implementation MUST follow the audited repository contract rather than older assumptions:
+
+- The only implemented app ingest endpoint at audited HEAD is `POST /api/ingest/grok`.
+- Auth header is `x-bioveracity-ingest-key`; server compares it to `process.env.BIOVERACITY_INGEST_KEY`.
+- Request flow is: auth → JSON parse → schema 2.1 validation → fingerprint dedup → **RawIngest raw-first persistence** → interpretation into ObservationCandidate / CommercialSignal / EntityCandidate → RawIngest status roll-up.
+- A successful response returns `success:true`, `rawIngestId`, `observationsReceived`, and status. A duplicate is also success and returns the existing `rawIngestId`.
+- Interpretation failure must preserve RawIngest, mark it FAILED and record the bounded error.
+- Nothing becomes public merely because ingest accepted it. Candidate normalisation/publication remains a separate reviewed lifecycle.
+- There is **no StagedDiscovery model**. Do not create one merely to match operational language. “Staged” outside the app means a payload waiting in the external Scout runtime. Once accepted by this app, lifecycle state is represented by RawIngest / ObservationCandidate statuses and timestamps.
+- Existing RawIngest lifecycle: FOUND → PARSED → VERIFICATION_PENDING → VERIFIED → NORMALISED → PUBLISHED, plus FAILED.
+- Existing ObservationCandidate lifecycle: CANDIDATE → NEEDS_REVIEW → VERIFIED → NORMALISED → PUBLISHED, or REJECTED.
+- Existing ingest-related models are RawIngest, ObservationCandidate, CommercialSignal and EntityCandidate. Reuse them unless an implementation gap is demonstrated.
+- The server does **not** read `BIOVERACITY_INGEST_URL`. That URL belongs only in the external Scout sender runtime.
+- Do not introduce `INGEST_SECRET` or `CONNECTOR_WRITE_ENABLED` as though they already exist. The audited app auth variable is `BIOVERACITY_INGEST_KEY`.
+- No scheduler is version-controlled in the audited repo. Scout/Abacus scheduling is external and must be verified separately.
+- Audited repo contains neither `/api/ingest/external` nor `/api/ingest/connectors`. Do not invent those routes simply to satisfy old scheduler configuration; first establish the intended source contract and deliberately repoint/consolidate external tasks.
+- There is currently no retry/dead-letter queue or structured logging framework in the ingest path. DB lifecycle state + HTTP responses are the current audit trail.
+
+### Today's Niamh-safe rule
+
+Niamh may log in while this work is underway. Preserve all existing customer/workspace data and authentication behaviour. No migration, seed, replay or production write may be used as a shortcut for her demo. If the new regional intelligence feature is incomplete, keep it behind an explicit feature/config gate rather than destabilising her existing journey.
+
+
 ## Scout direct ingest
 
 Current controller evidence says Scout discovers payloads but its runtime lacks:
@@ -42,12 +67,20 @@ Production route expected:
 - Scout receives URL + key in its actual execution runtime;
 - send exactly ONE staged canary first;
 - require HTTP 200;
-- response includes `rawIngestId`;
-- record is visible in authenticated `/admin/ingest`;
+- response includes `rawIngestId` and app lifecycle status;
+- record exists as `RawIngest` and is visible in authenticated `/admin/ingest`;
 - source URL, retrieval timestamp and raw payload survive;
-- only after canary proof may the backlog be replayed;
-- replay is idempotent by fingerprint and reports accepted/duplicate/failed counts;
+- only after canary proof may the external Scout backlog be replayed;
+- replay is idempotent via existing `RawIngest.payloadFingerprint @unique` behaviour and reports accepted/duplicate/failed counts;
 - no customer/private records are modified by the test.
+
+## External Scout sender contract
+
+The sender is outside this repository. Configure/verify there:
+- `BIOVERACITY_INGEST_URL=https://bioveracity.com/api/ingest/grok`
+- `BIOVERACITY_INGEST_KEY=<same secret as production server>`
+
+Never print the value. The external sender must record attempt timestamp, HTTP status, returned rawIngestId/status, bounded error, and retry count. A local staged file is NOT an app RawIngest row.
 
 ## 6-hour connector train
 
