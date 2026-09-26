@@ -1,0 +1,24 @@
+{
+  "name": "@bioveracity/sdk",
+  "version": "1.0.0",
+  "description": "Thin TypeScript client for the BioVeracity Developer Platform V1. Delivery only — no environmental analysis or source-specific business logic.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
