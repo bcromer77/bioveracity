@@ -1782,8 +1782,9 @@ model PlatformRawEvidence {
   apiKeyId           String
   apiKey             PlatformApiKey  @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
   mode               String // "test" | "live"
-  // Deterministic SHA-256 fingerprint of the submitted body. Unique per mode
-  // so identical resubmissions dedup rather than duplicate.
+  // Deterministic SHA-256 fingerprint of the submitted body. Unique per
+  // (apiKeyId, mode) so identical resubmissions from the SAME key dedup, while
+  // two independent keys never collide or leak each other's evidence.
   payloadFingerprint String
   rawBody            Json
   idempotencyKey     String?
@@ -1791,7 +1792,7 @@ model PlatformRawEvidence {
   createdAt          DateTime        @default(now())
   evidence           PlatformEvidence?
 
-  @@unique([mode, payloadFingerprint])
+  @@unique([apiKeyId, mode, payloadFingerprint])
   @@index([apiKeyId])
   @@index([requestId])
 }
