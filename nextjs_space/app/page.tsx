@@ -22,25 +22,16 @@ const ROUTES = [
 export default function HomePage() {
   return (
     <PublicShell>
-      <section className="bv-hero">
-        <div className="bv-split">
-          <div>
-            <h1>The otter hasn’t come back.<br /><em>When did it leave?</em></h1>
-            <p className="bv-intro">Nature does not always announce what has changed. BioVeracity gives every place a shared memory—built from local observations, public records and professional evidence.</p>
-            <div className="bv-actions">
-              <Link className="bv-button" href="/wild">Explore a living place</Link>
-              <Link className="bv-text-link" href="/professionals">Follow the evidence →</Link>
-            </div>
+      <section className="bv-hero bv-hero-otter">
+        <img className="bv-hero-otter-img" src="/hero-otter.jpg" alt="A wild Eurasian otter at the water's edge — the kind of presence a place can lose without anyone recording it" width={1400} height={1138} />
+        <div className="bv-hero-otter-overlay">
+          <h1>The otter hasn’t come back.<br /><em>When did it leave?</em></h1>
+          <p className="bv-intro">Nature does not always announce what has changed. BioVeracity gives every place a shared memory—built from local observations, public records and professional evidence.</p>
+          <div className="bv-actions">
+            <Link className="bv-button" href="/wild">Explore a living place</Link>
+            <Link className="bv-text-link" href="/professionals">Follow the evidence →</Link>
           </div>
-          <figure className="bv-hero-figure bv-wild-hero-photo">
-            <div className="bv-preview-photo">
-              <img src="/hero-otter.jpg" alt="A wild Eurasian otter at the water's edge — the kind of presence a place can lose without anyone recording it" width={1400} height={1138} />
-              <figcaption className="bv-photo-caption">
-                <span className="bv-photo-species">Eurasian otter</span>
-                <span className="bv-photo-credit">Photograph: Byrdyak (CC BY-SA 4.0)</span>
-              </figcaption>
-            </div>
-          </figure>
+          <p className="bv-hero-otter-credit">Eurasian otter · Photograph: Byrdyak (CC BY-SA 4.0)</p>
         </div>
       </section>
 
