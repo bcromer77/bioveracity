@@ -127,6 +127,9 @@ export function IngestMonitor({ tiles, rows }: { tiles: Tile[]; rows: Row[] }) {
           interpreted. Incoming records are candidates and proposals for review —
           they do not become public evidence automatically.
         </p>
+        <EvidenceLink href="/admin/platform" className="mt-3 inline-block text-sm underline">
+          Developer Platform V1 evidence (read-only)
+        </EvidenceLink>
       </header>
 
       {/* Status tiles */}
