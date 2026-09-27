@@ -425,7 +425,9 @@ export function platformService(db: Database, options: ServiceOptions = {}) {
     if (!evidence) throw internalError()
     if (options.processor) {
       try {
-        await options.processor(evidence)
+        // Persist the in-flight PROCESSING state before the processor runs.
+        await db.query('UPDATE "PlatformEvidence" SET "processingStatus" = $1 WHERE "id" = $2', ['PROCESSING', evId])
+        await options.processor({ ...evidence, processing_status: 'PROCESSING' })
         await db.query('UPDATE "PlatformEvidence" SET "processingStatus" = $1 WHERE "id" = $2', ['PROCESSED', evId])
       } catch (e) {
         const detail = redactSecrets(String((e as Error)?.message ?? e)).slice(0, 500)
