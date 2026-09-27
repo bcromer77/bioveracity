@@ -75,7 +75,7 @@ export type Plan = {
 }
 export type Snapshot = {
   profile: Profile
-  plan: Plan
+  plan: Plan | null
   photoIds: string[]
   approvedAt: string
   reviewedAt?: string
@@ -399,7 +399,8 @@ export function editCampaigns(plan: Plan, raw: unknown): Plan {
     }),
   }
 }
-export function activeCampaign(plan: Plan, now = new Date()): Campaign | null {
+export function activeCampaign(plan: Plan | null | undefined, now = new Date()): Campaign | null {
+  if (!plan || !Array.isArray(plan.campaigns)) return null
   const [day, month, year] = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/Dublin',
     day: '2-digit',

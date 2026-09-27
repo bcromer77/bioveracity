@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { EvidenceLink } from '@/components/evidence-link'
-import type { Snapshot } from '@/lib/wild-hubs/domain'
+import type { Plan, Snapshot } from '@/lib/wild-hubs/domain'
 type Review = { id: string; hubId: string; revision: number; snapshot: Snapshot; photos: { id: string; caption: string; credit: string }[] }
 export function WildReviewQueue() {
   const [reviews, setReviews] = useState<Review[]>([])
@@ -39,12 +39,7 @@ export function WildReviewQueue() {
       <p>{r.snapshot.profile.county} · {r.snapshot.profile.kind} · Submitted revision {r.revision}</p>
       <p className="whitespace-pre-wrap">{r.snapshot.profile.story}</p>
       {r.snapshot.profile.website && <EvidenceLink href={r.snapshot.profile.website}>Submitted website reference</EvidenceLink>}
-      <p>Interests: {r.snapshot.profile.interests.join(', ')} · Plan year {r.snapshot.plan.year} · Basis: {r.snapshot.plan.basis}</p>
-      {r.snapshot.plan.trend && <details><summary>Owner-supplied historical Trends data</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(r.snapshot.plan.trend,null,2)}</pre></details>}
-      {r.snapshot.plan.sources.length > 0 && <details><summary>Retained source context</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(r.snapshot.plan.sources,null,2)}</pre></details>}
-      {r.snapshot.plan.campaigns.map(m => <section key={m.month} className="rounded border p-3">
-        <h3 className="font-semibold">{m.month}. {m.title}</h3><p>{m.introduction}</p><p>{m.activity}</p><p>{m.caption}</p><p>{m.planningNote}</p>
-      </section>)}
+      <ReviewPlanDetails interests={r.snapshot.profile.interests} plan={r.snapshot.plan}/>
       <p>Only the selected photos below will be published. Wider county API records update separately and do not establish species presence at this venue.</p>
       {r.photos.map(p => <figure key={p.id}><ReviewPhoto reviewId={r.id} photoId={p.id}/><figcaption>{p.caption} · {p.credit}</figcaption></figure>)}
       <label className="block">Review notes and checks performed (required)<textarea className="block w-full rounded border p-2" maxLength={2000} value={notes[r.id] || ''} disabled={busy} onChange={e => setNotes({...notes,[r.id]:e.target.value})}/></label>
@@ -52,6 +47,17 @@ export function WildReviewQueue() {
       <div className="flex gap-4"><button disabled={busy || !confirmed[r.id] || !notes[r.id]?.trim()} onClick={() => decide(r,'approve')}>Approve and publish reviewed version</button><button disabled={busy || !confirmed[r.id] || !notes[r.id]?.trim()} onClick={() => decide(r,'reject')}>Return for changes</button></div>
     </article>)}
   </div>
+}
+export function ReviewPlanDetails({interests,plan}:{interests:string[];plan:Plan|null}) {
+  if (!plan) return <p>Interests: {interests.join(', ')} · No seasonal plan submitted</p>
+  return <>
+    <p>Interests: {interests.join(', ')} · Plan year {plan.year} · Basis: {plan.basis}</p>
+    {plan.trend && <details><summary>Owner-supplied historical Trends data</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(plan.trend,null,2)}</pre></details>}
+    {plan.sources.length > 0 && <details><summary>Retained source context</summary><pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(plan.sources,null,2)}</pre></details>}
+    {plan.campaigns.map(m => <section key={m.month} className="rounded border p-3">
+      <h3 className="font-semibold">{m.month}. {m.title}</h3><p>{m.introduction}</p><p>{m.activity}</p><p>{m.caption}</p><p>{m.planningNote}</p>
+    </section>)}
+  </>
 }
 function ReviewPhoto({reviewId,photoId}:{reviewId:string;photoId:string}) {
   return <img className="max-h-80 object-contain" src={`/api/wild/reviews/${reviewId}/photos/${photoId}`} alt="Selected venue photo for editorial review"/>

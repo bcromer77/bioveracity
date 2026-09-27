@@ -63,7 +63,7 @@ export function reviewService(db: Database, actorId: string) {
         const approve = input.action === 'approve'
         if (approve) {
           const year = new Date().getUTCFullYear()
-          if (review.snapshot.plan.year < year || review.snapshot.plan.year > year + 1)
+          if (review.snapshot.plan && (review.snapshot.plan.year < year || review.snapshot.plan.year > year + 1))
             throw new HubError(409, 'The owner must submit a plan for this year or next year.')
           const available = await sql.query<{ id: string }>('SELECT "id" FROM "WildHubPhoto" WHERE "hubId"=$1', [review.hubId])
           if (review.snapshot.photoIds.some(id => !available.some(p => p.id === id)))
