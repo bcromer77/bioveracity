@@ -73,7 +73,7 @@ export function PublishedHub({
       </section>
       {!!journal.length && <section className="bv-section"><p className="bv-eyebrow">Your place through time</p><h2>Many ways of seeing.</h2><p>Guest photographs, ordered by the date observed. These are community contributions, not verified species identifications. Not photographed does not mean not present.</p><div className="bv-photo-grid">{journal.map(p=><figure key={p.id}><img src={`/api/wild/journal/photos/${p.id}`} alt={p.caption} loading="lazy"/><figcaption>{p.caption} · {p.credit}<p>{p.observedOn || 'Date taken unknown'} · {p.location}</p></figcaption></figure>)}</div></section>}
       {contributionsEnabled && <VenuePhotoContribute hubId={id}/>}
-      {campaign && (
+      {campaign && plan && (
         <section className="bv-section bv-tinted bv-split">
           <div>
             <p className="bv-eyebrow">
