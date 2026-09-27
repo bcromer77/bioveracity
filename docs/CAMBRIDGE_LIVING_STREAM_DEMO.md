@@ -115,6 +115,31 @@ Before implementation inspect the existing Fodder/WildHub implementation, PR 57 
 
 The same architecture must remain capable of expressing woodland, wetland, river, club, venue, estate and infrastructure places without separate engines.
 
+
+## Multi-user place stewardship
+
+A BioVeracity Place must support more than one authorised custodian/guardian. This is a reusable place capability, not a Cambridge-specific account system.
+
+A family, club committee, estate team, council team or venue staff group may collectively care for the same Place while retaining individual user identities.
+
+Requirements for later implementation:
+
+- one canonical Place may have multiple individually authenticated members;
+- do not create shared passwords or one family email/login;
+- invite additional members to an existing Place;
+- use explicit place-scoped roles/permissions (minimum design: owner/admin, custodian/editor, contributor/viewer as warranted by the existing model);
+- every contribution, moderation decision, rights action, publication, acknowledgement and configuration change retains the acting user's identity and audit trail;
+- a user may belong to multiple Places without data leaking between them;
+- removing a member must not delete the Place memory or provenance of actions they previously took;
+- account recovery, Terms/privacy acceptance and rights records remain per person where legally/technically appropriate;
+- family/team members can all collect observations and photographs into the same Place memory;
+- sensitive evidence and exact locations remain permission-controlled;
+- public visitors do not need to become custodians merely to contribute through an allowed guest flow.
+
+Before implementation, inspect the existing user/workspace/WildHub ownership and collaborator models and extend the smallest proven model. Do not introduce a duplicate tenancy or identity system.
+
+Acceptance must include at least: two authorised users for one Place can sign in separately, contribute to the same Place, see the appropriate shared custodian queue, retain distinct attribution/audit identities, and cannot access another Place unless separately authorised.
+
 ## Demo acceptance
 
 Return:
