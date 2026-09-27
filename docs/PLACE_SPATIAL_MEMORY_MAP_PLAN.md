@@ -183,6 +183,36 @@ Before claiming 500-venue readiness, test with a synthetic non-production datase
 
 No synthetic record may be presented as genuine evidence.
 
+## Venue creation must be data-driven, not code-driven
+
+Opening a new Living Place must **not** require a new branch, pull request, deployment, migration or venue-specific source file.
+
+The existing `WildVenueSetup` / venue launch flow is the default provisioning path and must remain the reusable control plane for new places.
+
+A new venue should be creatable at runtime by an authorised operator through the existing launch desk and ownership flow, using place data/configuration rather than application-code changes.
+
+The canonical journey is:
+
+1. prepare the venue in the launch desk;
+2. issue the setup/claim link to the confirmed representative;
+3. owner claims the place and receives the existing WildHub/Living Place workspace;
+4. owner adds story, media, seasonal material and approved place configuration;
+5. reviewer approves publication;
+6. the permanent public place/QR identity is available;
+7. optional source trains, map/spatial rules and visual treatments are attached through reusable configuration/registries rather than bespoke venue branches.
+
+Hard invariant:
+
+> **A venue is data, not a deployment.**
+
+Fodder is the design reference, not a hard-coded exception.
+
+PRs are only justified when BioVeracity itself gains a new reusable capability that benefits multiple places — for example a new evidence connector, rights model, map behaviour, media type or workflow. They are not justified merely because a new café, club, wetland, estate, hotel, farm or visitor attraction joins.
+
+Acceptance must prove that, after the shared Living Place capability is released, at least two new synthetic venues can be created, claimed, curated, reviewed and published through the existing runtime onboarding flow with **zero repository changes** between them.
+
+The 50-place batch intake is an operator convenience, not a requirement that every venue be pre-coded. Venue-specific factual content belongs in persisted place records/configuration, never in a new application branch unless there is a documented technical reason.
+
 ## Proposed delivery order
 
 1. Complete Gate 2 first. Do not interrupt current QA release work.
