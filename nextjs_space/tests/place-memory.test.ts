@@ -9,11 +9,21 @@ import { parseEvidenceCreate } from '../lib/v1/contract'
 import { parseToken } from '../lib/v1/keys'
 import { platformService } from '../lib/v1/service'
 import { v1ServiceOptions } from '../lib/v1/processor'
+import type { EvidencePublic } from '../lib/v1/service'
 import {
   KERRY_001_EXTERNAL_ID,
   KERRY_PLACE_ID,
   NPWS_SPA_PAGE_URL,
 } from '../lib/place-memory/kerry-001'
+import {
+  PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS,
+  PRODUCTION_PLACE_MEMORY_PROJECTORS,
+} from '../lib/place-memory/production-registry'
+import {
+  createPlaceMemoryProjectorRegistry,
+  registerPlaceMemoryProjector,
+  type PlaceMemoryProjectorAdapter,
+} from '../lib/place-memory/registry'
 import { searchPlaceMemory } from '../lib/place-memory/retrieval'
 import { tracePlaceMemoryProvenance } from '../lib/place-memory/provenance'
 import { validateQrObservationDraft } from '../lib/place-memory/qr-contract'
@@ -271,4 +281,53 @@ test('frozen public V1 route surface remains exactly four routes and no Place Me
   const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? walk(join(dir, entry.name)) : [join(dir, entry.name).slice(root.length + 1)])
   assert.deepEqual(walk(root).sort(), ['evidence/[id]/route.ts', 'evidence/route.ts', 'health/route.ts', 'requests/[id]/route.ts'])
+})
+
+test('typed projector registry keeps production KERRY-only while a hypothetical adapter needs registration only', async () => {
+  assert.deepEqual(PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS, ['KERRY-001'])
+  assert.equal(PRODUCTION_PLACE_MEMORY_PROJECTORS.length, 1)
+  assert.doesNotMatch(readFileSync('lib/place-memory/registry.ts', 'utf8'), /KERRY|NPWS/)
+
+  type HypotheticalRecord = Readonly<{ evidenceId: string; marker: 'HYPOTHETICAL-002' }>
+  let projected: HypotheticalRecord | null = null
+  const hypotheticalAdapter = {
+    id: 'HYPOTHETICAL-002',
+    adapt(evidence) {
+      const metadata = evidence.metadata as { place_memory?: { train?: unknown } } | null
+      return metadata?.place_memory?.train === 'HYPOTHETICAL-002'
+        ? { evidenceId: evidence.id, marker: 'HYPOTHETICAL-002' as const }
+        : null
+    },
+    async project(_db, record) {
+      projected = record
+      return { projected: true, projectorId: record.marker, evidenceId: record.evidenceId }
+    },
+  } satisfies PlaceMemoryProjectorAdapter<HypotheticalRecord>
+  const hypothetical = registerPlaceMemoryProjector(hypotheticalAdapter)
+  const unusedDb = {} as Database
+  const evidence: EvidencePublic = {
+    id: 'ev_hypothetical_002', object: 'evidence', mode: 'live', contract_version: 'v1',
+    raw_evidence_id: 'raw_hypothetical_002', provider: 'hypothetical', source_external_id: 'record-002',
+    evidence_type: 'bounded_test', publisher: 'Hypothetical Publisher', source_url: null, geography: null,
+    observation_time: null, observation_precision: null, publication_time: null, retrieval_time: null,
+    source_data: null, metadata: { place_memory: { train: 'HYPOTHETICAL-002' } }, provenance: null,
+    processing_status: 'PROCESSING', request_id: 'req_hypothetical_002', created_at: '2026-09-28T12:00:00.000Z',
+  }
+
+  const production = createPlaceMemoryProjectorRegistry(unusedDb, PRODUCTION_PLACE_MEMORY_PROJECTORS)
+  assert.deepEqual(await production(evidence), { projected: false, reason: 'unregistered' })
+
+  const extended = createPlaceMemoryProjectorRegistry(unusedDb, [
+    ...PRODUCTION_PLACE_MEMORY_PROJECTORS,
+    hypothetical,
+  ])
+  assert.deepEqual(await extended(evidence), {
+    projected: true, projectorId: 'HYPOTHETICAL-002', evidenceId: 'ev_hypothetical_002',
+  })
+  assert.deepEqual(projected, { evidenceId: 'ev_hypothetical_002', marker: 'HYPOTHETICAL-002' })
+  assert.deepEqual(PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS, ['KERRY-001'])
+  assert.throws(
+    () => createPlaceMemoryProjectorRegistry(unusedDb, [hypothetical, hypothetical]),
+    /place_memory_registry_invalid:duplicate_id:HYPOTHETICAL-002/,
+  )
 })

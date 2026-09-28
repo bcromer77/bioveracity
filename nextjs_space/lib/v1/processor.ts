@@ -11,7 +11,7 @@
 // ==========================================================================
 
 import type { Database, Sql } from '@/lib/workspaces/service'
-import { createPlaceMemoryProjector } from '@/lib/place-memory/projector'
+import { createProductionPlaceMemoryProjector } from '@/lib/place-memory/production-registry'
 import { CONTRACT_VERSION, fingerprint, parseEvidenceCreate } from './contract'
 import type { EvidencePublic, ServiceOptions } from './service'
 
@@ -84,7 +84,7 @@ export function createV1Processor(db: Sql): NonNullable<ServiceOptions['processo
 
 export const v1ServiceOptions = (db: Database): ServiceOptions => {
   const integrity = createV1Processor(db)
-  const placeMemory = createPlaceMemoryProjector(db)
+  const placeMemory = createProductionPlaceMemoryProjector(db)
   return {
     processor: async (evidence) => {
       // Integrity always completes first. Place Memory is an additive,

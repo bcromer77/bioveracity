@@ -1,5 +1,5 @@
 import type { Database, Sql } from '@/lib/workspaces/service'
-import type { EvidencePublic } from '@/lib/v1/service'
+import type { PlaceMemoryProjectorAdapter } from './registry'
 import {
   KERRY_BIRD_TERMS,
   KERRY_PLACE_ID,
@@ -260,9 +260,8 @@ export async function projectKerry001(db: Database, record: Kerry001Record) {
   })
 }
 
-export function createPlaceMemoryProjector(db: Database) {
-  return async (evidence: EvidencePublic) => {
-    const kerry = parseKerry001Evidence(evidence)
-    if (kerry) await projectKerry001(db, kerry)
-  }
-}
+export const kerry001ProjectionAdapter = Object.freeze({
+  id: 'KERRY-001',
+  adapt: parseKerry001Evidence,
+  project: projectKerry001,
+} satisfies PlaceMemoryProjectorAdapter<Kerry001Record>)

@@ -25,6 +25,8 @@ Proposed cargo SHA-256: `3ed8d59ec262a13bf4d163f65d2194579cbd6354044afd9b9544361
 - Test-mode Platform evidence cannot project into or be retrieved from Place Memory.
 - Access control is applied in SQL before text is supplied to a semantic reranker.
 - No public submission or Place Memory HTTP endpoint is introduced in V1.
+- The source-neutral projector registry contains no Kerry or NPWS semantics. Production
+  explicitly registers only the typed KERRY-001 adapter.
 
 ## Implementation map
 
@@ -70,6 +72,19 @@ Proposed cargo SHA-256: `3ed8d59ec262a13bf4d163f65d2194579cbd6354044afd9b9544361
 
 Together these support `PLACE × TIME × ENTITY × EVENT × SOURCE × EVIDENCE` without
 making a PDF or search vector the knowledge object.
+
+### Projector boundary
+
+`PlaceMemoryProjectorAdapter<TRecord>` binds one source-specific parser to a projector
+that accepts exactly that parser's typed record. `registry.ts` performs only registration,
+unique-ID checking, single-match dispatch and fail-closed ambiguity handling; it imports
+no source semantics. `production-registry.ts` is the explicit production allowlist and
+contains KERRY-001 only.
+
+A future source requires its own adapter implementation plus explicit registration. It
+does not require a change to the registry, Place Memory schema, retrieval or provenance
+core. Registration remains a reviewed production authorisation; writing an adapter alone
+does not activate it.
 
 ## Evidence classes
 
@@ -217,7 +232,8 @@ and Place Memory records; do not destroy evidence to simulate rollback.
 - No recovery worker for a processor interrupted while `PROCESSING` (existing railway debt).
 - No public/operator Place Memory HTTP/UI surface; retrieval is a library boundary only.
 - No automated refresh/version-diff for NPWS source changes.
-- No general projector registry beyond strict KERRY-001 dispatch.
+- The projector allowlist is code-defined and requires review/release for every new source;
+  no runtime source-registration administration exists.
 - No deletion/withdrawal workflow for rights changes.
 - Curated English common/descriptive bird terms require a governed taxonomy source before scale.
 - QR fields are data-contract readiness only; rights, moderation, image safety and legal review remain separate work.
