@@ -60,7 +60,8 @@ export async function grantFirstAdmin(db: Database, input: FirstAdminInput, now:
   validate(input)
   return db.transaction(async (sql) => {
     // Serialise concurrent bootstrap attempts, in addition to SERIALIZABLE isolation.
-    await sql.query(`SELECT pg_advisory_xact_lock(hashtext('bioveracity:first-admin-bootstrap'))`, [])
+    // pg_advisory_xact_lock returns void, which Prisma raw queries cannot deserialise; project a constant.
+    await sql.query(`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtext('bioveracity:first-admin-bootstrap'))`, [])
     const plan = await inspect(sql, input.email, true)
     const at = now()
     const [row] = await sql.query<{ role: string; accessState: string; authVersion: number }>(
