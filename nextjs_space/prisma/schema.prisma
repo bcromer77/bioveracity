@@ -248,6 +248,7 @@ model Asset {
   changeRecords       ChangeRecord[]
   unresolvedQuestions UnresolvedQuestion[]
   watches             Watch[]
+  placeMemoryItems    PlaceMemoryItem[]    @relation("PlaceMemoryPlace")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -377,6 +378,20 @@ model ObservationEventRecord {
   findings                 ObservationFindingRecord[]
   sources                  ObservationSourceRecord[]
   revisions                ObservationRevisionRecord[]
+  placeMemoryItems         PlaceMemoryItem[]
+  // QR/citizen-science readiness. These fields remain inert until an authorised
+  // intake path is introduced; no public submission endpoint is created here.
+  origin                   String   @default("SYSTEM")
+  originalLanguage         String?
+  mediaReferences          Json     @default("[]")
+  observerAttributionState String?
+  claimedObservation       Json?
+  machineInterpretation    Json?
+  verificationState        String   @default("UNREVIEWED")
+  submissionLicence        String?
+  submissionConsent        Json?
+  sensitiveLocation        Boolean  @default(false)
+  locationDisclosure       String   @default("NAMED_ONLY")
   createdAt                DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([assetId, receivedAt])
@@ -787,6 +802,7 @@ model Area {
   unresolvedQuestions UnresolvedQuestion[]
   watches             Watch[]
   datasetCoverages    DatasetCoverage[]
+  spatialVersions     PlaceSpatialVersion[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -804,11 +820,21 @@ model AssetArea {
   relationshipType  String   @default("WITHIN")
   sourceDocumentId  String?
   verificationState String   @default("UNVERIFIED")
+  platformEvidenceId String?
+  platformEvidence   PlatformEvidence? @relation(fields: [platformEvidenceId], references: [id], onDelete: Restrict)
+  areaVersionId      String?
+  areaVersion        PlaceSpatialVersion? @relation(fields: [areaVersionId], references: [id], onDelete: Restrict)
+  relationBasis      String?
+  relationMethod     String?
+  calculatedAt       DateTime? @db.Timestamptz(3)
+  uncertainty        Json?
   createdAt         DateTime @default(now())
 
   @@unique([assetId, areaId, relationshipType])
   @@index([assetId])
   @@index([areaId])
+  @@index([platformEvidenceId])
+  @@index([areaVersionId])
 }
 
 // H. Relationship graph — directional, source-backed edges only.
@@ -953,6 +979,7 @@ model PrivateWorkspace {
   cases PrivateCase[]
   audit PrivateWorkspaceAudit[]
   invitations PrivateWorkspaceInvitation[]
+  placeMemoryItems PlaceMemoryItem[]
 }
 model PrivateWorkspaceMember {
   workspaceId String
@@ -1971,6 +1998,10 @@ model PlatformEvidence {
   idempotencyKey     String?
   requestId          String
   createdAt          DateTime            @default(now())
+  placeMemoryItems   PlaceMemoryItem[]
+  spatialVersions    PlaceSpatialVersion[]
+  placeAreaLinks     AssetArea[]
+  memorySourceLinks  PlaceMemorySourceLink[]
 
   @@index([apiKeyId])
   @@index([mode])
@@ -2042,4 +2073,180 @@ model AdminGrantAudit {
   createdAt            DateTime @default(now()) @db.Timestamp(3)
 
   @@index([userId])
+}
+
+// ============================================================================
+// PLACE MEMORY V1 — durable projection and retrieval over Platform evidence.
+//
+// Asset remains the logical Place identity; Area remains the canonical spatial
+// object. A source geometry is never collapsed into a synthetic master polygon:
+// each immutable PlaceSpatialVersion retains its own CRS, scale, version, rights
+// and provenance. Search documents are rebuildable representations and never the
+// evidence record itself.
+// ============================================================================
+
+model PlaceSpatialVersion {
+  id                 String   @id
+  areaId             String
+  area               Area     @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  platformEvidenceId String?
+  platformEvidence   PlatformEvidence? @relation(fields: [platformEvidenceId], references: [id], onDelete: Restrict)
+  versionKey         String
+  geometry           Json
+  geometryFormat     String
+  crs                String
+  sourceCrs          String?
+  sourceScale        String?
+  spatialPrecision   String
+  effectiveFrom      String?
+  effectiveTo        String?
+  effectivePrecision String  @default("unknown")
+  retrievedAt        DateTime @db.Timestamptz(3)
+  publisher          String
+  dataset            String
+  sourceExternalId   String
+  sourceUrl          String
+  licence            String
+  rightsState        String
+  contentHash        String
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  assetAreas         AssetArea[]
+  memoryItems        PlaceMemoryItem[]
+
+  @@unique([areaId, versionKey])
+  @@index([platformEvidenceId])
+  @@index([sourceExternalId])
+  @@index([retrievedAt])
+}
+
+model PlaceMemoryItem {
+  id                   String   @id
+  itemKey              String
+  placeId              String
+  place                Asset    @relation("PlaceMemoryPlace", fields: [placeId], references: [id], onDelete: Restrict)
+  platformEvidenceId   String?
+  platformEvidence     PlatformEvidence? @relation(fields: [platformEvidenceId], references: [id], onDelete: Restrict)
+  observationEventId   String?
+  observationEvent     ObservationEventRecord? @relation(fields: [observationEventId], references: [id], onDelete: Restrict)
+  spatialVersionId     String?
+  spatialVersion       PlaceSpatialVersion? @relation(fields: [spatialVersionId], references: [id], onDelete: Restrict)
+  workspaceId          String?
+  workspace            PrivateWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  kind                 String
+  evidenceClass        String
+  visibility           String
+  rightsState          String
+  originalStatement    String
+  sourceIndependenceKey String
+  eventStart           DateTime? @db.Timestamptz(3)
+  eventEnd             DateTime? @db.Timestamptz(3)
+  timePrecision        String   @default("unknown")
+  timeBasis            String   @default("source")
+  geographyPrecision   String?
+  locationDisclosure   String   @default("NAMED_ONLY")
+  uncertainty          Json     @default("{}")
+  status               String   @default("ACTIVE")
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  searchDocument       PlaceMemorySearchDocument?
+  entities             PlaceMemoryItemEntity[]
+  sourceLinks          PlaceMemorySourceLink[]
+  relationsFrom        PlaceMemoryRelation[] @relation("MemoryRelationFrom")
+  relationsTo          PlaceMemoryRelation[] @relation("MemoryRelationTo")
+
+  @@unique([platformEvidenceId, itemKey])
+  @@index([placeId, status])
+  @@index([workspaceId, visibility])
+  @@index([evidenceClass])
+  @@index([eventStart, eventEnd])
+  @@index([observationEventId])
+  @@index([spatialVersionId])
+}
+
+// One underlying memory item may be encountered through more than one
+// publication or credential. Those representations remain traceable without
+// being counted as independent evidence.
+model PlaceMemorySourceLink {
+  itemId                String
+  item                  PlaceMemoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  platformEvidenceId    String
+  platformEvidence      PlatformEvidence @relation(fields: [platformEvidenceId], references: [id], onDelete: Restrict)
+  relationship          String
+  sourceIndependenceKey String
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([itemId, platformEvidenceId])
+  @@index([sourceIndependenceKey])
+}
+
+model PlaceMemoryEntity {
+  id             String   @id
+  kind           String
+  canonicalLabel String
+  authority      String?
+  externalId     String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  terms          PlaceMemoryTerm[]
+  items          PlaceMemoryItemEntity[]
+
+  @@unique([authority, externalId])
+  @@index([kind])
+  @@index([canonicalLabel])
+}
+
+model PlaceMemoryTerm {
+  id         String   @id
+  entityId   String
+  entity     PlaceMemoryEntity @relation(fields: [entityId], references: [id], onDelete: Restrict)
+  term       String
+  normalized String
+  language   String
+  termType   String
+  status     String
+  provenance Json     @default("{}")
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([entityId, language, normalized, termType])
+  @@index([normalized])
+  @@index([language, termType])
+}
+
+model PlaceMemoryItemEntity {
+  itemId         String
+  item           PlaceMemoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  entityId       String
+  entity         PlaceMemoryEntity @relation(fields: [entityId], references: [id], onDelete: Restrict)
+  relationType   String
+  assertionState String
+  sourceAssertion Json
+  uncertainty    Json @default("{}")
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([itemId, entityId, relationType, assertionState])
+  @@index([entityId, relationType])
+}
+
+model PlaceMemoryRelation {
+  id           String   @id
+  fromItemId   String
+  fromItem     PlaceMemoryItem @relation("MemoryRelationFrom", fields: [fromItemId], references: [id], onDelete: Restrict)
+  toItemId     String
+  toItem       PlaceMemoryItem @relation("MemoryRelationTo", fields: [toItemId], references: [id], onDelete: Restrict)
+  relationType String
+  uncertainty  Json     @default("{}")
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([fromItemId, toItemId, relationType])
+  @@index([toItemId, relationType])
+}
+
+model PlaceMemorySearchDocument {
+  itemId                String   @id
+  item                  PlaceMemoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  content               String
+  language              String   @default("en")
+  representationVersion String
+  conceptTerms          Json     @default("[]")
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
 }
