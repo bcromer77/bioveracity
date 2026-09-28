@@ -1,0 +1,88 @@
+{
+  "_label": "PROPOSED / NOT SENT",
+  "evidence_create": {
+    "provider": "scout",
+    "evidence_type": "designated_site_record",
+    "source_data": {
+      "ingestion_metadata": {
+        "source_agent": "scout",
+        "schema_version": "2.1",
+        "category": "designated_site"
+      },
+      "raw_source": {
+        "url": "https://services-eu1.arcgis.com/Jhij7i46ouO8Cc0N/arcgis/rest/services/NPWSDesignatedAreas/FeatureServer/3/query?where=SITECODE%3D%27002162%27&outFields=SITECODE,SITE_NAME,VERSION,COUNTY,HA,Source_CRS,SourcScale,URL&returnGeometry=false&f=json",
+        "publisher": "National Parks and Wildlife Service (NPWS), Department of Housing, Local Government and Heritage",
+        "licence": "CC BY 4.0",
+        "licence_url": "http://creativecommons.org/licenses/by/4.0/",
+        "attribution": "Copyright Government of Ireland. This service was created by National Parks and Wildlife Service, Department of Housing, Local Government and Heritage. This copyright material is licensed for re-use under the Creative Commons Attribution 4.0 International licence.  http://creativecommons.org/licenses/by/4.0/"
+      },
+      "observations": [
+        {
+          "observation_type": "designated_site_record",
+          "claim": "NPWS lists site code 002162, River Barrow and River Nore SAC, as a Special Area of Conservation.",
+          "official_identifier": "002162",
+          "source_url": "https://www.npws.ie/protected-sites/sac/002162",
+          "retrieval_timestamp": "2026-09-27T21:14:53Z",
+          "source_locator": "NPWSDesignatedAreas FeatureServer layer 3 (Special Area of Conservation), SITECODE = 002162",
+          "source_excerpt": "SITECODE 002162; SITE_NAME River Barrow and River Nore SAC; VERSION 3.04; COUNTY cw, kd, kk, la, of, ti, wa, wx; HA 12325.1846; Source_CRS ITM; SourcScale 1:5000; URL https://www.npws.ie/protected-sites/sac/002162",
+          "source_record": {
+            "attributes": {
+              "SITECODE": "002162",
+              "SITE_NAME": "River Barrow and River Nore SAC",
+              "VERSION": 3.04,
+              "COUNTY": "cw, kd, kk, la, of, ti, wa, wx",
+              "HA": 12325.1846,
+              "Source_CRS": "ITM",
+              "SourcScale": "1:5000",
+              "URL": "https://www.npws.ie/protected-sites/sac/002162"
+            }
+          },
+          "dataset_dates": {
+            "layer_data_last_edit": "2026-07-30T09:47:30.661Z",
+            "sac_designation_layer_update_date": "2026-03-03",
+            "note": "Layer-level dates stated by the service; they are not record-level publication or observation dates."
+          },
+          "geography": {
+            "kind": "designated_site",
+            "name": "River Barrow and River Nore SAC",
+            "precision": "whole_site_no_geometry"
+          },
+          "uncertainty": {
+            "temporal": "No record-level publication or observation date is supplied by the source; only layer-level dates (dataset_dates). publication_time and observation_time are therefore omitted.",
+            "spatial": "Site-level identity only. Geometry was deliberately not retrieved and no coordinates are asserted; the site spans eight counties (COUNTY codes preserved verbatim, not expanded)."
+          }
+        }
+      ]
+    },
+    "source_external_id": "002162",
+    "source_url": "https://www.npws.ie/protected-sites/sac/002162",
+    "publisher": "National Parks and Wildlife Service (NPWS), Department of Housing, Local Government and Heritage",
+    "retrieval_time": "2026-09-27T21:14:53Z",
+    "geography": {
+      "kind": "designated_site",
+      "name": "River Barrow and River Nore SAC",
+      "precision": "whole_site_no_geometry"
+    },
+    "metadata": {
+      "adapter": "scout-v1-adapter/1",
+      "source_agent": "scout",
+      "schema_version": "2.1",
+      "category": "designated_site"
+    },
+    "provenance": {
+      "submitted_via": "scout-v1-adapter/1",
+      "source_agent": "scout",
+      "raw_source_url": "https://services-eu1.arcgis.com/Jhij7i46ouO8Cc0N/arcgis/rest/services/NPWSDesignatedAreas/FeatureServer/3/query?where=SITECODE%3D%27002162%27&outFields=SITECODE,SITE_NAME,VERSION,COUNTY,HA,Source_CRS,SourcScale,URL&returnGeometry=false&f=json",
+      "licence": "CC BY 4.0",
+      "licence_url": "http://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Copyright Government of Ireland. This service was created by National Parks and Wildlife Service, Department of Housing, Local Government and Heritage. This copyright material is licensed for re-use under the Creative Commons Attribution 4.0 International licence.  http://creativecommons.org/licenses/by/4.0/",
+      "source_locator": "NPWSDesignatedAreas FeatureServer layer 3 (Special Area of Conservation), SITECODE = 002162",
+      "source_excerpt": "SITECODE 002162; SITE_NAME River Barrow and River Nore SAC; VERSION 3.04; COUNTY cw, kd, kk, la, of, ti, wa, wx; HA 12325.1846; Source_CRS ITM; SourcScale 1:5000; URL https://www.npws.ie/protected-sites/sac/002162",
+      "uncertainty": {
+        "temporal": "No record-level publication or observation date is supplied by the source; only layer-level dates (dataset_dates). publication_time and observation_time are therefore omitted.",
+        "spatial": "Site-level identity only. Geometry was deliberately not retrieved and no coordinates are asserted; the site spans eight counties (COUNTY codes preserved verbatim, not expanded)."
+      }
+    }
+  },
+  "idempotency_key": "scout-v1:e54266c470104de70f11e0aba6fcac8eabfbc888f7a507d7cce594b771408a44"
+}
