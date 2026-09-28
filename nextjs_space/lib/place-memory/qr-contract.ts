@@ -1,6 +1,8 @@
 // Data-contract readiness only. No route calls this module and this change does
 // not authorise public submission, media upload, moderation or publication.
 
+import { hasPlaceIdShape } from '../place/identity'
+
 export type QrObservationDraft = {
   placeId: string
   originalLanguage: string
@@ -57,7 +59,7 @@ const timestamp = (value: unknown, field: string): string => {
 export function validateQrObservationDraft(value: unknown): QrObservationDraft {
   const input = object(value, 'QR observation')
   const placeId = text(input.placeId, 'place identity', 160)
-  if (!/^bv_place_[a-z0-9_]+$/.test(placeId)) throw new Error('Invalid place identity')
+  if (!hasPlaceIdShape(placeId)) throw new Error('Invalid place identity')
   const originalLanguage = text(input.originalLanguage, 'original language', 20)
   const originalText = text(input.originalText, 'original statement', 2000)
   const observedPrecision = String(input.observedPrecision ?? 'unknown') as QrObservationDraft['observedPrecision']
