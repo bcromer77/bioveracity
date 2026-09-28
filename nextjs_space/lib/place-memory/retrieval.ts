@@ -1,5 +1,6 @@
 import { EVIDENCE_CLASSES, type AuthorisedSemanticReranker, type MemoryActor, type MemoryMatchedEntity, type MemorySearchHit, type MemorySearchQuery, type MemorySearchResponse, type PlaceMemoryEvidenceClass } from './types'
 import { normaliseMemoryTerm } from './kerry-001'
+import { isPlaceId } from '../place/identity'
 import type { Sql } from '@/lib/workspaces/service'
 
 type CandidateRow = {
@@ -39,7 +40,7 @@ const day = /^\d{4}-\d{2}-\d{2}$/
 const iso = (value: Date | string | null): string | null => value == null ? null : new Date(value).toISOString()
 
 function validate(query: MemorySearchQuery) {
-  if (!/^bv_place_[a-z0-9_]{1,120}$/.test(query.placeId)) throw new Error('Invalid place id')
+  if (!isPlaceId(query.placeId)) throw new Error('Invalid place id')
   if ((query.q?.length ?? 0) > 300 || /[\u0000-\u001f]/.test(query.q ?? '')) throw new Error('Invalid search text')
   for (const value of [query.from, query.to]) {
     if (value && (!day.test(value) || new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) !== value)) {
