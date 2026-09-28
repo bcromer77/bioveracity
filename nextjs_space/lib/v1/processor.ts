@@ -10,7 +10,8 @@
 // the service alone records the resulting status.
 // ==========================================================================
 
-import type { Sql } from '@/lib/workspaces/service'
+import type { Database, Sql } from '@/lib/workspaces/service'
+import { createPlaceMemoryProjector } from '@/lib/place-memory/projector'
 import { CONTRACT_VERSION, fingerprint, parseEvidenceCreate } from './contract'
 import type { EvidencePublic, ServiceOptions } from './service'
 
@@ -81,4 +82,16 @@ export function createV1Processor(db: Sql): NonNullable<ServiceOptions['processo
   }
 }
 
-export const v1ServiceOptions = (db: Sql): ServiceOptions => ({ processor: createV1Processor(db) })
+export const v1ServiceOptions = (db: Database): ServiceOptions => {
+  const integrity = createV1Processor(db)
+  const placeMemory = createPlaceMemoryProjector(db)
+  return {
+    processor: async (evidence) => {
+      // Integrity always completes first. Place Memory is an additive,
+      // idempotent projection and runs only for an explicitly recognised live
+      // source adapter; every other V1 record retains the frozen behaviour.
+      await integrity(evidence)
+      await placeMemory(evidence)
+    },
+  }
+}
