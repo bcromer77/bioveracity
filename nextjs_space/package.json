@@ -35,7 +35,8 @@
     "db:release": "node --import tsx scripts/database-release.ts",
     "test:club": "node --import tsx --test tests/club-launch.test.ts",
     "club:sources": "node --import tsx scripts/club-operations.ts sources",
-    "billing:reconcile": "node --import tsx scripts/club-operations.ts billing"
+    "billing:reconcile": "node --import tsx scripts/club-operations.ts billing",
+    "test:first-admin": "node --import tsx --test tests/first-admin.test.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
