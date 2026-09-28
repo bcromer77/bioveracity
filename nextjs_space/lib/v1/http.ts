@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import type { Database, Sql } from '@/lib/workspaces/service'
 import { PlatformError, internalError } from './errors'
 import { platformService } from './service'
+import { v1ServiceOptions } from './processor'
 import { redactSecrets } from './keys'
 
 // SQL strings are fixed in service.ts; all user values remain bound parameters.
@@ -22,7 +23,7 @@ export const platformDb: Database = {
 }
 
 export function getService() {
-  return platformService(platformDb)
+  return platformService(platformDb, v1ServiceOptions(platformDb))
 }
 
 // The platform is gated so it can be merged and reviewed before exposure. It is
