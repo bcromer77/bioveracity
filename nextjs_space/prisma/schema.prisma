@@ -249,6 +249,7 @@ model Asset {
   unresolvedQuestions UnresolvedQuestion[]
   watches             Watch[]
   placeMemoryItems    PlaceMemoryItem[]    @relation("PlaceMemoryPlace")
+  placeSlugs          PlaceSlug[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -2249,4 +2250,18 @@ model PlaceMemorySearchDocument {
   conceptTerms          Json     @default("[]")
   createdAt             DateTime @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+}
+
+// Place Experience PR B (ADR-0001 G-SLUG): canonical Place slug history.
+// A slug is a locator only; identity stays on Asset.id. The one-current-slug
+// partial unique index, format CHECKs and the append-only guard trigger live in
+// migration 20261004_place_slug_history (Prisma cannot express them).
+model PlaceSlug {
+  slug      String    @id
+  placeId   String
+  place     Asset     @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  createdAt DateTime  @default(now())
+  retiredAt DateTime?
+
+  @@index([placeId])
 }
