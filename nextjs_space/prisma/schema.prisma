@@ -2020,3 +2020,26 @@ model PlatformRequest {
   @@index([apiKeyId])
   @@index([createdAt])
 }
+
+// Append-only audit of administrator grants (see migration 20261002_admin_grant_audit).
+// No relation to User by design: the record must outlive account erasure.
+model AdminGrantAudit {
+  id                   String   @id
+  action               String
+  userId               String
+  email                String
+  operator             String
+  authorisedBy         String
+  reason               String
+  beforeRole           String
+  beforeAccessState    String
+  beforeAuthVersion    Int
+  afterRole            String
+  afterAccessState     String
+  afterAuthVersion     Int
+  verifiedAdminsBefore Int
+  grantedAt            DateTime @db.Timestamp(3)
+  createdAt            DateTime @default(now()) @db.Timestamp(3)
+
+  @@index([userId])
+}
