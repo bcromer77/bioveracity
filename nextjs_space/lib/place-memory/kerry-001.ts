@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { fingerprint } from '@/lib/v1/contract'
 import type { EvidencePublic } from '@/lib/v1/service'
 
@@ -92,13 +91,7 @@ const string = (value: unknown, field: string): string => {
 
 const siteCode = (row: SourceRow): string => string(row['SITE CODE'], 'site_code')
 
-export function normaliseMemoryTerm(value: string): string {
-  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
-}
-
-export function stableMemoryId(prefix: string, ...parts: string[]): string {
-  return `${prefix}_${createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 32)}`
-}
+export { normaliseMemoryTerm, stableMemoryId } from './memory-utils'
 
 export function parseKerry001Evidence(evidence: EvidencePublic): Kerry001Record | null {
   const metadataRoot = evidence.metadata == null ? null : object(evidence.metadata, 'metadata')

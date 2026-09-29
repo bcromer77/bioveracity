@@ -1,5 +1,5 @@
 import { EVIDENCE_CLASSES, type AuthorisedSemanticReranker, type MemoryActor, type MemoryMatchedEntity, type MemorySearchHit, type MemorySearchQuery, type MemorySearchResponse, type PlaceMemoryEvidenceClass } from './types'
-import { normaliseMemoryTerm } from './kerry-001'
+import { normaliseMemoryTerm } from './memory-utils'
 import { isPlaceId } from '../place/identity'
 import type { Sql } from '@/lib/workspaces/service'
 

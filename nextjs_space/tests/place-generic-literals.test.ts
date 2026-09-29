@@ -8,7 +8,7 @@ import { join, relative } from 'node:path'
 // never code paths. Place-specific source adapters live in lib/place-memory/.
 const root = process.cwd()
 const GENERIC_DIRS = ['lib/place', 'components/place', 'app/place', 'app/p', 'components/place-client']
-const FORBIDDEN = [/tralee/i, /kerry/i, /004188/]
+const FORBIDDEN = [/tralee/i, /kerry/i, /004188/, /fodder/i]
 
 function files(dir: string): string[] {
   if (!existsSync(dir)) return []
@@ -26,6 +26,7 @@ test('detector self-test flags each forbidden literal in any case', () => {
   assert.equal(forbiddenLiterals('x', 'const s = "TRALEE"').length, 1)
   assert.equal(forbiddenLiterals('x', '// County Kerry').length, 1)
   assert.equal(forbiddenLiterals('x', "code = 'IE0004188'").length, 1)
+  assert.equal(forbiddenLiterals('x', 'hub = "fodder"').length, 1)
   assert.deepEqual(forbiddenLiterals('x', 'export const PLACE_ID_PREFIX = "bv_place_"'), [])
 })
 
