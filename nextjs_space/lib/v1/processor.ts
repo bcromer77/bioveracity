@@ -71,14 +71,18 @@ export function createV1Processor(db: Sql): NonNullable<ServiceOptions['processo
     ]
     for (const [name, a, b] of verbatim) if (!same(a, b)) fail(`${name}_mismatch`)
 
-    // Times are stored canonically, so check presence parity: a time the
-    // producer did not supply must still be unknown, and a supplied one kept.
+    // The contract has already validated each raw time as an ISO calendar date
+    // or offset date-time. Compare the instant stored by PostgreSQL, not just
+    // presence: a different non-null date would corrupt the chronology.
     const times: Array<[string, unknown, unknown]> = [
       ['observation_time', raw.observation_time, evidence.observation_time],
       ['publication_time', raw.publication_time, evidence.publication_time],
       ['retrieval_time', raw.retrieval_time, evidence.retrieval_time],
     ]
-    for (const [name, a, b] of times) if ((a == null) !== (b == null)) fail(`${name}_presence`)
+    for (const [name, a, b] of times) {
+      if ((a == null) !== (b == null)) fail(`${name}_presence`)
+      if (a != null && new Date(a as string).toISOString() !== b) fail(`${name}_mismatch`)
+    }
   }
 }
 
