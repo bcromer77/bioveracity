@@ -87,3 +87,51 @@ test('first Place: the immutable Place ID is untouched and never used as a locat
     assert.deepEqual(asset, { id: KERRY_PLACE_ID, name: body.metadata.place_memory.place_label }, 'display title never rewrites Asset data')
   } finally { await h.pg.close() }
 })
+
+
+test('first Place X1 ARRIVE: relation, categories, truthful Water, empty time strip, illustrative hero, How we know, Menu', async () => {
+  const h = await projected()
+  try {
+    const r = await loadPlaceShell(h.db, LOCAL_SLUG, placePresentation)
+    const view = (r as { view: PlaceShellView }).view
+    assert.equal(view.relation, 'Within the Tralee Bay Complex public record')
+    assert.deepEqual(view.categories.map((c) => `${c.id}:${c.status}:${c.count}`), ['designations:available:1', 'species:available:23', 'planning:unwired:0', 'water:unverified:0'])
+    assert.deepEqual(view.timeline, [], 'a designation is not a dated record')
+
+    const html = renderToStaticMarkup(createElement(PlaceShell, { view }))
+    const t = text(html)
+    assert.ok(/data-place-relation="">Within the Tralee Bay Complex public record</.test(html))
+    // Categories: available ones open a sheet; Water is disabled, unverified, with no count.
+    const cat = (id: string) => html.match(new RegExp(`<li data-category="${id}"[\\s\\S]*?</li>`))![0]
+    assert.ok(/href="#evidence"/.test(cat('designations')) && /href="#species"/.test(cat('species')))
+    const water = cat('water')
+    assert.ok(/data-category-status="unverified"/.test(water) && /aria-disabled="true"/.test(water) && !/href=/.test(water))
+    assert.ok(/data-place-state="NOT YET INGESTED"/.test(water) && text(water).includes('source has not been verified') && !/>\s*0\s*</.test(water))
+    assert.ok(/data-category-status="unwired"/.test(cat('planning')) && !/href=/.test(cat('planning')))
+    // Time strip.
+    assert.ok(html.includes('data-time-strip="empty"') && t.includes('No dated public records yet'))
+    // Hero: illustration slot only, rights pending, always badged, no image file.
+    const hero = html.match(/<figure\b[^>]*data-hero="illustration"[\s\S]*?<\/figure>/)![0]
+    assert.ok(/data-hero-rights="PENDING"/.test(hero) && /role="img"/.test(hero))
+    assert.ok(/aria-label="Illustration of Tralee Wetlands[^"]*"/.test(hero))
+    assert.ok(/data-illustrative-badge="">Illustrative</.test(hero))
+    assert.ok(!/<img\b|<image\b|\.(png|jpe?g|webp|avif)\b/i.test(hero))
+    // How we know modal: dialog sheet with the five interactive rules, sources, and what is not shown.
+    const how = html.match(/<section id="how-we-know"[\s\S]*?<\/section>/)![0]
+    assert.ok(/role="dialog"/.test(how) && /aria-modal="true"/.test(how) && /aria-labelledby="how-we-know-title"/.test(how) && /tabindex="-1"/.test(how))
+    assert.equal((how.match(/<details\b/g) ?? []).length, 5)
+    assert.equal((how.match(/<summary\b/g) ?? []).length, 5)
+    assert.ok(text(how).includes('An illustration is not evidence') && text(how).includes('Water:') && text(how).includes('Planning:'))
+    assert.ok(/data-pa-close=""/.test(how) && /href="#place-main"/.test(how))
+    // Menu: fuchsia mark in the heading, GET search.
+    const menuTitle = html.match(/<h2 id="place-menu-title"[\s\S]*?<\/h2>/)![0]
+    assert.ok(/data-bv-place-mark/.test(menuTitle) && /data-tone="fuchsia"/.test(menuTitle) && text(menuTitle).includes('Menu'))
+    const form = html.match(/<form\b[^>]*>/g) ?? []
+    assert.equal(form.length, 1)
+    assert.ok(/action="\/search"/.test(form[0]) && /method="get"/.test(form[0]) && /role="search"/.test(form[0]) && !/method="post"/i.test(html))
+    // Layout: mobile nav hidden at lg, desktop section nav from lg, in-flow consent slot.
+    assert.ok(/<nav aria-label="Place navigation" class="[^"]*\blg:hidden\b/.test(html))
+    assert.ok(/<nav aria-label="Place sections" class="hidden lg:block"/.test(html))
+    assert.ok(html.includes('data-place-consent-slot=""'))
+  } finally { await h.pg.close() }
+})

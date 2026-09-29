@@ -30,7 +30,7 @@ export function PlaceMobileNav() {
   return (
     <nav
       aria-label="Place navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] pb-[env(safe-area-inset-bottom)] md:sticky md:top-0 md:bottom-auto md:border-b md:border-t-0"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] pb-[env(safe-area-inset-bottom)] md:sticky md:top-0 md:bottom-auto md:border-b md:border-t-0 lg:hidden"
     >
       <ul className="mx-auto grid max-w-2xl grid-cols-5 items-center px-2 py-1">
         <li><Link href="/" className={item}><Icon d={ICONS.home} /><span>Home</span></Link></li>

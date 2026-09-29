@@ -12,6 +12,7 @@ import type { PlaceShellView } from '../lib/place/shell-view'
 import { PlaceShell } from '../components/place/place-shell'
 import { BioVeracityPlaceMark, PLACE_MARK_PETAL_PATH, PLACE_MARK_TONES } from '../components/place/place-mark'
 import { placePresentation } from '../lib/place-memory/place-presentation'
+import { PLACE_ARRIVE_CSS } from '../components/place/place-arrive-styles'
 
 // Synthetic, Place-neutral fixtures for the universal Place shell (PR D).
 // Every non-public row carries SENTINEL markers a leak would surface.
@@ -221,21 +222,40 @@ test('8. inert contribution: the + is disabled, outside any form, with no handle
   const h = await harness()
   try {
     const html = render(await okView(h.db, 'alpha-marsh'))
-    assert.ok(!/<form\b|\baction=|formaction|method="post"/i.test(html))
+    // X1: the only form is the Menu site search, a GET to /search. Nothing can POST.
+    const forms = [...html.matchAll(/<form\b[^>]*>/g)].map((m) => m[0])
+    assert.equal(forms.length, 1)
+    assert.ok(/action="\/search"/.test(forms[0]) && /method="get"/.test(forms[0]) && /role="search"/.test(forms[0]))
+    assert.equal((html.match(/\baction=/g) ?? []).length, 1)
+    assert.ok(!/formaction|method="post"/i.test(html))
+    const form = html.match(/<form\b[\s\S]*?<\/form>/)![0]
+    assert.ok(/<input\b[^>]*name="q"/.test(form) && !/type="hidden"/.test(form), 'search carries only the visible query')
     const all = [...html.matchAll(/<button\b[^>]*>/g)].map((m) => m[0])
-    // Only other buttons allowed: the shared EvidenceLink attribution toggles (local disclosure, no request).
+    // Only other buttons allowed: the shared EvidenceLink attribution toggles (local disclosure, no request)
+    // and the GET search submit.
     const attribution = all.filter((b) => /aria-expanded="false"/.test(b))
     assert.ok(attribution.every((b) => /type="button"/.test(b)))
-    const buttons = all.filter((b) => !attribution.includes(b))
+    const search = all.filter((b) => /data-place-search="get"/.test(b))
+    assert.equal(search.length, 1)
+    assert.ok(/type="submit"/.test(search[0]) && form.includes(search[0]))
+    const buttons = all.filter((b) => !attribution.includes(b) && !search.includes(b))
     assert.equal(buttons.length, 1)
     assert.ok(/type="button"/.test(buttons[0]) && /\bdisabled=""/.test(buttons[0]) && /aria-disabled="true"/.test(buttons[0]) && /data-place-contribute="inert"/.test(buttons[0]))
     assert.ok(visibleText(html).includes('Not open yet'))
+    assert.ok(!form.includes('data-place-contribute'), 'the + is outside the search form')
   } finally { await h.pg.close() }
   for (const p of SHELL_SOURCES) {
     const s = src(p)
     assert.ok(!/^['"]use client['"]/m.test(s), `${p} must stay a server component`)
     assert.ok(!/\bon(Click|Submit|Change)\b|fetch\(|XMLHttpRequest|sendBeacon|<form|'use server'|"use server"/.test(s), `${p} must not carry a handler or submission path`)
   }
+  // X1 client helpers: hash navigation and focus only; the search is a handler-free GET form.
+  for (const p of files(join(root, 'components/place-client')).map((x) => relative(root, x))) {
+    const s = src(p)
+    assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|'use server'|"use server"|method="post"|formAction|router\.(push|replace)/i.test(s), `${p} must not request or post`)
+  }
+  const search = src('components/place-client/place-search.tsx')
+  assert.ok(!/^['"]use client['"]/m.test(search) && !/\bon(Click|Submit|Change)\b/.test(search) && /method="get"/.test(search))
 })
 
 test('9. mark reuse: one geometry source, every rendered mark uses it, tone never changes geometry', async () => {
@@ -270,6 +290,34 @@ test('10. mark genericity: Place-neutral props, no Place literals, accessible na
   assert.ok(/aria-hidden="true"/.test(decorative) && !/role="img"/.test(decorative))
   const named = renderToStaticMarkup(createElement(BioVeracityPlaceMark, { title: 'BioVeracity', size: 64 }))
   assert.ok(/role="img"/.test(named) && /aria-label="BioVeracity"/.test(named) && /<title>BioVeracity<\/title>/.test(named) && /width="64"/.test(named))
+})
+
+test('X1 ARRIVE: dated records only on the time strip, no relation without a backing record, reduced motion and 44px source targets', async () => {
+  const h = await harness()
+  try {
+    const alpha = await okView(h.db, 'alpha-marsh')
+    assert.equal(alpha.relation, null, 'no relationRecord configured, so no relation is claimed')
+    assert.deepEqual(alpha.timeline, [], 'the undated designation and undated observation stay off the strip')
+    const alphaHtml = render(alpha)
+    assert.ok(alphaHtml.includes('data-time-strip="empty"') && visibleText(alphaHtml).includes('No dated public records yet'))
+    assert.ok(!alphaHtml.includes('data-place-relation'))
+    const beta = await okView(h.db, 'beta-fen')
+    assert.deepEqual(beta.timeline.map((r) => r.date), ['2025-06-14'])
+    const betaHtml = render(beta)
+    assert.ok(betaHtml.includes('data-time-strip="dated"') && !visibleText(betaHtml).includes('No dated public records yet'))
+    assert.equal(beta.categories.find((c) => c.id === 'designations')!.status, 'empty')
+    for (const v of [alpha, beta]) assert.deepEqual(v.categories.find((c) => c.id === 'water'), {
+      id: 'water', label: 'Water', count: 0, status: 'unverified', state: 'NOT YET INGESTED', href: null,
+      summary: 'Water-quality data is not shown: its source has not been verified for this place.' })
+    assert.ok(/<h1 id="place-title"/.test(alphaHtml) && /aria-label="Illustration of Alpha Marsh/.test(alphaHtml) && alphaHtml.includes('data-illustrative-badge=""'))
+  } finally { await h.pg.close() }
+  const css = PLACE_ARRIVE_CSS.replace(/\s+/g, '')
+  assert.ok(css.includes('.pa-srca,.pa-srcbutton{min-height:44px'), 'source links are 44px targets')
+  assert.ok(css.includes('.pa-theme>summary{min-height:44px'), 'How we know rules are 44px targets')
+  const reduced = css.match(/@media\(prefers-reduced-motion:reduce\)\{([\s\S]*)\}$/)![1]
+  assert.ok(reduced.includes('animation-duration:0s!important') && reduced.includes('transition-duration:0s!important'))
+  const arrive = src('components/place/place-arrive.tsx')
+  assert.ok(!/animate-|transition(?!-colors)/.test(arrive.replace(/motion-safe:transition-colors/g, '')), 'motion is limited to the reducible CSS set')
 })
 
 test('replication: a synthetic second Place renders through the same shell with its own data-backed title', async () => {

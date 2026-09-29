@@ -54,3 +54,28 @@ test('application JSX has no unmanaged anchors and map links remain internal', a
  }
  await inspect('app');await inspect('components')
 })
+
+
+test('Place ARRIVE stays on-site: managed hash links, GET-only search, no external or raw links, consent in flow', async()=>{
+ const { readFile, readdir }=await import('node:fs/promises')
+ const dirs=['components/place','components/place-client']
+ const sources:Record<string,string>={}
+ for(const d of dirs)for(const f of await readdir(d))if(/\.tsx?$/.test(f))sources[d+'/'+f]=await readFile(d+'/'+f,'utf8')
+ sources['app/place/[slug]/page.tsx']=await readFile('app/place/[slug]/page.tsx','utf8')
+ for(const [path,source] of Object.entries(sources)){
+  assert.doesNotMatch(source,/href=["'`]https?:|href=\{`https?:|window\.open|location\.assign|location\.href\s*=/,'Off-site navigation in '+path)
+  assert.doesNotMatch(source,/method=["']post["']|formAction|'use server'/i,'Submission path in '+path)
+  assert.doesNotMatch(source,/<img\b|<Image\b|<iframe\b|next\/image/,'Imagery or embed in '+path)
+ }
+ const hash=sources['components/place-client/hash-link.tsx']
+ assert.match(hash,/import Link from 'next\/link'/);assert.match(hash,/href: `#\$\{string\}`/,'HashLink only accepts same-page fragments')
+ assert.match(sources['components/place-client/place-search.tsx'],/action="\/search" method="get"/)
+ assert.match(await readFile('app/search/page.tsx','utf8'),/searchParams: Promise<\{ q\?: string \}>/,'search target reads the GET q parameter')
+ const consent=await readFile('components/cookie-consent.tsx','utf8')
+ const { isGlobalBannerRoute }=await import('../components/cookie-consent')
+ for(const p of ['/place/tralee-wetlands','/place/x'])assert.equal(isGlobalBannerRoute(p),false,p)
+ for(const p of ['/','/wild/kerry','/placement','/places',null])assert.equal(isGlobalBannerRoute(p),true,String(p))
+ assert.match(consent,/placement === 'fixed' && !isGlobalBannerRoute\(pathname\)/)
+ assert.match(sources['components/place/place-shell.tsx'],/<CookieConsent placement="inline" \/>/)
+ assert.match(await readFile('app/layout.tsx','utf8'),/<CookieConsent \/>/,'global banner stays on everywhere else')
+})

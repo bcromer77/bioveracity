@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Cookie } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const STORAGE_KEY = 'bv-cookie-consent'
+
+export type CookieConsentPlacement = 'fixed' | 'inline'
+
+/** Routes that render their own in-flow consent slot, so the global fixed banner stays off (globalBanner false). */
+export function isGlobalBannerRoute(pathname: string | null | undefined): boolean {
+  return !(pathname ?? '').startsWith('/place/')
+}
 
 /**
  * Site-wide cookie & privacy consent banner.
@@ -13,8 +21,11 @@ const STORAGE_KEY = 'bv-cookie-consent'
  * once a choice ('accepted' | 'necessary') has been recorded in localStorage.
  * localStorage is read only after mount, so SSR output stays deterministic
  * (no hydration mismatch).
+ * placement 'fixed' (default, app/layout.tsx) is the global bottom banner and is
+ * suppressed on routes with their own slot; 'inline' renders in document flow.
  */
-export function CookieConsent() {
+export function CookieConsent({ placement = 'fixed' }: { placement?: CookieConsentPlacement } = {}) {
+  const pathname = usePathname()
   // null = not yet determined (during SSR / before mount) -> render nothing.
   const [visible, setVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -40,13 +51,15 @@ export function CookieConsent() {
   }
 
   if (!mounted || !visible) return null
+  if (placement === 'fixed' && !isGlobalBannerRoute(pathname)) return null
 
   return (
     <div
-      role="dialog"
+      role={placement === 'fixed' ? 'dialog' : 'region'}
       aria-live="polite"
       aria-label="Cookie and privacy notice"
-      className="fixed inset-x-0 bottom-0 z-[1000] px-4 pb-4 sm:px-6"
+      data-consent-placement={placement}
+      className={placement === 'fixed' ? 'fixed inset-x-0 bottom-0 z-[1000] px-4 pb-4 sm:px-6' : 'pt-4'}
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-xl border border-border bg-white p-4 shadow-lg sm:flex-row sm:items-center sm:gap-6 sm:p-5">
         <div className="flex items-start gap-3">

@@ -8,7 +8,8 @@ import type { PlacePresentation } from '@/lib/place/shell-view'
 import { KERRY_PLACE_ID } from './kerry-001'
 
 const PLACE_PRESENTATION: Readonly<Record<string, PlacePresentation>> = Object.freeze({
-  [KERRY_PLACE_ID]: Object.freeze({ displayTitle: 'Tralee Wetlands' }),
+  // relationRecord is shown only if a public statutory record names it (shell-view.ts).
+  [KERRY_PLACE_ID]: Object.freeze({ displayTitle: 'Tralee Wetlands', relationRecord: 'Tralee Bay Complex' }),
 })
 
 export function placePresentation(placeId: string): PlacePresentation | null {

@@ -76,9 +76,33 @@ export type ShellSpecies = {
 
 export type ShellPromptAnswer = { id: PlacePromptId; question: string; state: PlaceState | null; summary: string; detail: string }
 
+/**
+ * ARRIVE evidence categories (Gate F X1). Counts come only from public DTOs.
+ * 'unwired' = no public source is connected for this category yet;
+ * 'unverified' = a source exists outside the public model but is not verified,
+ * so nothing is shown. Neither state is evidence of absence.
+ */
+export type ArriveCategoryId = 'designations' | 'species' | 'planning' | 'water'
+export type ArriveCategory = {
+  id: ArriveCategoryId
+  label: string
+  count: number
+  summary: string
+  status: 'available' | 'empty' | 'unwired' | 'unverified'
+  state: PlaceState | null
+  href: string | null
+}
+
+/** A record with a known observation/event date. Designations are never dated records. */
+export type ArriveDatedRecord = { date: string; statement: string; classLabel: string }
+
 export type PlaceShellView = {
   title: string
   context: string | null
+  /** "Within the … public record", only when a public record carries that name. */
+  relation: string | null
+  categories: ArriveCategory[]
+  timeline: ArriveDatedRecord[]
   publicItemCount: number
   prompts: ShellPromptAnswer[]
   cards: ShellEvidenceCard[]
@@ -87,7 +111,15 @@ export type PlaceShellView = {
   sources: Array<{ publisher: string; licence: string; attribution: string | null; url: string | null; retrievedAt: string | null; publishedAt: string | null }>
 }
 
-export type PlacePresentation = { displayTitle?: string | null }
+export type PlacePresentation = {
+  displayTitle?: string | null
+  /**
+   * Name of the public record this Place sits within. Rendered as
+   * "Within the <name> public record" ONLY when a public statutory record's
+   * statement actually contains that name; otherwise it is dropped.
+   */
+  relationRecord?: string | null
+}
 
 const day = (iso: string | null): string | null => (iso ? iso.slice(0, 10) : null)
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -198,10 +230,50 @@ function prompts(items: PublicMemoryItem[], speciesList: ShellSpecies[]): ShellP
   return [lives, changed, know, how]
 }
 
+function relation(cards: ShellEvidenceCard[], presentation: PlacePresentation): string | null {
+  const name = presentation.relationRecord?.trim()
+  if (!name) return null
+  const backed = cards.some((c) => c.classLabel === EVIDENCE_CLASS_LABELS.AUTHORITATIVE_STATUTORY && c.statement.includes(name))
+  return backed ? `Within the ${name} public record` : null
+}
+
+function categories(cards: ShellEvidenceCard[], speciesList: ShellSpecies[]): ArriveCategory[] {
+  const designations = cards.filter((c) => c.designation).length
+  const taxa = speciesList.filter((s) => s.kindLabel === KIND_LABELS.TAXON).length
+  const features = speciesList.length - taxa
+  return [
+    designations
+      ? { id: 'designations', label: 'Designations', count: designations, status: 'available', state: null, href: '#evidence',
+          summary: `${plural(designations, 'protected-area designation')} in the public record.` }
+      : { id: 'designations', label: 'Designations', count: 0, status: 'empty', state: 'NOT RECORDED', href: null,
+          summary: `No protected-area designation is in the public record here. ${NO_EVIDENCE_NOTE}` },
+    speciesList.length
+      ? { id: 'species', label: 'Species and habitats', count: speciesList.length, status: 'available', state: null, href: '#species',
+          summary: `${plural(taxa, 'species', 'species')} · ${plural(features, 'habitat or feature', 'habitats or features')} named in public records.` }
+      : { id: 'species', label: 'Species and habitats', count: 0, status: 'empty', state: 'NOT RECORDED', href: null,
+          summary: `No public record names species or habitats here yet. ${NO_EVIDENCE_NOTE}` },
+    { id: 'planning', label: 'Planning', count: 0, status: 'unwired', state: 'NOT YET INGESTED', href: null,
+      summary: 'Planning records have not been added to this place yet.' },
+    { id: 'water', label: 'Water', count: 0, status: 'unverified', state: 'NOT YET INGESTED', href: null,
+      summary: 'Water-quality data is not shown: its source has not been verified for this place.' },
+  ]
+}
+
+function timeline(cards: ShellEvidenceCard[]): ArriveDatedRecord[] {
+  return cards
+    .filter((c) => !c.designation)
+    .flatMap((c) => {
+      const when = c.facts.find((f) => f.label === 'When')
+      return when && when.state === null ? [{ date: when.value, statement: c.statement, classLabel: c.classLabel }] : []
+    })
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
 export function buildPlaceShellView(place: PublicPlace, items: PublicMemoryItem[], presentation: PlacePresentation = {}): PlaceShellView {
   const displayTitle = presentation.displayTitle?.trim()
   const title = displayTitle || place.name
   const speciesList = species(items)
+  const cards = items.map(card)
   const sourceMap = new Map<string, PlaceShellView['sources'][number]>()
   for (const item of items) {
     const key = `${item.source.publisher ?? ''}|${item.source.sourceIdentifier ?? ''}|${item.source.licence}`
@@ -213,9 +285,12 @@ export function buildPlaceShellView(place: PublicPlace, items: PublicMemoryItem[
   return {
     title,
     context: title === place.name ? null : place.name,
+    relation: relation(cards, presentation),
+    categories: categories(cards, speciesList),
+    timeline: timeline(cards),
     publicItemCount: place.publicItemCount,
     prompts: prompts(items, speciesList),
-    cards: items.map(card),
+    cards,
     species: speciesList,
     designationNote: speciesList.some((s) => s.framing === 'designation_feature') ? DESIGNATION_FEATURE_NOTE : null,
     sources: [...sourceMap.values()],
