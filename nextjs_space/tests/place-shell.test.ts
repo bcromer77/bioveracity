@@ -238,7 +238,11 @@ test('8. inert contribution: the + is disabled, outside any form, with no handle
     const search = all.filter((b) => /data-place-search="get"/.test(b))
     assert.equal(search.length, 1)
     assert.ok(/type="submit"/.test(search[0]) && form.includes(search[0]))
-    const buttons = all.filter((b) => !attribution.includes(b) && !search.includes(b))
+    // The in-flow consent notice is server-rendered (reserved space, no CLS): two local choice buttons, no request.
+    const consent = all.filter((b) => /data-consent-choice="(necessary|accepted)"/.test(b))
+    assert.equal(consent.length, 2)
+    assert.ok(consent.every((b) => /type="button"/.test(b) && /min-h-\[44px\]/.test(b)))
+    const buttons = all.filter((b) => !attribution.includes(b) && !search.includes(b) && !consent.includes(b))
     assert.equal(buttons.length, 1)
     assert.ok(/type="button"/.test(buttons[0]) && /\bdisabled=""/.test(buttons[0]) && /aria-disabled="true"/.test(buttons[0]) && /data-place-contribute="inert"/.test(buttons[0]))
     assert.ok(visibleText(html).includes('Not open yet'))
@@ -276,7 +280,7 @@ test('9. mark reuse: one geometry source, every rendered mark uses it, tone neve
     assert.ok(all.every((g) => g === geometry[0]))
     const toneList = [...html.matchAll(/data-tone="(\w+)"/g)].map((m) => m[1])
     assert.deepEqual([...new Set(toneList)].sort(), ['fuchsia', 'white'])
-    assert.equal(toneList.filter((t) => t === 'white').length, 1, 'white only on the dark footer, for contrast')
+    assert.equal(toneList.filter((t) => t === 'white').length, 2, 'white only on dark surfaces (header over the hero, footer), for contrast')
   } finally { await h.pg.close() }
   assert.equal(PLACE_MARK_TONES.fuchsia.toUpperCase(), '#B0246A', 'canonical tone is fuchsia')
 })

@@ -31,5 +31,11 @@ export const PLACE_ARRIVE_CSS = `
 .pa-theme>summary::-webkit-details-marker{display:none}
 .pa-theme>summary::after{content:'+';margin-left:auto;font-size:20px;color:var(--pl-green)}
 .pa-theme[open]>summary::after{content:'\\2212'}
+.pa-chip{background:var(--pl-paper);border-color:var(--pl-line);color:var(--pl-ink);box-shadow:0 1px 2px rgba(28,42,34,.06)}
+.pa-chip-off{background:var(--pl-warm);border-style:dashed;color:var(--pl-muted);box-shadow:none}
+.pa-chips{scrollbar-width:none}.pa-chips::-webkit-scrollbar{display:none}
+.pa-gap{background:repeating-linear-gradient(135deg,#F2EDDF 0 4px,#E5DDC8 4px 7px)}
+html[data-bv-consent] [data-place-consent-slot]{display:none}
+@media (min-width:1024px){.pa-chips .pa-chip{background:rgba(18,37,28,.78);border-color:rgba(255,255,255,.3);color:#fff;box-shadow:none}.pa-chips .pa-chip>span:first-child{background:rgba(255,255,255,.92)}}
 @media (prefers-reduced-motion:reduce){.pa,.pa *,.pa *::before,.pa *::after{animation-duration:0s!important;animation-delay:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}}
 `

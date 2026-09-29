@@ -95,27 +95,48 @@ test('first Place X1 ARRIVE: relation, categories, truthful Water, empty time st
     const r = await loadPlaceShell(h.db, LOCAL_SLUG, placePresentation)
     const view = (r as { view: PlaceShellView }).view
     assert.equal(view.relation, 'Within the Tralee Bay Complex public record')
-    assert.deepEqual(view.categories.map((c) => `${c.id}:${c.status}:${c.count}`), ['designations:available:1', 'species:available:23', 'planning:unwired:0', 'water:unverified:0'])
+    assert.deepEqual(view.categories.map((c) => `${c.id}:${c.status}:${c.count}`), ['species:available:22', 'habitats:available:1', 'water:unverified:0', 'designations:available:1', 'people:unwired:0', 'climate:unwired:0', 'planning:unwired:0'])
     assert.deepEqual(view.timeline, [], 'a designation is not a dated record')
+    assert.equal(view.timeWindow.years.length, 30)
+    assert.ok(view.timeWindow.years.every((y) => y.records === 0) && view.timeWindow.outside === 0, 'no dated records, so no filled years')
+    assert.equal(view.known.statement, '22 species and 1 habitat or feature are named in the Tralee Bay Complex SPA designation.')
 
     const html = renderToStaticMarkup(createElement(PlaceShell, { view }))
     const t = text(html)
     assert.ok(/data-place-relation="">Within the Tralee Bay Complex public record</.test(html))
     // Categories: available ones open a sheet; Water is disabled, unverified, with no count.
     const cat = (id: string) => html.match(new RegExp(`<li data-category="${id}"[\\s\\S]*?</li>`))![0]
-    assert.ok(/href="#evidence"/.test(cat('designations')) && /href="#species"/.test(cat('species')))
+    assert.ok(/href="#evidence"/.test(cat('designations')) && /href="#species"/.test(cat('species')) && /href="#species"/.test(cat('habitats')))
     const water = cat('water')
     assert.ok(/data-category-status="unverified"/.test(water) && /aria-disabled="true"/.test(water) && !/href=/.test(water))
     assert.ok(/data-place-state="NOT YET INGESTED"/.test(water) && text(water).includes('source has not been verified') && !/>\s*0\s*</.test(water))
-    assert.ok(/data-category-status="unwired"/.test(cat('planning')) && !/href=/.test(cat('planning')))
-    // Time strip.
+    for (const id of ['people', 'climate', 'planning']) assert.ok(/data-category-status="unwired"/.test(cat(id)) && !/href=/.test(cat(id)), id)
+    // Chips: same truthful order; Water opens its empty-state sheet; unwired chips are inert and carry no count.
+    const chips = [...html.matchAll(/<li data-chip="(\w+)" data-chip-status="(\w+)">([\s\S]*?)<\/li>/g)]
+    assert.deepEqual(chips.slice(0, 7).map((m) => `${m[1]}:${m[2]}`), ['species:available', 'habitats:available', 'water:unverified', 'designations:available', 'people:unwired', 'climate:unwired', 'planning:unwired'])
+    assert.ok(/href="#water"/.test(chips[2][3]))
+    for (const m of chips.slice(4, 7)) assert.ok(/aria-disabled="true"/.test(m[3]) && !/href=/.test(m[3]) && /NOT YET INGESTED/.test(m[3]), m[1])
+    // What we know so far: derived from the designation record, traceable in How we know.
+    const knownCard = html.match(/<article[^>]*data-known-so-far=""[\s\S]*?<\/article>/)![0]
+    assert.ok(text(knownCard).includes('What we know so far') && text(knownCard).includes(view.known.statement) && /href="#how-we-know"/.test(knownCard))
+    // Time strip: 30-year window, no filled year, gaps stated.
     assert.ok(html.includes('data-time-strip="empty"') && t.includes('No dated public records yet'))
-    // Hero: illustration slot only, rights pending, always badged, no image file.
+    const strip = html.match(/<a[^>]*id="time-strip"[\s\S]*?<\/a>/)![0]
+    assert.equal((strip.match(/data-year="/g) ?? []).length, 30)
+    assert.ok(!/data-records="[1-9]/.test(strip) && text(strip).includes('Travel 30 years'))
+    // Water sheet: truthful empty state, no invented reading.
+    const waterSheet = html.match(/<section id="water"[\s\S]*?<\/section>/)![0]
+    assert.ok(/role="dialog"/.test(waterSheet) && /data-water-empty=""/.test(waterSheet) && text(waterSheet).includes("Water hasn't been gathered yet") && text(waterSheet).includes('No evidence is not evidence of absence.'))
+    // Time sheet: no dated records, no trend claimed.
+    const timeSheet = html.match(/<section id="time"[\s\S]*?<\/section>/)![0]
+    assert.ok(text(timeSheet).includes('No dated public records yet') && text(timeSheet).includes('No trend is claimed') && !/data-time-records/.test(timeSheet))
+    // Hero: deterministic inline illustration, rights pending, always badged, no image file.
     const hero = html.match(/<figure\b[^>]*data-hero="illustration"[\s\S]*?<\/figure>/)![0]
     assert.ok(/data-hero-rights="PENDING"/.test(hero) && /role="img"/.test(hero))
     assert.ok(/aria-label="Illustration of Tralee Wetlands[^"]*"/.test(hero))
-    assert.ok(/data-illustrative-badge="">Illustrative</.test(hero))
+    assert.ok(/data-illustrative-badge=""/.test(hero) && text(hero.match(/<span data-illustrative-badge[\s\S]*?<\/span><\/span>/)![0]).includes('Illustration'))
     assert.ok(!/<img\b|<image\b|\.(png|jpe?g|webp|avif)\b/i.test(hero))
+    assert.equal(renderToStaticMarkup(createElement(PlaceShell, { view })), html, 'hero illustration is deterministic')
     // How we know modal: dialog sheet with the five interactive rules, sources, and what is not shown.
     const how = html.match(/<section id="how-we-know"[\s\S]*?<\/section>/)![0]
     assert.ok(/role="dialog"/.test(how) && /aria-modal="true"/.test(how) && /aria-labelledby="how-we-know-title"/.test(how) && /tabindex="-1"/.test(how))
@@ -132,6 +153,9 @@ test('first Place X1 ARRIVE: relation, categories, truthful Water, empty time st
     // Layout: mobile nav hidden at lg, desktop section nav from lg, in-flow consent slot.
     assert.ok(/<nav aria-label="Place navigation" class="[^"]*\blg:hidden\b/.test(html))
     assert.ok(/<nav aria-label="Place sections" class="hidden lg:block"/.test(html))
-    assert.ok(html.includes('data-place-consent-slot=""'))
+    const main = html.match(/<main id="place-main"[\s\S]*<\/main>/)![0]
+    assert.ok(main.includes('data-place-consent-slot=""') && main.includes('data-consent-placement="inline"'), 'consent is reserved in flow, server-rendered')
+    assert.ok(/<script>[^<]*localStorage\.getItem\('bv-cookie-consent'\)[^<]*data-bv-consent/.test(html), 'returning visitors hide the slot before paint')
+    for (const b of html.match(/<button[^>]*data-consent-choice[^>]*>/g) ?? []) assert.ok(/min-h-\[44px\]/.test(b) && /type="button"/.test(b))
   } finally { await h.pg.close() }
 })
