@@ -222,10 +222,10 @@ test('8. inert contribution: the + is disabled, outside any form, with no handle
   const h = await harness()
   try {
     const html = render(await okView(h.db, 'alpha-marsh'))
-    // X1: the only form is the Menu site search, a GET to /search. Nothing can POST.
+    // PR F: the only form is the Place-scoped search, a GET to /place/<slug>#place-search. Nothing can POST.
     const forms = [...html.matchAll(/<form\b[^>]*>/g)].map((m) => m[0])
     assert.equal(forms.length, 1)
-    assert.ok(/action="\/search"/.test(forms[0]) && /method="get"/.test(forms[0]) && /role="search"/.test(forms[0]))
+    assert.ok(/action="\/place\/[a-z0-9-]+#place-search"/.test(forms[0]) && /method="get"/.test(forms[0]) && /role="search"/.test(forms[0]))
     assert.equal((html.match(/\baction=/g) ?? []).length, 1)
     assert.ok(!/formaction|method="post"/i.test(html))
     const form = html.match(/<form\b[\s\S]*?<\/form>/)![0]

@@ -19,10 +19,10 @@ export const attribution =
 
 export const PLACE_ARRIVE_CSS = `
 .pa-sheet{display:none}
-.pa-sheet:target{display:flex;position:fixed;inset:0;z-index:60;align-items:flex-end;justify-content:center;background:rgba(20,63,44,.46)}
+.pa-sheet:target,.pa-sheet:has(:target){display:flex;position:fixed;inset:0;z-index:60;align-items:flex-end;justify-content:center;background:rgba(20,63,44,.46)}
 .pa-sheet:focus{outline:none}
 .pa-sheet-panel{width:100%;max-width:44rem;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;background:var(--pl-warm);border-radius:24px 24px 0 0;padding:20px 20px calc(28px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px rgba(20,63,44,.22);animation:pa-rise .28s cubic-bezier(.2,.7,.2,1)}
-@media (min-width:768px){.pa-sheet:target{align-items:center;padding:24px}.pa-sheet-panel{border-radius:24px;padding:28px 32px}}
+@media (min-width:768px){.pa-sheet:target,.pa-sheet:has(:target){align-items:center;padding:24px}.pa-sheet-panel{border-radius:24px;padding:28px 32px}}
 @keyframes pa-rise{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
 .pa-fade{animation:pa-fade .5s ease-out both}
 @keyframes pa-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}

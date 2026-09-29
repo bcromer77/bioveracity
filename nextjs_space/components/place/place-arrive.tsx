@@ -6,8 +6,8 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import type { ArriveCategory, PlaceShellView, PlaceState, ShellEvidenceCard, ShellFact, ShellSpecies } from '@/lib/place/shell-view'
-import { NO_EVIDENCE_NOTE } from '@/lib/place/shell-view'
+import type { ArriveCategory, ArriveMap, PlaceSearchResult, PlaceShellView, PlaceState, ShellEvidenceCard, ShellFact, ShellSpecies } from '@/lib/place/shell-view'
+import { NO_EVIDENCE_NOTE, recordAnchor } from '@/lib/place/shell-view'
 import { EvidenceLink } from '@/components/evidence-link'
 import { HashLink } from '@/components/place-client/hash-link'
 import { PlaceSearch } from '@/components/place-client/place-search'
@@ -35,9 +35,9 @@ function Fact({ fact }: { fact: ShellFact }) {
   )
 }
 
-function EvidenceCard({ c }: { c: ShellEvidenceCard }) {
+export function EvidenceCard({ c }: { c: ShellEvidenceCard }) {
   return (
-    <article className={`${card} p-5 md:p-6`} data-public-handle={c.handle}>
+    <article id={recordAnchor(c.handle)} tabIndex={-1} className={`${card} scroll-mt-4 p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--pl-fuchsia)] md:p-6`} data-public-handle={c.handle}>
       <p className={eyebrow}>{c.classLabel}</p>
       <h3 className={`${editorial} mt-2 text-[21px] leading-snug`}>{c.statement}</h3>
       {c.note ? <p className="mt-3 border-l-2 border-[color:var(--pl-gold)] pl-3 text-[14px] leading-relaxed text-[color:var(--pl-muted)]">{c.note}</p> : null}
@@ -56,16 +56,72 @@ function EvidenceCard({ c }: { c: ShellEvidenceCard }) {
   )
 }
 
-function SpeciesRow({ s }: { s: ShellSpecies }) {
-  return (
-    <li className="rounded-xl bg-[color:var(--pl-paper)] px-4 py-3 shadow-[0_1px_2px_rgba(28,42,34,0.06)]" data-framing={s.framing}>
-      <p className="text-[15px] font-semibold">{s.commonName ?? s.label}</p>
-      {s.commonName ? <p className="text-[13px] italic text-[color:var(--pl-muted)]">{s.label}</p> : null}
-      <p className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[color:var(--pl-muted)]">
+function SpeciesRow({ s, path }: { s: ShellSpecies; path: string | null }) {
+  const body = (
+    <>
+      <span className="block text-[15px] font-semibold">{s.commonName ?? s.label}</span>
+      {s.commonName ? <span className="block text-[13px] italic text-[color:var(--pl-muted)]">{s.label}</span> : null}
+      <span className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[color:var(--pl-muted)]">
         <span>{s.kindLabel} · {s.basis}</span>
         <span className="inline-flex items-center gap-1">Here now: <PlaceStateBadge state={s.presenceNow} /></span>
-      </p>
+      </span>
+      {path ? <span className="mt-2 block text-[13px] font-medium text-[color:var(--pl-green)]">Follow its record <span aria-hidden="true">→</span></span> : null}
+    </>
+  )
+  const box = 'block rounded-xl bg-[color:var(--pl-paper)] px-4 py-3 shadow-[0_1px_2px_rgba(28,42,34,0.06)]'
+  return (
+    <li data-framing={s.framing}>
+      {path ? <Link href={`${path}/species/${s.slug}`} prefetch={false} className={`${box} hover:bg-[color:var(--pl-green-soft)] ${focusRing}`} data-species-journey={s.slug}>{body}</Link> : <div className={box}>{body}</div>}
     </li>
+  )
+}
+
+/** Journey footer: every sheet leads on to the next step, never a dead end. */
+function NextStep({ href, label }: { href: `#${string}`; label: string }) {
+  return (
+    <p className="mt-6 flex justify-end border-t border-[color:var(--pl-line)] pt-4" data-next-step={href}>
+      <HashLink href={href} className={`${target44} gap-2 rounded-full bg-[color:var(--pl-green-deep)] px-5 text-[15px] font-semibold text-white hover:bg-[color:var(--pl-green)]`}>{label}<span aria-hidden="true">→</span></HashLink>
+    </p>
+  )
+}
+
+const MAP_ROWS: Array<{ key: 'namedOnly' | 'generalised' | 'withheld'; label: string; state: PlaceState | null; detail: string }> = [
+  { key: 'namedOnly', label: 'Named place only', state: 'NOT LOCATED', detail: 'The source names the place but gives no area or point.' },
+  { key: 'generalised', label: 'Generalised area only', state: null, detail: 'The source gives an area, never an exact point. No shape is published.' },
+  { key: 'withheld', label: 'Location withheld', state: 'RESTRICTED', detail: 'Sensitive or restricted locations are never shown, not even roughly.' },
+]
+
+/**
+ * Evidence-safe Map step (PR F), shared by the Place and every object journey.
+ * The public record carries disclosure and precision only, never geometry, so
+ * this never draws a point, centre or outline. It says why, record by record.
+ */
+export function MapStep({ map, subject }: { map: ArriveMap; subject: string }) {
+  return (
+    <div className="mt-4" data-map-state={map.drawable ? 'drawn' : 'not-supported'}>
+      <div className="rounded-2xl border border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] p-5 text-center">
+        <svg viewBox="0 0 160 96" width="160" height="96" aria-hidden="true" focusable="false" className="mx-auto">
+          <path d="M20 22 60 12l40 10 40-10v62l-40 10-40-10-40 10Z" fill="#F3EFE4" stroke="#B9B09A" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M60 12v62m40-52v62" stroke="#D8D1C0" strokeWidth="2" />
+          <path d="M30 60c14-10 22 4 36-6s24-18 40-8 22 2 24-4" fill="none" stroke="#9AA9A3" strokeWidth="2" strokeDasharray="3 5" strokeLinecap="round" />
+        </svg>
+        <h3 className={`${editorial} mt-3 text-[24px] leading-tight text-[color:var(--pl-ink)]`}>The public evidence does not support a map</h3>
+        <p className="mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-[color:var(--pl-muted)]">{map.reason}</p>
+        <p className="mt-3"><PlaceStateBadge state={map.state} /></p>
+      </div>
+      {map.records ? (
+        <ul className="mt-4 grid gap-2" aria-label={`How the public record locates ${subject}`}>
+          {MAP_ROWS.filter((r) => map[r.key] > 0).map((r) => (
+            <li key={r.key} className="flex items-start justify-between gap-3 rounded-xl bg-[color:var(--pl-paper)] px-4 py-3" data-map-row={r.key}>
+              <span><span className="block text-[15px] font-medium">{r.label}</span><span className="block text-[13px] text-[color:var(--pl-muted)]">{r.detail}</span></span>
+              <span className="flex shrink-0 items-center gap-2">{r.state ? <PlaceStateBadge state={r.state} /> : null}<span className={`${editorial} text-[22px] text-[color:var(--pl-green-deep)]`}>{map[r.key]}</span></span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {map.precisions.length ? <p className="mt-3 text-[14px] text-[color:var(--pl-muted)]">Precision as stated by the source: <span className="font-medium text-[color:var(--pl-ink)]">{map.precisions.join(', ')}</span></p> : null}
+      <p className="mt-3 text-[14px] leading-relaxed text-[color:var(--pl-muted)]">No point, centre or outline is drawn in place of evidence. A place without a map is not a place without a record.</p>
+    </div>
   )
 }
 
@@ -121,6 +177,8 @@ function TraceStep({ label, title, detail, icon }: { label: string; title: strin
     </li>
   )
 }
+
+const TRY_PROMPTS = new Set(['what-lives-here', 'what-has-changed', 'how-do-we-know'])
 
 const THEMES: Array<{ title: string; body: string }> = [
   { title: 'Evidence is not interpretation', body: 'A record says what its source says. Our wording never adds to it, and analysis is always labelled as analysis.' },
@@ -180,7 +238,7 @@ function TimeCells({ years, size = 'strip' }: { years: PlaceShellView['timeWindo
   )
 }
 
-export function PlaceArrive({ view, consent }: { view: PlaceShellView; consent?: ReactNode }) {
+export function PlaceArrive({ view, consent, search }: { view: PlaceShellView; consent?: ReactNode; search?: PlaceSearchResult | null }) {
   const designation = view.species.filter((s) => s.framing === 'designation_feature')
   const recorded = view.species.filter((s) => s.framing === 'subject')
   const notShown = view.categories.filter((c) => c.status === 'unwired' || c.status === 'unverified')
@@ -217,15 +275,15 @@ export function PlaceArrive({ view, consent }: { view: PlaceShellView; consent?:
       {/* DISCOVERY: cream sheet over the hero (mobile); floats over the hero foot (desktop). */}
       <div className="pa-sheet-top relative z-10 -mt-7 rounded-t-[28px] bg-[color:var(--pl-warm)] px-5 pb-4 pt-6 md:px-8 lg:-mt-[400px] lg:rounded-none lg:bg-transparent lg:pt-0">
         <div className="mx-auto max-w-6xl">
-          <HashLink href="#place-menu" aria-label="Search places and records" className={`flex min-h-[60px] items-center gap-3 rounded-full border border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] py-2 pl-5 pr-2 shadow-[0_6px_20px_rgba(28,42,34,0.10)] lg:max-w-[720px] ${focusRing}`}>
+          <HashLink href="#place-menu" aria-label="Search this place" className={`flex min-h-[60px] items-center gap-3 rounded-full border border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] py-2 pl-5 pr-2 shadow-[0_6px_20px_rgba(28,42,34,0.10)] lg:max-w-[720px] ${focusRing}`}>
             <Icon d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 4 4" size={22} className="text-[color:var(--pl-ink)]" />
-            <span className="flex-1 truncate text-[17px] text-[color:var(--pl-muted)]">Search places and records…</span>
+            <span className="flex-1 truncate text-[17px] text-[color:var(--pl-muted)]">Search species, habitats, records…</span>
             <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-full bg-[color:var(--pl-green-deep)] text-white"><Icon d="M5 12h14m-6-6 6 6-6 6" size={20} /></span>
           </HashLink>
           <ul aria-label="What the public record holds" className="pa-chips relative -mx-5 mt-4 flex gap-2 overflow-x-auto px-5 pb-1 md:mx-0 md:px-0 lg:flex-wrap lg:overflow-visible">{view.categories.map((c) => <Chip key={c.id} c={c} />)}</ul>
           <p className="mt-4 hidden flex-wrap items-center gap-2 text-[15px] text-white lg:flex">
             <span className="mr-1">Try</span>
-            {view.prompts.slice(0, 2).concat(view.prompts.slice(3)).map((p) => (
+            {view.prompts.filter((p) => TRY_PROMPTS.has(p.id)).map((p) => (
               <HashLink key={p.id} href={`#${p.id}`} className={`${target44} rounded-full border border-white/40 bg-[#12251C]/60 px-4`}>{p.question}</HashLink>
             ))}
           </p>
@@ -279,7 +337,7 @@ export function PlaceArrive({ view, consent }: { view: PlaceShellView; consent?:
               {p.state ? <p className="mt-3"><PlaceStateBadge state={p.state} /></p> : null}
               <p className="mt-3 text-[15px] leading-relaxed">{p.summary}</p>
               <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--pl-muted)]">{p.detail}</p>
-              {p.id === 'how-do-we-know' ? <p className="mt-3 text-[14px]"><HashLink href="#how-we-know" className={`${target44} ${textLink}`}>How we know</HashLink></p> : null}
+              <p className="mt-3 text-[15px] font-medium" data-prompt-next={p.next.href}><HashLink href={p.next.href} className={`${target44} gap-1.5 text-[color:var(--pl-green)] ${textLink}`}>{p.next.label}<span aria-hidden="true">→</span></HashLink></p>
             </article>
           ))}
         </div>
@@ -372,9 +430,9 @@ export function PlaceArrive({ view, consent }: { view: PlaceShellView; consent?:
         {view.timeline.length ? (
           <ol className="mt-5 grid gap-3" data-time-records="">
             {view.timeline.map((r) => (
-              <li key={`${r.date}|${r.statement}`} className={`${card} flex items-baseline gap-4 p-4`}>
+              <li key={`${r.date}|${r.handle}`} className={`${card} flex items-baseline gap-4 p-4`}>
                 <p className={`${editorial} text-[22px] tabular-nums text-[color:var(--pl-green)]`}>{r.date}</p>
-                <div><p className="text-[16px] font-medium">{r.statement}</p><p className="text-[13px] text-[color:var(--pl-muted)]">{r.classLabel}</p></div>
+                <div><p className="text-[16px] font-medium">{r.statement}</p><p className="text-[13px] text-[color:var(--pl-muted)]">{r.classLabel}</p><HashLink href={`#${recordAnchor(r.handle)}`} className={`${target44} text-[14px] font-medium ${textLink}`}>See the record</HashLink></div>
               </li>
             ))}
           </ol>
@@ -384,13 +442,14 @@ export function PlaceArrive({ view, consent }: { view: PlaceShellView; consent?:
         {tw.outside ? <p className="mt-3 text-[14px] text-[color:var(--pl-muted)]">{tw.outside} dated {tw.outside === 1 ? 'record falls' : 'records fall'} outside this window.</p> : null}
         <p className="mt-4 flex flex-wrap gap-4 text-[14px] text-[color:var(--pl-muted)]"><span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-3.5 w-6 rounded bg-[color:var(--pl-green)]" />Dated public evidence</span><span className="inline-flex items-center gap-2"><span aria-hidden="true" className="pa-gap h-3.5 w-6 rounded" />Not gathered yet</span></p>
         <p className={`${editorial} mt-4 text-center text-[19px] italic text-[color:var(--pl-green)]`}>We never fill gaps with guesses.</p>
+        <NextStep href="#species" label="Species and features" />
       </Sheet>
 
       <Sheet id="species" title="Species and features">
         {recorded.length ? (
           <>
             <h3 className="mt-5 text-[16px] font-semibold">Named in public observation records</h3>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2">{recorded.map((s) => <SpeciesRow key={s.key} s={s} />)}</ul>
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2">{recorded.map((s) => <SpeciesRow key={s.key} s={s} path={view.path} />)}</ul>
           </>
         ) : (
           <p className="mt-4 flex flex-wrap items-center gap-2 text-[15px]"><PlaceStateBadge state="NOT RECORDED" /> No public observation records name species here yet.</p>
@@ -399,27 +458,72 @@ export function PlaceArrive({ view, consent }: { view: PlaceShellView; consent?:
           <>
             <h3 className="mt-7 text-[16px] font-semibold">Named as reasons this site is protected</h3>
             {view.designationNote ? <p className="mt-3 rounded-xl border-l-4 border-[color:var(--pl-gold)] bg-[color:var(--pl-paper)] px-4 py-3 text-[14px] leading-relaxed">{view.designationNote}</p> : null}
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">{designation.map((s) => <SpeciesRow key={s.key} s={s} />)}</ul>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">{designation.map((s) => <SpeciesRow key={s.key} s={s} path={view.path} />)}</ul>
           </>
         ) : null}
+        <NextStep href="#evidence" label="The public record" />
+      </Sheet>
+
+      <Sheet id="map" title="Where the record places it">
+        <p className="mt-2 text-[15px] text-[color:var(--pl-muted)]">Every location is shown only as precisely as its source states it.</p>
+        <MapStep map={view.map} subject={view.title} />
+        <NextStep href="#time" label="Travel through time" />
       </Sheet>
 
       <Sheet id="evidence" title="The public record">
         <p className="mt-2 text-[15px] text-[color:var(--pl-muted)]">Each record keeps its source, licence and dates. Unknown dates stay unknown.</p>
         <div className="mt-5 grid gap-4">{view.cards.map((c) => <EvidenceCard key={c.handle} c={c} />)}</div>
+        <NextStep href="#how-we-know" label="How we know: the original sources" />
       </Sheet>
 
+      {search ? (
+        <Sheet id="place-search" title="Search this place">
+          <p className="mt-2 text-[15px] text-[color:var(--pl-muted)]" data-search-query="">Results for “{search.q}” in the public record for {view.title}. Matched word by word, never guessed.</p>
+          {search.status === 'invalid' ? <p className="mt-4 rounded-2xl border border-dashed border-[color:var(--pl-line)] p-4 text-[15px]">That search could not be run. Try a shorter search of plain words.</p> : null}
+          {search.warning ? <p className="mt-4 rounded-xl border-l-4 border-[color:var(--pl-gold)] bg-[color:var(--pl-paper)] px-4 py-3 text-[14px] leading-relaxed" data-search-warning="">{search.warning}</p> : null}
+          {search.species.length ? (
+            <>
+              <h3 className="mt-5 text-[16px] font-semibold">Species and features</h3>
+              <ul className="mt-2 grid gap-2">
+                {search.species.map((r) => (
+                  <li key={r.slug}>{view.path ? <Link href={`${view.path}/species/${r.slug}`} prefetch={false} className={`block rounded-xl bg-[color:var(--pl-paper)] px-4 py-3 hover:bg-[color:var(--pl-green-soft)] ${focusRing}`}><span className="block text-[15px] font-semibold">{r.title}</span>{r.latin ? <span className="block text-[13px] italic text-[color:var(--pl-muted)]">{r.latin}</span> : null}<span className="block text-[12px] text-[color:var(--pl-muted)]">{r.basis}</span></Link> : <span className="block px-4 py-3 text-[15px] font-semibold">{r.title}</span>}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {search.records.length ? (
+            <>
+              <h3 className="mt-5 text-[16px] font-semibold">Public records</h3>
+              <ul className="mt-2 grid gap-2">
+                {search.records.map((r) => (
+                  <li key={r.handle}><HashLink href={`#${recordAnchor(r.handle)}`} className={`block rounded-xl bg-[color:var(--pl-paper)] px-4 py-3 hover:bg-[color:var(--pl-green-soft)] ${focusRing}`}><span className="block text-[15px] font-medium">{r.statement}</span><span className="block text-[12px] text-[color:var(--pl-muted)]">{r.classLabel}</span></HashLink></li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {search.status === 'ok' && !search.species.length && !search.records.length ? (
+            <p className="mt-4 rounded-2xl border border-dashed border-[color:var(--pl-line)] p-4 text-[15px]" data-search-empty=""><span className="font-semibold">Nothing in this place&apos;s public record matches.</span> <span className="text-[color:var(--pl-muted)]">{NO_EVIDENCE_NOTE}</span></p>
+          ) : null}
+          <p className="mt-5 flex flex-wrap gap-x-5 text-[14px]">
+            <HashLink href="#place-menu" className={`${target44} ${textLink}`}>Search again</HashLink>
+            <Link href={{ pathname: '/search', query: { q: search.q } }} prefetch={false} className={`${target44} ${textLink}`}>Search all of BioVeracity</Link>
+          </p>
+        </Sheet>
+      ) : null}
+
       <Sheet id="place-menu" title="Menu" heading={<BioVeracityPlaceMark size={22} />}>
-        <PlaceSearch />
+        <PlaceSearch path={view.path} defaultValue={search?.q} />
         <ul className="mt-4 grid gap-1 sm:grid-cols-2">
           {view.prompts.map((p) => (
             <li key={p.id}><HashLink href={`#${p.id}`} className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>{p.question}</HashLink></li>
           ))}
           <li><HashLink href="#arrive-categories" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>What the public record holds</HashLink></li>
           <li><HashLink href="#species" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>Species and features</HashLink></li>
+          <li><HashLink href="#map" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>Where the record places it</HashLink></li>
+          <li><HashLink href="#time" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>Travel through time</HashLink></li>
           <li><HashLink href="#evidence" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>The public record</HashLink></li>
           <li><HashLink href="#how-we-know" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>How we know</HashLink></li>
-          <li><Link href="/" className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>BioVeracity home</Link></li>
+          <li><Link href="/" prefetch={false} className={`flex min-h-[44px] items-center rounded-lg px-2 text-[15px] ${textLink}`}>BioVeracity home</Link></li>
         </ul>
       </Sheet>
     </>

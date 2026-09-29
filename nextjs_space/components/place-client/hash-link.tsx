@@ -32,8 +32,16 @@ export function goToHash(href: string, opts: { close?: boolean; opener?: HTMLEle
     back?.focus({ preventScroll: true })
     return
   }
-  if (target?.hasAttribute('data-pa-sheet')) lastOpener = opts.opener ?? null
+  // A target nested inside a sheet (a record card) opens that sheet through CSS :has(:target).
+  if (target?.closest('[data-pa-sheet]')) lastOpener = opts.opener ?? null
   target?.focus({ preventScroll: target.hasAttribute('data-pa-sheet') })
+}
+
+/** The sheet the current hash opens: the target itself or the sheet that contains it. */
+function openSheet(): HTMLElement | null {
+  const id = window.location.hash.slice(1)
+  const target = id ? document.getElementById(decodeURIComponent(id)) : null
+  return target?.closest<HTMLElement>('[data-pa-sheet]') ?? null
 }
 
 export function HashLink({ href, close, children, ...rest }: HashLinkProps) {
@@ -43,19 +51,23 @@ export function HashLink({ href, close, children, ...rest }: HashLinkProps) {
     goToHash(href, { close, opener: event.currentTarget })
   }
   return (
-    <Link href={href} scroll={false} {...rest} {...(close ? { 'data-pa-close': '' } : {})} onClick={handle}>
+    <Link href={href} scroll={false} prefetch={false} {...rest} {...(close ? { 'data-pa-close': '' } : {})} onClick={handle}>
       {children}
     </Link>
   )
 }
 
-/** Escape closes the open sheet; Tab stays inside it while it is open. Renders nothing. */
+/** Escape closes the open sheet; Tab stays inside it while it is open; a sheet named in the URL opens on arrival. Renders nothing. */
 export function SheetKeys() {
   useEffect(() => {
+    // Arriving from another Place page (client navigation uses history.pushState),
+    // :target is not re-evaluated; re-apply the hash in place so the named sheet opens.
+    const id = decodeURIComponent(window.location.hash.slice(1))
+    const arrived = id ? document.getElementById(id) : null
+    if (arrived?.closest('[data-pa-sheet]') && !arrived.matches(':target')) window.location.replace(`#${id}`)
     function onKey(event: KeyboardEvent) {
-      const id = window.location.hash.slice(1)
-      const sheet = id ? document.getElementById(id) : null
-      if (!sheet?.hasAttribute('data-pa-sheet')) return
+      const sheet = openSheet()
+      if (!sheet) return
       if (event.key === 'Escape') {
         const closer = sheet.querySelector<HTMLAnchorElement>('[data-pa-close]')
         event.preventDefault()

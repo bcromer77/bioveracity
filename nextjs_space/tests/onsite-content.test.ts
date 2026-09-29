@@ -69,7 +69,8 @@ test('Place ARRIVE stays on-site: managed hash links, GET-only search, no extern
  }
  const hash=sources['components/place-client/hash-link.tsx']
  assert.match(hash,/import Link from 'next\/link'/);assert.match(hash,/href: `#\$\{string\}`/,'HashLink only accepts same-page fragments')
- assert.match(sources['components/place-client/place-search.tsx'],/action="\/search" method="get"/)
+ assert.match(sources['components/place-client/place-search.tsx'],/action=\{action\} method="get"/)
+ assert.match(sources['components/place-client/place-search.tsx'],/`\$\{path\}#place-search` : '\/search'/,'Place-scoped GET search with site-search fallback')
  assert.match(await readFile('app/search/page.tsx','utf8'),/searchParams: Promise<\{ q\?: string \}>/,'search target reads the GET q parameter')
  const consent=await readFile('components/cookie-consent.tsx','utf8')
  const { isGlobalBannerRoute }=await import('../components/cookie-consent')

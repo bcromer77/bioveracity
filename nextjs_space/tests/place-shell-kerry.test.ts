@@ -144,12 +144,12 @@ test('first Place X1 ARRIVE: relation, categories, truthful Water, empty time st
     assert.equal((how.match(/<summary\b/g) ?? []).length, 5)
     assert.ok(text(how).includes('An illustration is not evidence') && text(how).includes('Water:') && text(how).includes('Planning:'))
     assert.ok(/data-pa-close=""/.test(how) && /href="#place-main"/.test(how))
-    // Menu: fuchsia mark in the heading, GET search.
+    // Menu: fuchsia mark in the heading, Place-scoped GET search (PR F).
     const menuTitle = html.match(/<h2 id="place-menu-title"[\s\S]*?<\/h2>/)![0]
     assert.ok(/data-bv-place-mark/.test(menuTitle) && /data-tone="fuchsia"/.test(menuTitle) && text(menuTitle).includes('Menu'))
     const form = html.match(/<form\b[^>]*>/g) ?? []
     assert.equal(form.length, 1)
-    assert.ok(/action="\/search"/.test(form[0]) && /method="get"/.test(form[0]) && /role="search"/.test(form[0]) && !/method="post"/i.test(html))
+    assert.ok(/action="\/place\/[a-z0-9-]+#place-search"/.test(form[0]) && /method="get"/.test(form[0]) && /role="search"/.test(form[0]) && !/method="post"/i.test(html))
     // Layout: mobile nav hidden at lg, desktop section nav from lg, in-flow consent slot.
     assert.ok(/<nav aria-label="Place navigation" class="[^"]*\blg:hidden\b/.test(html))
     assert.ok(/<nav aria-label="Place sections" class="hidden lg:block"/.test(html))
