@@ -42,3 +42,38 @@ export function fodderAssetSeed() {
     status: 'active',
   })
 }
+
+/**
+ * FIXTURE source metadata for the structural items below. The publisher and
+ * licence are explicitly labelled as non-production; no real source is cited.
+ */
+export const FODDER_FIXTURE_SOURCE = Object.freeze({
+  evidenceId: 'fixture_fodder_source',
+  publisher: 'FIXTURE (non-production) BioVeracity test harness',
+  sourceExternalId: 'FIXTURE-FODDER-001',
+  licence: 'FIXTURE ONLY: not for publication',
+  attribution: 'FIXTURE (non-production)',
+} as const)
+
+/**
+ * Two FIXTURE, non-production structural items. They exist only so that the
+ * generic read model, loader and shell can be exercised end to end for a
+ * second Place. They are archive-status notes about the fixture itself and make
+ * no environmental claim: no entities, no event dates, no geography.
+ */
+export function fodderItemSeeds() {
+  return Object.freeze([
+    Object.freeze({
+      id: 'fixture_fodder_item_archive_status',
+      kind: 'ANALYSIS',
+      evidenceClass: 'BIOVERACITY_DERIVED_ANALYSIS',
+      originalStatement: 'FIXTURE (non-production): no records have been submitted to this archive for this venue.',
+    }),
+    Object.freeze({
+      id: 'fixture_fodder_item_structural',
+      kind: 'ANALYSIS',
+      evidenceClass: 'BIOVERACITY_DERIVED_ANALYSIS',
+      originalStatement: 'FIXTURE (non-production): structural test record; makes no environmental claim.',
+    }),
+  ] as const)
+}
