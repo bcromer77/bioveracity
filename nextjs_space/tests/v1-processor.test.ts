@@ -155,6 +155,35 @@ test('processor never accepts manufactured dates, coordinates or out-of-lifecycl
   }
 })
 
+test('processor rejects changed non-null dates while accepting canonical UTC equivalents', async () => {
+  let captured: EvidencePublic | null = null
+  const h: Harness = await harness({ processor: async (e) => { captured = e } })
+  try {
+    const key = await h.service.createKey({ name: 'k', mode: 'test' })
+    const dated = {
+      ...body,
+      observation_time: '2026-09-01',
+      observation_precision: 'day',
+      publication_time: '2026-09-01T03:00:00+03:00',
+      retrieval_time: '2026-09-02T00:00:00Z',
+    }
+    const res = await h.handle('POST', '/api/v1/evidence', { token: key.token, body: dated })
+    assert.equal(res.status, 201)
+    const e = captured as unknown as EvidencePublic
+    const processor = createV1Processor(h.db)
+    await processor(e)
+    assert.equal(e.publication_time, '2026-09-01T00:00:00.000Z')
+    for (const name of ['observation_time', 'publication_time', 'retrieval_time'] as const) {
+      await assert.rejects(
+        processor({ ...e, [name]: '2026-09-03T00:00:00.000Z' }),
+        (err: unknown) => err instanceof ProcessingCheckError && err.check === `${name}_mismatch`,
+      )
+    }
+  } finally {
+    await h.pg.close()
+  }
+})
+
 test('production wiring: getService() supplies the V1 processor', () => {
   const src = readFileSync(join(process.cwd(), 'lib/v1/http.ts'), 'utf8')
   assert.match(src, /return platformService\(platformDb, v1ServiceOptions\(platformDb\)\)/)
