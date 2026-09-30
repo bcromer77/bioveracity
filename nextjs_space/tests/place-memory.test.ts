@@ -283,9 +283,9 @@ test('frozen public V1 route surface remains exactly four routes and no Place Me
   assert.deepEqual(walk(root).sort(), ['evidence/[id]/route.ts', 'evidence/route.ts', 'health/route.ts', 'requests/[id]/route.ts'])
 })
 
-test('typed projector registry keeps production KERRY-only while a hypothetical adapter needs registration only', async () => {
-  assert.deepEqual(PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS, ['KERRY-001'])
-  assert.equal(PRODUCTION_PLACE_MEMORY_PROJECTORS.length, 1)
+test('typed projector registry holds KERRY-001 plus the generic manifest projector; a hypothetical adapter needs registration only', async () => {
+  assert.deepEqual(PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS, ['KERRY-001', 'PLACE-MANIFEST-V1'])
+  assert.equal(PRODUCTION_PLACE_MEMORY_PROJECTORS.length, 2)
   assert.doesNotMatch(readFileSync('lib/place-memory/registry.ts', 'utf8'), /KERRY|NPWS/)
 
   type HypotheticalRecord = Readonly<{ evidenceId: string; marker: 'HYPOTHETICAL-002' }>
@@ -325,7 +325,7 @@ test('typed projector registry keeps production KERRY-only while a hypothetical 
     projected: true, projectorId: 'HYPOTHETICAL-002', evidenceId: 'ev_hypothetical_002',
   })
   assert.deepEqual(projected, { evidenceId: 'ev_hypothetical_002', marker: 'HYPOTHETICAL-002' })
-  assert.deepEqual(PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS, ['KERRY-001'])
+  assert.deepEqual(PRODUCTION_PLACE_MEMORY_PROJECTOR_IDS, ['KERRY-001', 'PLACE-MANIFEST-V1'])
   assert.throws(
     () => createPlaceMemoryProjectorRegistry(unusedDb, [hypothetical, hypothetical]),
     /place_memory_registry_invalid:duplicate_id:HYPOTHETICAL-002/,

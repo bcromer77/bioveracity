@@ -7,6 +7,7 @@
 import type { PlacePresentation } from '@/lib/place/shell-view'
 import { KERRY_PLACE_ID } from './kerry-001'
 import { FODDER_PLACE_ID } from './fodder-fixture'
+import { placeManifestFor } from '@/data/places'
 
 const PLACE_PRESENTATION: Readonly<Record<string, PlacePresentation>> = Object.freeze({
   // relationRecord is shown only if a public statutory record names it (shell-view.ts).
@@ -16,5 +17,13 @@ const PLACE_PRESENTATION: Readonly<Record<string, PlacePresentation>> = Object.f
 })
 
 export function placePresentation(placeId: string): PlacePresentation | null {
-  return Object.prototype.hasOwnProperty.call(PLACE_PRESENTATION, placeId) ? PLACE_PRESENTATION[placeId] : null
+  if (Object.prototype.hasOwnProperty.call(PLACE_PRESENTATION, placeId)) return PLACE_PRESENTATION[placeId]
+  // Manifest-backed Places carry their presentation as reviewed data (PILOT-001).
+  const manifest = placeManifestFor(placeId)
+  if (!manifest) return null
+  const { display_title, relation_record } = manifest.place.presentation
+  return Object.freeze({
+    ...(display_title ? { displayTitle: display_title } : {}),
+    ...(relation_record ? { relationRecord: relation_record } : {}),
+  })
 }

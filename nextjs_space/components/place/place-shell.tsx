@@ -37,7 +37,7 @@ export const PLACE_CONSENT_PREPAINT = `try{if(localStorage.getItem('bv-cookie-co
  * `children` replaces ARRIVE on a Place object page (PR F species journey):
  * the header turns solid and section links return to the Place page.
  */
-export function PlaceShell({ view, search, children }: { view: PlaceShellView; search?: PlaceSearchResult | null; children?: ReactNode }) {
+export function PlaceShell({ view, search, children, invitation }: { view: PlaceShellView; search?: PlaceSearchResult | null; children?: ReactNode; invitation?: ReactNode }) {
   const base = children ? view.path : null
   return (
     <div style={placeTokenStyle} className="pa relative min-h-screen pb-28 font-sans lg:pb-0" data-place-shell="v1">
@@ -68,6 +68,7 @@ export function PlaceShell({ view, search, children }: { view: PlaceShellView; s
         {children ?? <PlaceArrive
           view={view}
           search={search}
+          invitation={invitation}
           consent={
             // Reserved, server-rendered, in-flow consent slot (the global fixed banner is off on /place/*).
             <div className="pa-consent mt-5" data-place-consent-slot="">

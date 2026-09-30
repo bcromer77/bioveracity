@@ -1,0 +1,124 @@
+{
+  "manifest_version": "place-manifest-v1",
+  "place": {
+    "id": "bv_place_gb_ni_down_strangford_lough",
+    "slug": "strangford-lough",
+    "label": "Strangford Lough",
+    "region": "down",
+    "region_slug": "down",
+    "jurisdiction": "Northern Ireland",
+    "summary": "Logical evidence container; not a manufactured scientific or legal polygon.",
+    "presentation": { "display_title": "Strangford Lough" }
+  },
+  "sources": [
+    {
+      "ref": "jncc_sac_site_page",
+      "provider": "jncc",
+      "publisher": "Joint Nature Conservation Committee",
+      "url": "https://sac.jncc.gov.uk/site/UK0016618",
+      "retrieved_at": "2026-09-30T15:47:46Z",
+      "sha256": "2dff2d0a00a76a24e3b8795596dd2f8551ed927b4e4e5bc65d2d999600dcc811",
+      "licence": "Open Government Licence v3.0",
+      "licence_url": "https://data.jncc.gov.uk/data/d6381e39-baa4-4f12-93d7-fa16dd3600b8/JNCC-OpenData-Policy-v1.0.htm",
+      "attribution": "Contains public sector information licensed under the Open Government Licence v3.0. Source: JNCC"
+    },
+    {
+      "ref": "jncc_spa_standard_data_form",
+      "provider": "jncc",
+      "publisher": "Joint Nature Conservation Committee",
+      "url": "https://jncc.gov.uk/jncc-assets/SPA-N2K/UK9020111.pdf",
+      "retrieved_at": "2026-09-30T15:47:46Z",
+      "sha256": "0173f365eba94dda63474815e0466d42d81aab8b05cf2f92de323bd28724a9ed",
+      "licence": "Open Government Licence v3.0",
+      "licence_url": "https://data.jncc.gov.uk/data/d6381e39-baa4-4f12-93d7-fa16dd3600b8/JNCC-OpenData-Policy-v1.0.htm",
+      "attribution": "Contains public sector information licensed under the Open Government Licence v3.0. Source: JNCC"
+    },
+    {
+      "ref": "daera_sac_page",
+      "provider": "daera",
+      "publisher": "Department of Agriculture, Environment and Rural Affairs",
+      "url": "https://www.daera-ni.gov.uk/protected-areas/strangford-lough-sac",
+      "retrieved_at": "2026-09-30T15:47:46Z",
+      "sha256": "a9792a5539f5390fde7fd1ed87bd1fbd37b9a120e4befa115382168a5ddceb7b",
+      "licence": "Open Government Licence v3.0",
+      "licence_url": "https://www.daera-ni.gov.uk/articles/crown-copyright-daera",
+      "attribution": "Contains public sector information licensed under the Open Government Licence v3.0. Source: DAERA"
+    }
+  ],
+  "items": [
+    {
+      "item_key": "designation:SAC:UK0016618",
+      "kind": "DESIGNATION",
+      "evidence_type": "protected_site_designation_snapshot",
+      "statement": "Strangford Lough Special Area of Conservation (SAC)",
+      "source_ref": "jncc_sac_site_page",
+      "source_external_id": "SAC:UK0016618",
+      "source_locator": "Site page: SAC EU Code UK0016618; Status 'Designated Special Area of Conservation (SAC)'; Annex I and Annex II feature lists",
+      "search_terms": ["Special Area of Conservation", "SAC UK0016618", "designation evidence, not a current observation"],
+      "uncertainty": ["designation_not_observation", "current_presence_not_established", "abundance_not_established", "condition_not_established", "observation_time_unknown", "publication_time_unknown"],
+      "entities": [
+        { "kind": "ECOLOGICAL_FEATURE", "label": "Mudflats and sandflats not covered by seawater at low tide", "authority": "JNCC_SAC_ANNEX_I", "external_id": "1140", "source_assertion": "Annex I habitats that are a primary reason for selection of this site", "source_terms": [], "curated_terms": [] },
+        { "kind": "ECOLOGICAL_FEATURE", "label": "Coastal lagoons", "authority": "JNCC_SAC_ANNEX_I", "external_id": "1150", "source_assertion": "Annex I habitats that are a primary reason for selection of this site; * Priority feature", "source_terms": [], "curated_terms": [] },
+        { "kind": "ECOLOGICAL_FEATURE", "label": "Large shallow inlets and bays", "authority": "JNCC_SAC_ANNEX_I", "external_id": "1160", "source_assertion": "Annex I habitats that are a primary reason for selection of this site", "source_terms": [], "curated_terms": [] },
+        { "kind": "ECOLOGICAL_FEATURE", "label": "Reefs", "authority": "JNCC_SAC_ANNEX_I", "external_id": "1170", "source_assertion": "Annex I habitats that are a primary reason for selection of this site", "source_terms": [], "curated_terms": [] },
+        { "kind": "TAXON", "label": "Phoca vitulina", "authority": "JNCC_SAC_ANNEX_II", "external_id": "1365", "source_assertion": "Annex II species present as a qualifying feature, but not a primary reason for site selection", "source_terms": ["Harbour seal"], "curated_terms": [] }
+      ]
+    },
+    {
+      "item_key": "designation:SPA:UK9020111",
+      "kind": "DESIGNATION",
+      "evidence_type": "protected_site_designation_snapshot",
+      "statement": "Strangford Lough Special Protection Area (SPA)",
+      "source_ref": "jncc_spa_standard_data_form",
+      "source_external_id": "SPA:UK9020111",
+      "source_locator": "Standard Data Form: 1.2 Site code UK9020111; 1.3 Site name; 3.2 Species referred to in Article 4 of Directive 2009/147/EC; 3.3 WATR",
+      "search_terms": ["Special Protection Area", "SPA UK9020111", "designation evidence, not a current observation"],
+      "uncertainty": ["designation_not_observation", "current_presence_not_established", "abundance_not_established", "condition_not_established", "observation_time_unknown", "publication_time_unknown"],
+      "entities": [
+        { "kind": "TAXON", "label": "Branta bernicla hrota", "authority": "JNCC_SPA_ARTICLE_4", "external_id": "A674", "source_assertion": "Section 3.2: Branta bernicla hrota [Canada/Ireland]; type w", "source_terms": [], "curated_terms": ["Light-bellied Brent Goose"] },
+        { "kind": "TAXON", "label": "Calidris canutus", "authority": "JNCC_SPA_ARTICLE_4", "external_id": "A143", "source_assertion": "Section 3.2: Calidris canutus; type w", "source_terms": [], "curated_terms": ["Knot"] },
+        { "kind": "TAXON", "label": "Sterna hirundo", "authority": "JNCC_SPA_ARTICLE_4", "external_id": "A193", "source_assertion": "Section 3.2: Sterna hirundo; type r", "source_terms": [], "curated_terms": ["Common Tern"] },
+        { "kind": "TAXON", "label": "Sterna paradisaea", "authority": "JNCC_SPA_ARTICLE_4", "external_id": "A194", "source_assertion": "Section 3.2: Sterna paradisaea; type r", "source_terms": [], "curated_terms": ["Arctic Tern"] },
+        { "kind": "TAXON", "label": "Sterna sandvicensis", "authority": "JNCC_SPA_ARTICLE_4", "external_id": "A191", "source_assertion": "Section 3.2: Sterna sandvicensis; type r", "source_terms": [], "curated_terms": ["Sandwich Tern"] },
+        { "kind": "TAXON", "label": "Tringa totanus", "authority": "JNCC_SPA_ARTICLE_4", "external_id": "A162", "source_assertion": "Section 3.2: Tringa totanus; type w", "source_terms": [], "curated_terms": ["Redshank"] },
+        { "kind": "ECOLOGICAL_FEATURE", "label": "Waterbird assemblage", "authority": "JNCC_SPA_ASSEMBLAGE", "external_id": "WATR", "source_assertion": "Section 3.3: WATR Waterbird assemblage", "source_terms": [], "curated_terms": [] }
+      ]
+    },
+    {
+      "item_key": "statement:SAC:UK0016618:1160",
+      "kind": "CLAIM",
+      "evidence_type": "authoritative_site_description",
+      "statement": "Strangford Lough on the east coast of Northern Ireland is an outstanding example of a large, enclosed fjardic sea lough.",
+      "source_ref": "jncc_sac_site_page",
+      "source_external_id": "SAC:UK0016618:1160:description",
+      "source_locator": "Site page: 'Large shallow inlets and bays' (1160), first sentence of the feature description",
+      "search_terms": ["sea lough", "inlet"],
+      "uncertainty": ["condition_not_established", "observation_time_unknown", "publication_time_unknown"],
+      "entities": []
+    },
+    {
+      "item_key": "statement:DAERA:SAC:setting",
+      "kind": "CLAIM",
+      "evidence_type": "authoritative_site_description",
+      "statement": "Strangford Lough is a large (150 km2) marine inlet on the east coast of County Down, of which about 50 km2 lies between high water mark mean tide (HWMMT) and low water mark mean tide (LWMMT).",
+      "source_ref": "daera_sac_page",
+      "source_external_id": "DAERA:strangford-lough-sac:paragraph-1:sentence-1",
+      "source_locator": "Protected areas page 'Strangford Lough SAC', first paragraph, first sentence",
+      "search_terms": ["intertidal", "tide"],
+      "uncertainty": ["observation_time_unknown", "publication_time_unknown"],
+      "entities": []
+    },
+    {
+      "item_key": "statement:DAERA:SAC:habitats",
+      "kind": "CLAIM",
+      "evidence_type": "authoritative_site_description",
+      "statement": "The Lough supports an impressive range of marine habitats and communities with over 2,000 recorded species. It is important for marine invertebrates, algae and saltmarsh plants, for wintering and breeding wetland birds, and for marine mammals.",
+      "source_ref": "daera_sac_page",
+      "source_external_id": "DAERA:strangford-lough-sac:paragraph-2",
+      "source_locator": "Protected areas page 'Strangford Lough SAC', second paragraph (whitespace normalised)",
+      "search_terms": ["marine habitats", "wetland birds", "marine mammals"],
+      "uncertainty": ["current_presence_not_established", "abundance_not_established", "condition_not_established", "observation_time_unknown", "publication_time_unknown"],
+      "entities": []
+    }
+  ]
+}

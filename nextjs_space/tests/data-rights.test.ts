@@ -12,7 +12,8 @@ const acceptance={acceptTerms:true,termsVersion:TERMS_VERSION,privacyVersion:PRI
 async function fixture(){
  const pg=new PGlite()
  await pg.exec(`CREATE TABLE "User" (id TEXT PRIMARY KEY,name TEXT,email TEXT,role TEXT DEFAULT 'user',"accessState" TEXT DEFAULT 'REGISTERED',"createdAt" TIMESTAMPTZ DEFAULT now()); INSERT INTO "User" (id,name,email) VALUES ('a','Alice','a@example.test'),('b','Bob','b@example.test'),('admin','Reviewer','admin@example.test'); UPDATE "User" SET role='admin' WHERE id='admin';`)
- for(const migration of ['20260914_wild_hubs','20260915_wild_editorial_review','20260919_attention_return','20260923_venue_photo_journal','20260924_data_rights'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
+ await pg.exec(`CREATE TABLE "Asset" (id TEXT PRIMARY KEY); INSERT INTO "Asset" (id) VALUES ('place-x');`)
+ for(const migration of ['20260914_wild_hubs','20260915_wild_editorial_review','20260919_attention_return','20260923_venue_photo_journal','20260924_data_rights','20261005_listening_pilot','20261006_pilot_001_place_link'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
  await pg.exec(`INSERT INTO "WildHub" (id,"ownerId",profile,published) VALUES ('venue','a','{"name":"Test venue"}','{}'),('other','b','{"name":"Other venue"}','{}');`)
  const sql=(p:Pick<PGlite,'query'>):Sql=>({query:async<T>(q:string,v:unknown[])=>(await p.query<T>(q,v)).rows})
  const db:Database={...sql(pg),transaction:fn=>pg.transaction(tx=>fn(sql(tx)))}
@@ -101,5 +102,46 @@ test('owner gallery also requires a release, keeps contacts private and supports
  assert.equal((await admin.publicationRelease(id,'venue') as {photoId:string}).photoId,id)
  await f.a.withdrawGalleryRelease(id)
  await assert.rejects(admin.publicationRelease(id,'venue'),/No verified/)
+ }finally{await f.pg.close()}
+})
+
+async function seedListening(f:Awaited<ReturnType<typeof fixture>>){
+ await f.pg.exec(`INSERT INTO "ListeningPlot" (id,"ownerId",name,county,"placeId","payloadHash") VALUES
+  ('a-own','a','Garden','Kerry',NULL,'h1'),('a-place','a','Strangford Lough',NULL,'place-x','h2'),('b-place','b','Strangford Lough',NULL,'place-x','h3');
+  INSERT INTO "ListeningVisit" (id,"plotId","observedAt",payload,"payloadHash") VALUES
+  ('va1','a-own',now(),'{"heard":[]}','x1'),('va2','a-place',now(),'{"heard":["robin"]}','x2'),('vb1','b-place',now(),'{"heard":[]}','x3');`)
+}
+const count=async(f:Awaited<ReturnType<typeof fixture>>,t:string,owner:string)=>t==='ListeningPlot'
+ ?(await f.db.query(`SELECT id FROM "ListeningPlot" WHERE "ownerId"=$1`,[owner])).length
+ :(await f.db.query(`SELECT v.id FROM "ListeningVisit" v JOIN "ListeningPlot" p ON p.id=v."plotId" WHERE p."ownerId"=$1`,[owner])).length
+test('PILOT-001 export: only the requester\'s standalone and Place-linked listening data, labelled unverified',async()=>{
+ const f=await fixture();try{
+ await seedListening(f)
+ const a=(await f.a.overview()).listening as {plots:{id:string;placeId:string|null;status:string}[];visits:{id:string;status:string}[]}
+ assert.deepEqual(a.plots.map(p=>p.id).sort(),['a-own','a-place'])
+ assert.deepEqual(a.visits.map(v=>v.id).sort(),['va1','va2'])
+ assert.ok([...a.plots,...a.visits].every(r=>r.status==='Participant observation · Unverified'))
+ assert.equal(JSON.stringify(a).includes('b-place'),false);assert.equal(JSON.stringify(a).includes('vb1'),false)
+ const b=(await f.b.overview()).listening as {plots:{id:string}[]};assert.deepEqual(b.plots.map(p=>p.id),['b-place'])
+ }finally{await f.pg.close()}
+})
+test('PILOT-001 erasure: PARTIALLY_COMPLETED keeps listening data; COMPLETED removes only the requester\'s; closure is not repeatable',async()=>{
+ const f=await fixture();try{
+ await seedListening(f)
+ const r1=await f.a.request({kind:'ERASURE',details:'Everything',confirm:'DELETE MY DATA'}) as {id:string}
+ await f.admin.respond(r1.id,{status:'PARTIALLY_COMPLETED',response:'Synthetic: some categories retained with grounds.',confirm:true})
+ assert.equal(await count(f,'ListeningPlot','a'),2);assert.equal(await count(f,'ListeningVisit','a'),2)
+ const r2=await f.a.request({kind:'ERASURE',details:'Everything again',confirm:'DELETE MY DATA'}) as {id:string}
+ await f.admin.respond(r2.id,{status:'IN_REVIEW',response:'Synthetic: assessing the request in full now.'})
+ assert.equal(await count(f,'ListeningPlot','a'),2)
+ const b1=await f.b.request({kind:'ACCESS',details:'Copy',confirm:null}) as {id:string}
+ await f.admin.respond(b1.id,{status:'COMPLETED',response:'Synthetic: access copy provided to requester.',confirm:true})
+ assert.equal(await count(f,'ListeningPlot','b'),1)
+ await f.admin.respond(r2.id,{status:'COMPLETED',response:'Synthetic: all account data categories erased.',confirm:true})
+ assert.equal(await count(f,'ListeningPlot','a'),0);assert.equal(await count(f,'ListeningVisit','a'),0)
+ assert.equal(await count(f,'ListeningPlot','b'),1);assert.equal(await count(f,'ListeningVisit','b'),1)
+ await assert.rejects(f.admin.respond(r2.id,{status:'COMPLETED',response:'Synthetic: retry of the same completion.',confirm:true}),/already closed/)
+ assert.equal(await count(f,'ListeningPlot','b'),1)
+ assert.equal((await f.db.query(`SELECT id FROM "User" WHERE id='a'`,[])).length,1) // account-row erasure is existing, separate debt
  }finally{await f.pg.close()}
 })
