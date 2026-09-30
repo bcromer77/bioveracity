@@ -250,6 +250,7 @@ model Asset {
   watches             Watch[]
   placeMemoryItems    PlaceMemoryItem[]    @relation("PlaceMemoryPlace")
   placeSlugs          PlaceSlug[]
+  placeAccessPoints   PlaceAccessPoint[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -2262,6 +2263,18 @@ model PlaceSlug {
   place     Asset     @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   createdAt DateTime  @default(now())
   retiredAt DateTime?
+
+  @@index([placeId])
+}
+
+model PlaceAccessPoint {
+  id               Int      @id @default(autoincrement())
+  publicAccessId   String   @unique
+  placeId          String
+  createdAt        DateTime @default(now())
+  revokedAt        DateTime?
+
+  place Asset @relation(fields: [placeId], references: [id], onDelete: Restrict)
 
   @@index([placeId])
 }

@@ -30,7 +30,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preload" href="/fonts/web/dm-sans-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/web/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/web/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       {/* Do not load third-party scripts into an application carrying private case evidence. */}
       <body className="font-sans antialiased">

@@ -1,7 +1,10 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
+import { HashLink } from '@/components/place-client/hash-link'
 
 // Place navigation (PR D). Mobile-first bottom bar: Home | Explore | + | Species | Menu.
-// Managed links (next/link) only, fully keyboard reachable, 44px+ targets. The
+// Managed links only (HashLink on the Place page so :target sheets open; next/link
+// back to the Place from an object page), fully keyboard reachable, 44px+ targets. The
 // central + is a truthful, disabled control: it is not inside a form, has no
 // handler and cannot submit anything. Contributions are not open.
 
@@ -26,15 +29,19 @@ const ICONS = {
 
 export const PLACE_CONTRIBUTE_STATUS = 'Not open yet'
 
-export function PlaceMobileNav() {
+function Section({ base, hash, children }: { base?: string | null; hash: `#${string}`; children: ReactNode }) {
+  return base ? <Link href={`${base}${hash}`} prefetch={false} className={item}>{children}</Link> : <HashLink href={hash} className={item}>{children}</HashLink>
+}
+
+export function PlaceMobileNav({ base }: { base?: string | null } = {}) {
   return (
     <nav
       aria-label="Place navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] pb-[env(safe-area-inset-bottom)] md:sticky md:top-0 md:bottom-auto md:border-b md:border-t-0"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--pl-line)] bg-[color:var(--pl-paper)] pb-[env(safe-area-inset-bottom)] md:sticky md:top-0 md:bottom-auto md:border-b md:border-t-0 lg:hidden"
     >
       <ul className="mx-auto grid max-w-2xl grid-cols-5 items-center px-2 py-1">
-        <li><Link href="/" className={item}><Icon d={ICONS.home} /><span>Home</span></Link></li>
-        <li><Link href="#explore" className={item}><Icon d={ICONS.explore} /><span>Explore</span></Link></li>
+        <li><Link href="/" prefetch={false} className={item}><Icon d={ICONS.home} /><span>Home</span></Link></li>
+        <li><Section base={base} hash="#explore"><Icon d={ICONS.explore} /><span>Explore</span></Section></li>
         <li className="flex flex-col items-center justify-center gap-0.5">
           <button
             type="button"
@@ -49,8 +56,8 @@ export function PlaceMobileNav() {
           </button>
           <span id="place-contribute-status" className="text-[11px] font-medium text-[color:var(--pl-muted)]">{PLACE_CONTRIBUTE_STATUS}</span>
         </li>
-        <li><Link href="#species" className={item}><Icon d={ICONS.species} /><span>Species</span></Link></li>
-        <li><Link href="#place-menu" className={item}><Icon d={ICONS.menu} /><span>Menu</span></Link></li>
+        <li><Section base={base} hash="#species"><Icon d={ICONS.species} /><span>Species</span></Section></li>
+        <li><Section base={base} hash="#place-menu"><Icon d={ICONS.menu} /><span>Menu</span></Section></li>
       </ul>
     </nav>
   )

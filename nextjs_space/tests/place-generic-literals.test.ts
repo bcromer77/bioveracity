@@ -7,8 +7,8 @@ import { join, relative } from 'node:path'
 // Place-, county- or designation-specific literals. Individual Places are data,
 // never code paths. Place-specific source adapters live in lib/place-memory/.
 const root = process.cwd()
-const GENERIC_DIRS = ['lib/place', 'components/place']
-const FORBIDDEN = [/tralee/i, /kerry/i, /004188/]
+const GENERIC_DIRS = ['lib/place', 'components/place', 'app/place', 'app/p', 'components/place-client']
+const FORBIDDEN = [/tralee/i, /kerry/i, /004188/, /fodder/i]
 
 function files(dir: string): string[] {
   if (!existsSync(dir)) return []
@@ -26,12 +26,16 @@ test('detector self-test flags each forbidden literal in any case', () => {
   assert.equal(forbiddenLiterals('x', 'const s = "TRALEE"').length, 1)
   assert.equal(forbiddenLiterals('x', '// County Kerry').length, 1)
   assert.equal(forbiddenLiterals('x', "code = 'IE0004188'").length, 1)
+  assert.equal(forbiddenLiterals('x', 'hub = "fodder"').length, 1)
   assert.deepEqual(forbiddenLiterals('x', 'export const PLACE_ID_PREFIX = "bv_place_"'), [])
 })
 
-test('generic lib/place and components/place code contains no Tralee, Kerry or 004188 literals', () => {
+test('generic Place Experience code (lib, components, /place and /p routes) contains no Tralee, Kerry or 004188 literals', () => {
   const scanned = GENERIC_DIRS.flatMap((dir) => files(join(root, dir)))
   assert.ok(scanned.some((path) => path.endsWith(join('lib', 'place', 'identity.ts'))), 'guard must not be vacuous')
+  assert.ok(scanned.some((path) => path.endsWith(join('lib', 'place', 'access-points.ts'))), 'access point resolver is scanned')
+  assert.ok(scanned.some((path) => path.endsWith(join('app', 'p', '[publicAccessId]', 'route.ts'))), '/p route is scanned')
+  assert.ok(scanned.some((path) => path.endsWith(join('app', 'place', '[slug]', 'page.tsx'))), '/place route is scanned')
   const findings = scanned.flatMap((path) => forbiddenLiterals(relative(root, path), readFileSync(path, 'utf8')))
   assert.deepEqual(findings, [])
 })

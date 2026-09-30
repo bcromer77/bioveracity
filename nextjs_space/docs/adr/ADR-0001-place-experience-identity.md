@@ -1,6 +1,6 @@
 # ADR-0001: Place Experience V1: identity, boundaries, read model, replication, Ask, performance and migration gates
 
-- Status: **Proposed**. Accepted only when Bazil Cromer approves the PR A review.
+- Status: **Accepted**. Approved by Bazil Cromer; recorded with Place Experience PR E (opaque Place Access Points, gate G-ACCESS).
 - Date: 2026-09-28
 - Scope: Place Experience V1, Phase 1 (universal Place foundation and first real-evidence Place).
 - Base: release line `origin/gate3c/deployed-b776a6c` at `66f6be1`. **Not** `main`.

@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import type { Sql } from '@/lib/workspaces/service'
 import { isPlaceExperienceEnabled, loadPlaceShell } from '@/lib/place/shell-loader'
+import { searchPlaceView } from '@/lib/place/shell-view'
 import { placePresentation } from '@/lib/place-memory/place-presentation'
 import { PlaceShell } from '@/components/place/place-shell'
 
@@ -19,11 +20,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function PlacePage({ params }: { params: Promise<{ slug: string }> }) {
+// PR F: an optional GET ?q= runs the deterministic Place-scoped search over the
+// same public view; it never widens what the page can read.
+export default async function PlacePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ q?: string | string[] }> }) {
   if (!isPlaceExperienceEnabled()) notFound()
   const { slug } = await params
   const result = await loadPlaceShell(db, slug, placePresentation)
   if (result.outcome === 'redirect') permanentRedirect(result.location)
   if (result.outcome !== 'ok') notFound()
-  return <PlaceShell view={result.view} />
+  const { q } = await searchParams
+  return <PlaceShell view={result.view} search={searchPlaceView(result.view, q)} />
 }
