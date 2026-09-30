@@ -55,7 +55,7 @@ export function PlaceShell({ view, search, children }: { view: PlaceShellView; s
           <nav aria-label="Place sections" className="hidden lg:block">
             <ul className="flex items-center gap-1">
               {DESKTOP_SECTIONS.map((s) => (
-                <li key={s.href}>{base ? <Link href={`${base}${s.href}`} prefetch={false} className={`${target44} px-3 text-[16px] font-medium hover:bg-white/10`}>{s.label}</Link> : <HashLink href={s.href} className={`${target44} px-3 text-[16px] font-medium hover:bg-white/10`}>{s.label}</HashLink>}</li>
+                <li key={s.href}>{base ? <Link href={`${base}${s.href}`} prefetch={false} className={`${target44} px-3 text-[16px] font-medium hover:bg-white/10`}>{s.label}</Link> : <HashLink href={s.href} className={`${target44} px-3 text-[16px] font-medium hover:bg-[#12251C]/60`}>{s.label}</HashLink>}</li>
               ))}
             </ul>
           </nav>

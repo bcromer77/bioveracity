@@ -37,7 +37,8 @@ test('application JSX has no unmanaged anchors and map links remain internal', a
   for(const entry of await readdir(dir,{withFileTypes:true})){
    const path=dir+'/'+entry.name
    if(entry.isDirectory()){await inspect(path);continue}
-   if(!path.endsWith('.tsx') || path.endsWith('/evidence-link.tsx'))continue
+   // Managed link components: evidence-link (on-site disclosure) and original-source-link (allowlisted cleared source only).
+   if(!path.endsWith('.tsx') || path.endsWith('/evidence-link.tsx') || path.endsWith('/original-source-link.tsx'))continue
    const source=await readFile(path,'utf8')
    const ast=ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
    function walk(node:import('typescript').Node){

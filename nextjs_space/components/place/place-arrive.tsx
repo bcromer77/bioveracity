@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import type { ArriveCategory, ArriveMap, PlaceSearchResult, PlaceShellView, PlaceState, ShellEvidenceCard, ShellFact, ShellSpecies } from '@/lib/place/shell-view'
 import { NO_EVIDENCE_NOTE, recordAnchor } from '@/lib/place/shell-view'
 import { EvidenceLink } from '@/components/evidence-link'
+import { OriginalSourceLink } from '@/components/original-source-link'
 import { HashLink } from '@/components/place-client/hash-link'
 import { PlaceSearch } from '@/components/place-client/place-search'
 import { BioVeracityPlaceMark } from './place-mark'
@@ -357,7 +358,7 @@ export function PlaceArrive({ view, consent, search }: { view: PlaceShellView; c
           <p className="mt-1 text-[14px] leading-relaxed text-[color:var(--pl-ink)]">{k.doesNotSay}</p>
         </div>
         {k.source?.url ? (
-          <p className="pa-src mt-4 text-[15px] font-semibold">Open the original source: <EvidenceLink href={k.source.url} className={attribution}>{k.source.publisher}</EvidenceLink></p>
+          <p className="pa-src mt-4 text-[15px] font-semibold">Open the original source: <OriginalSourceLink href={k.source.url} className={`${attribution} ${target44}`}>{k.source.publisher}</OriginalSourceLink></p>
         ) : null}
         <p className="mt-5 text-[15px] leading-relaxed">Every statement here comes from a public record, shown with its source, licence and dates. Gaps stay visible instead of being filled with guesses.</p>
         <h3 className="mt-6 text-[16px] font-semibold">The rules we keep</h3>
