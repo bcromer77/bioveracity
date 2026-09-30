@@ -252,6 +252,8 @@ model Asset {
   placeMemoryItems    PlaceMemoryItem[]    @relation("PlaceMemoryPlace")
   placeSlugs          PlaceSlug[]
   placeAccessPoints   PlaceAccessPoint[]
+  listeningPlots      ListeningPlot[]
+  placeParticipation  PlaceParticipation?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -2286,11 +2288,24 @@ model ListeningPlot {
   ownerId String
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   name String
-  county String
+  // Standalone plots carry a county; Place-linked plots carry placeId (CHECK in 20261006_pilot_001_place_link).
+  county String?
+  placeId String?
+  place Asset? @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   payloadHash String
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   visits ListeningVisit[]
+  @@unique([ownerId, placeId])
   @@index([ownerId])
+  @@index([placeId])
+}
+// Place-level participation enablement (PILOT-001). Absent row or NULL = disabled.
+model PlaceParticipation {
+  placeId String @id
+  place Asset @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  listeningEnabledAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 }
 model ListeningVisit {
   id String @id

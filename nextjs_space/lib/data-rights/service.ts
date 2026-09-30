@@ -26,7 +26,10 @@ export function rightsService(db: Database, userId: string) {
       const venues = await db.query(`SELECT id,profile,plan,"createdAt","updatedAt",(published IS NOT NULL AND published<>'null'::jsonb) AS "isPublished" FROM "WildHub" WHERE "ownerId"=$1`, [userId])
       const preferences = await db.query('SELECT "scopeKey","actionEmail","importantChangeEmail","weeklyDigest","routineEmail","quietHoursStart","quietHoursEnd",timezone FROM "AttentionPreference" WHERE "userId"=$1', [userId])
       const galleryReleases = await db.query(`SELECT r."photoId",r."venueName",r.version,r.wording,r."venuePublications",r."bioPublications",r."acceptedAt",r."withdrawnAt" FROM "VenuePhotoRelease" r JOIN "WildHubPhoto" p ON p.id=r."galleryPhotoId" JOIN "WildHub" h ON h.id=p."hubId" WHERE h."ownerId"=$1`, [userId])
-      return { galleryReleases, account: {id:account.id,name:account.name,email:account.email,createdAt:account.createdAt}, acceptances, requests, venues, preferences }
+      // Private participant observations (standalone and Place-linked). Never public evidence.
+      const listeningPlots = await db.query(`SELECT id,name,county,"placeId","createdAt",'Participant observation · Unverified' AS status FROM "ListeningPlot" WHERE "ownerId"=$1 ORDER BY "createdAt"`, [userId])
+      const listeningVisits = await db.query(`SELECT v.id,v."plotId",v."observedAt",v.payload,v."receivedAt",'Participant observation · Unverified' AS status FROM "ListeningVisit" v JOIN "ListeningPlot" p ON p.id=v."plotId" WHERE p."ownerId"=$1 ORDER BY v."observedAt",v.id`, [userId])
+      return { galleryReleases, listening: { plots: listeningPlots, visits: listeningVisits }, account: {id:account.id,name:account.name,email:account.email,createdAt:account.createdAt}, acceptances, requests, venues, preferences }
     },
     async accept(input: unknown) { await user(db); await recordAcceptance(db, userId, input, 'account'); return {accepted:true} },
     async request(raw: Record<string, unknown>) {
@@ -67,8 +70,13 @@ export function rightsService(db: Database, userId: string) {
       if (input.status !== 'IN_REVIEW' && input.confirm !== true) throw new WorkspaceError(400, 'Confirm the work has actually been completed and the response is accurate.')
       return db.transaction(async sql => {
         await admin(sql)
-        const [saved] = await sql.query(`UPDATE "DataRightsRequest" SET status=$1,response=$2,"updatedAt"=now() WHERE id=$3 AND status IN ('RECEIVED','IN_REVIEW') RETURNING ${columns}`, [input.status,String(input.response).trim(),id])
+        const [saved] = await sql.query<{ kind: string }>(`UPDATE "DataRightsRequest" SET status=$1,response=$2,"updatedAt"=now() WHERE id=$3 AND status IN ('RECEIVED','IN_REVIEW') RETURNING ${columns}`, [input.status,String(input.response).trim(),id])
         if (!saved) throw new WorkspaceError(409, 'Request not found or already closed.')
+        // PILOT-001: only a COMPLETED erasure removes the requester's listening data (visits cascade).
+        // PARTIALLY_COMPLETED and every other status never infer category deletion.
+        if (saved.kind === 'ERASURE' && input.status === 'COMPLETED') {
+          await sql.query('DELETE FROM "ListeningPlot" WHERE "ownerId"=(SELECT "userId" FROM "DataRightsRequest" WHERE id=$1)', [id])
+        }
         await sql.query('INSERT INTO "DataRightsEvent" (id,"requestId","actorId",status,response) VALUES ($1,$2,$3,$4,$5)', [randomUUID(),id,userId,input.status,String(input.response).trim()])
         return saved
       })

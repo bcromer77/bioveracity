@@ -239,7 +239,7 @@ function TimeCells({ years, size = 'strip' }: { years: PlaceShellView['timeWindo
   )
 }
 
-export function PlaceArrive({ view, consent, search }: { view: PlaceShellView; consent?: ReactNode; search?: PlaceSearchResult | null }) {
+export function PlaceArrive({ view, consent, search, invitation }: { view: PlaceShellView; consent?: ReactNode; search?: PlaceSearchResult | null; invitation?: ReactNode }) {
   const designation = view.species.filter((s) => s.framing === 'designation_feature')
   const recorded = view.species.filter((s) => s.framing === 'subject')
   const notShown = view.categories.filter((c) => c.status === 'unwired' || c.status === 'unverified')
@@ -343,6 +343,8 @@ export function PlaceArrive({ view, consent, search }: { view: PlaceShellView; c
           ))}
         </div>
       </section>
+
+      {invitation}
 
       {/* EVIDENCE and SOURCE sheets */}
       <Sheet id="how-we-know" title="How we know">
