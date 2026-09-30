@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       await recordAcceptance(adapter(tx), created.id, input, 'signup')
       return created
     })
-    const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true'
+    const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true' || authReturnPath(typeof input.callbackUrl === 'string' ? input.callbackUrl : null) === '/listen'
     if (verificationRequired) {
       try { await identities().issue({email:user.email,ip:securityIp(request),purpose:'VERIFY_EMAIL',returnTo:authReturnPath(typeof input.callbackUrl === 'string' ? input.callbackUrl : null)}) }
       catch { console.error('signup_verification_issue_failed') }
