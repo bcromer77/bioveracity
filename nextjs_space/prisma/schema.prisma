@@ -102,6 +102,7 @@ model EvidenceSearchQuota {
 }
 
 model User {
+  listeningPlots ListeningPlot[]
   clubSubscriptions ClubSubscription[]
   configuredClubWatches ClubWatch[]
   clubSourceReviews ClubSourceRecord[]
@@ -2277,4 +2278,27 @@ model PlaceAccessPoint {
   place Asset @relation(fields: [placeId], references: [id], onDelete: Restrict)
 
   @@index([placeId])
+}
+
+// Free private listening pilot. SQL service binds all values and owns quota locks.
+model ListeningPlot {
+  id String @id
+  ownerId String
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  name String
+  county String
+  payloadHash String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  visits ListeningVisit[]
+  @@index([ownerId])
+}
+model ListeningVisit {
+  id String @id
+  plotId String
+  plot ListeningPlot @relation(fields: [plotId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  observedAt DateTime @db.Timestamptz(3)
+  payload Json
+  payloadHash String
+  receivedAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([plotId, observedAt])
 }

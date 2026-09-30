@@ -1,0 +1,19 @@
+name: Listening pilot contract
+on:
+  pull_request:
+    paths:
+      - 'nextjs_space/lib/listens/**'
+      - 'nextjs_space/app/listen/**'
+      - 'nextjs_space/app/api/listen/**'
+      - 'nextjs_space/tests/listening-pilot.test.mjs'
+      - '.github/workflows/listening-pilot.yml'
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/listening-pilot.test.mjs
+        working-directory: nextjs_space

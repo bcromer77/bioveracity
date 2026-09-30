@@ -64,8 +64,8 @@ export function SignupForm() {
             <div className="flex h-8 w-8 items-center justify-center rounded bg-accent text-accent-foreground font-display font-bold text-sm">BV</div>
             <span className="font-display font-bold text-lg text-foreground">BioVeracity</span>
           </Link>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{callbackUrl.startsWith('/wild/') ? 'Create your venue account' : callbackUrl.startsWith('/workspace') ? 'Create your professional account' : 'Create an account'}</h1>
-          <p className="text-[15px] text-muted-foreground mt-2">{callbackUrl.startsWith('/wild/') ? 'Manage your place and its photographs in your venue studio.' : 'Your venues and private evidence stay connected to your own account.'}</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{callbackUrl === '/listen' ? 'Join Ireland Listens — free' : callbackUrl.startsWith('/wild/') ? 'Create your venue account' : callbackUrl.startsWith('/workspace') ? 'Create your professional account' : 'Create an account'}</h1>
+          <p className="text-[15px] text-muted-foreground mt-2">{callbackUrl === '/listen' ? 'Create and verify your account, then save your first private listening place. No payment card required.' : callbackUrl.startsWith('/wild/') ? 'Manage your place and its photographs in your venue studio.' : 'Your venues and private evidence stay connected to your own account.'}</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {!requestedReturn && <label className="block text-sm font-medium">What brings you here?<select required value={purpose} onChange={e=>setPurpose(e.target.value)} className="mt-2 w-full rounded border p-3"><option value="">Choose your starting point</option><option value="venue">I run a venue or ecology hub</option><option value="professional">I work with professional evidence</option><option value="both">I do both / explore places</option></select></label>}
