@@ -14,6 +14,7 @@ import { HashLink } from '@/components/place-client/hash-link'
 import { PlaceSearch } from '@/components/place-client/place-search'
 import { BioVeracityPlaceMark } from './place-mark'
 import { PlaceHeroIllustration } from './place-hero-illustration'
+import { PlaceNoticeInvitation, type PlaceNotice } from './place-notice-invitation'
 import { attribution, card, editorial, eyebrow, focusRing, section, sectionTitle, sheetTitle, target44, textLink } from './place-arrive-styles'
 
 export function PlaceStateBadge({ state }: { state: PlaceState }) {
@@ -239,7 +240,7 @@ function TimeCells({ years, size = 'strip' }: { years: PlaceShellView['timeWindo
   )
 }
 
-export function PlaceArrive({ view, consent, search, invitation }: { view: PlaceShellView; consent?: ReactNode; search?: PlaceSearchResult | null; invitation?: ReactNode }) {
+export function PlaceArrive({ view, consent, search, invitation, notice }: { view: PlaceShellView; consent?: ReactNode; search?: PlaceSearchResult | null; invitation?: ReactNode; notice?: PlaceNotice | null }) {
   const designation = view.species.filter((s) => s.framing === 'designation_feature')
   const recorded = view.species.filter((s) => s.framing === 'subject')
   const notShown = view.categories.filter((c) => c.status === 'unwired' || c.status === 'unverified')
@@ -314,11 +315,11 @@ export function PlaceArrive({ view, consent, search, invitation }: { view: Place
               <span className="mt-2 block text-[14px] text-[color:var(--pl-muted)]">{view.timeline.length ? `${view.timeline.length} dated public ${view.timeline.length === 1 ? 'record' : 'records'} so far` : 'No dated public records yet'} · gaps are shown, never filled</span>
             </HashLink>
 
-            <article className="hidden rounded-2xl border border-dashed border-[color:var(--pl-line)] bg-[#F3EFE4] p-5 lg:block" data-contribute="not-open">
+            {notice ? <PlaceNoticeInvitation notice={notice} /> : <article className="hidden rounded-2xl border border-dashed border-[color:var(--pl-line)] bg-[#F3EFE4] p-5 lg:block" data-contribute="not-open">
               <h2 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--pl-muted)]">Tell us what you noticed</h2>
               <p className={`${editorial} mt-1 text-[22px] text-[color:var(--pl-ink)]`}>Not open yet</p>
               <p className="mt-2 text-[14px] leading-relaxed text-[color:var(--pl-muted)]">Photos and notes will open once safety, privacy and rights checks are in place.</p>
-            </article>
+            </article>}
           </div>
           {consent}
         </div>
@@ -406,7 +407,7 @@ export function PlaceArrive({ view, consent, search, invitation }: { view: Place
           <h4 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[color:var(--pl-muted)]">Where it could come from</h4>
           <ul className="mt-2 grid gap-2 text-[15px]">
             <li className="flex items-center justify-between gap-3">Official water-quality monitoring <span className="rounded-full bg-[#EFEBE0] px-3 py-1 text-[13px] font-semibold text-[color:var(--pl-muted)]">Not linked yet</span></li>
-            <li className="flex items-center justify-between gap-3">Your photos and notes <span className="rounded-full bg-[#EFEBE0] px-3 py-1 text-[13px] font-semibold text-[color:var(--pl-muted)]">Not open yet</span></li>
+            <li className="flex items-center justify-between gap-3">Your photos and notes {notice ? <Link href={notice.href} prefetch={false} className={`${target44} rounded-full bg-[#F3E9D2] px-3 text-[13px] font-semibold text-[color:var(--pl-gold-text)] ${textLink}`}>Private · Unverified</Link> : <span className="rounded-full bg-[#EFEBE0] px-3 py-1 text-[13px] font-semibold text-[color:var(--pl-muted)]">Not open yet</span>}</li>
           </ul>
         </div>
         {available.length ? (

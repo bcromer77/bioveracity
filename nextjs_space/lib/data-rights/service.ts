@@ -29,7 +29,10 @@ export function rightsService(db: Database, userId: string) {
       // Private participant observations (standalone and Place-linked). Never public evidence.
       const listeningPlots = await db.query(`SELECT id,name,county,"placeId","createdAt",'Participant observation · Unverified' AS status FROM "ListeningPlot" WHERE "ownerId"=$1 ORDER BY "createdAt"`, [userId])
       const listeningVisits = await db.query(`SELECT v.id,v."plotId",v."observedAt",v.payload,v."receivedAt",'Participant observation · Unverified' AS status FROM "ListeningVisit" v JOIN "ListeningPlot" p ON p.id=v."plotId" WHERE p."ownerId"=$1 ORDER BY v."observedAt",v.id`, [userId])
-      return { galleryReleases, listening: { plots: listeningPlots, visits: listeningVisits }, account: {id:account.id,name:account.name,email:account.email,createdAt:account.createdAt}, acceptances, requests, venues, preferences }
+      // PILOT-001 NE demo: participant observations (metadata; media is downloadable per item by its owner).
+      // Cascades from ListeningPlot, so a COMPLETED erasure below removes them with their media.
+      const participantObservations = await db.query(`SELECT o.id,o."plotId",o."placeId",o.kind,o.category,o."observedAt",o."observedAtSource",o."observedAtProvenance",o."receivedAt",o.note,o."participantIdentification",o."participantConfidence",o."locationMethod",o."capturedLat",o."capturedLng",o."capturedAccuracyM",o."locationSharing",m."mediaType",m.mime,m."byteLength",m.sha256,m."durationMs",'Participant observation · Unverified' AS status FROM "ParticipantObservation" o JOIN "ListeningPlot" p ON p.id=o."plotId" LEFT JOIN "ParticipantObservationMedia" m ON m."observationId"=o.id WHERE p."ownerId"=$1 ORDER BY o."observedAt",o.id`, [userId])
+      return { galleryReleases, listening: { plots: listeningPlots, visits: listeningVisits, observations: participantObservations }, account: {id:account.id,name:account.name,email:account.email,createdAt:account.createdAt}, acceptances, requests, venues, preferences }
     },
     async accept(input: unknown) { await user(db); await recordAcceptance(db, userId, input, 'account'); return {accepted:true} },
     async request(raw: Record<string, unknown>) {

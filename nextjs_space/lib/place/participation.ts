@@ -52,3 +52,41 @@ export async function resolveListeningPlace(db: Sql, rawSlug: unknown): Promise<
   if (resolved.outcome === 'redirect') return { outcome: 'redirect', location: placeListenPath(resolved.slug), place: current }
   return { outcome: 'ok', place: current }
 }
+
+// ---------------------------------------------------------------------------
+// Participant observation (PILOT-001 NE demo). Enabled per Place by a non-null
+// observationEnabledAt, and only when the server-only flag is exactly 'true'.
+// The map centre is a participation viewport for "choose approximately on map";
+// it is not Place geometry and is never rendered on the public Place page.
+// ---------------------------------------------------------------------------
+
+export const NOTICE_PATH_SUFFIX = '/notice'
+export type ObservationPlace = ListeningPlace & { mapCentre: { lat: number; lng: number } | null }
+export type ObservationPlaceResolution =
+  | { outcome: 'ok'; place: ObservationPlace }
+  | { outcome: 'redirect'; location: string; place: ObservationPlace }
+  | { outcome: 'not_found' }
+
+export function placeNoticePath(slug: string): string {
+  return placeRoutePath(slug) + NOTICE_PATH_SUFFIX
+}
+
+export function isObservationPilotEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.LISTENING_PILOT_ENABLED === 'true' && env.PARTICIPANT_OBSERVATION_ENABLED === 'true'
+}
+
+export async function resolveObservationPlace(db: Sql, rawSlug: unknown): Promise<ObservationPlaceResolution> {
+  const resolved = await resolvePlaceSlug(db, rawSlug)
+  if (resolved.outcome === 'not_found') return { outcome: 'not_found' }
+  const place = await readPublicPlace(db, resolved.placeId)
+  if (!place) return { outcome: 'not_found' }
+  const rows = await db.query<{ lat: number | null; lng: number | null }>(
+    'SELECT "mapCentreLat" AS lat, "mapCentreLng" AS lng FROM "PlaceParticipation" WHERE "placeId" = $1 AND "observationEnabledAt" IS NOT NULL',
+    [resolved.placeId],
+  )
+  if (!rows.length) return { outcome: 'not_found' }
+  const { lat, lng } = rows[0]
+  const current: ObservationPlace = { placeId: resolved.placeId, slug: resolved.slug, name: place.name, mapCentre: lat != null && lng != null ? { lat, lng } : null }
+  if (resolved.outcome === 'redirect') return { outcome: 'redirect', location: placeNoticePath(resolved.slug), place: current }
+  return { outcome: 'ok', place: current }
+}
