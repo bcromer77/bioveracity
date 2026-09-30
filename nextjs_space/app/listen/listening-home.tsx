@@ -6,31 +6,43 @@ type Plot = { id: string; name: string; county: string }
 type Visit = { id: string; plotId: string; receivedAt: string; payload: { observedAt: string; sourceTime: string; birds: string; wind: string; weather: string; note: string; method: string } }
 type Home = { plots: Plot[]; visits: Visit[] }
 const localTime = () => { const now = new Date(); return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0,16) }
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+// Shows the time exactly as the participant recorded it, with its offset; no conversion, minute precision.
+function recorded(source: string) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d{3})?)?(Z|[+-]\d{2}:\d{2})$/.exec(source)
+  if (!m) return source
+  return `${Number(m[3])} ${MONTHS[Number(m[2])-1]} ${m[1]}, ${m[4]}:${m[5]} (UTC${m[6]==='Z' ? '' : m[6]})`
+}
+class SaveError extends Error { constructor(message: string, public status = 0) { super(message) } }
+const UNCONFIRMED = 'The save could not be confirmed. Your form is kept: retry without changing it and it will not be saved twice.'
 export function ListeningHome() {
-  const [home,setHome] = useState<Home | null>(null), [error,setError] = useState(''), [busy,setBusy] = useState(false), [notice,setNotice] = useState('')
+  const [home,setHome] = useState<Home | null>(null), [error,setError] = useState(''), [errorStatus,setErrorStatus] = useState(0), [busy,setBusy] = useState(false), [notice,setNotice] = useState('')
   const [selected,setSelected] = useState(''), [name,setName] = useState(''), [county,setCounty] = useState('')
   const [placeId,setPlaceId] = useState(''), [visitId,setVisitId] = useState('')
-  const [time,setTime] = useState(localTime), [birds,setBirds] = useState(''), [wind,setWind] = useState(''), [weather,setWeather] = useState(''), [note,setNote] = useState(''), [completed,setCompleted] = useState(false), [adult,setAdult] = useState(false)
+  const [time,setTime] = useState(''), [birds,setBirds] = useState(''), [wind,setWind] = useState(''), [weather,setWeather] = useState(''), [note,setNote] = useState(''), [completed,setCompleted] = useState(false), [adult,setAdult] = useState(false)
   const [deleteId,setDeleteId] = useState('')
-  async function load() {
-    const res = await fetch('/api/listen',{cache:'no-store'})
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Your places could not be loaded')
-    setHome(data)
-    return data as Home
-  }
-  useEffect(() => { let active = true; fetch('/api/listen',{cache:'no-store'}).then(async res => { const data = await res.json(); if (!res.ok) throw new Error(data.error); if (active) setHome(data) }).catch(e => { if (active) setError(e.message) }); return () => { active = false } },[])
-  async function send(input: Record<string,unknown>) {
-    const res = await fetch('/api/listen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)})
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'The save could not be confirmed. Please retry.')
+  function fail(e: unknown, fallback: string) { setError(e instanceof Error && e.message ? e.message : fallback); setErrorStatus(e instanceof SaveError ? e.status : 0) }
+  async function call(init?: RequestInit) {
+    let res: Response
+    try { res = await fetch('/api/listen',{cache:'no-store',...init}) } catch { throw new SaveError(init ? UNCONFIRMED : 'Your places could not be loaded. Check your connection and reload.') }
+    const data = await res.json().catch(() => null)
+    if (!res.ok || !data) throw new SaveError(data?.error || (init ? UNCONFIRMED : 'Your places could not be loaded. Please reload.'), res.status)
     return data
   }
+  async function load() { const data = await call() as Home; setHome(data); return data }
+  useEffect(() => {
+    let active = true
+    setTime(localTime())
+    call().then((data: Home) => { if (!active) return; setHome(data); if (data.plots.length) setSelected(s => s || data.plots[0].id) }).catch(e => { if (active) fail(e, 'Your places could not be loaded') })
+    return () => { active = false }
+  },[])
+  const send = (input: Record<string,unknown>) => call({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input)})
+  const refresh = () => load().catch(() => { setError('Saved. Your places could not be refreshed just now.'); setErrorStatus(0) })
   async function createPlace(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError(''); setNotice('')
     const id = placeId || crypto.randomUUID(); setPlaceId(id)
-    try { await send({action:'place',id,name,county}); setPlaceId(''); setName(''); setCounty(''); setSelected(id); setNotice('Your place is saved. Its first visit begins the memory.'); await load() }
-    catch(e) { setError(e instanceof Error ? e.message : 'Save could not be confirmed. Retry with this form.') } finally { setBusy(false) }
+    try { await send({action:'place',id,name,county}); setPlaceId(''); setName(''); setCounty(''); setSelected(id); setNotice('Your place is saved. Its first visit begins the memory.'); await refresh() }
+    catch(e) { fail(e, UNCONFIRMED) } finally { setBusy(false) }
   }
   async function createVisit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setError(''); setNotice('')
@@ -40,22 +52,23 @@ export function ListeningHome() {
       const date = new Date(time), offset = -date.getTimezoneOffset(), sign = offset >= 0 ? '+' : '-'
       const zone = sign + String(Math.floor(Math.abs(offset)/60)).padStart(2,'0') + ':' + String(Math.abs(offset)%60).padStart(2,'0')
       await send({action:'visit',id,plotId:selected,observedAt:time+':00'+zone,birds,wind,weather,note,completed,adult})
-      setVisitId(''); setBirds(''); setWind(''); setWeather(''); setNote(''); setCompleted(false); setTime(localTime()); setNotice('Visit saved. Thank you for giving this place five minutes of attention.'); await load()
-    } catch(e) { setError(e instanceof Error ? e.message : 'Save could not be confirmed. Retry with this form.') } finally { setBusy(false) }
+      setVisitId(''); setBirds(''); setWind(''); setWeather(''); setNote(''); setCompleted(false); setTime(localTime()); setNotice('Visit saved. Thank you for giving this place five minutes of attention.'); await refresh()
+    } catch(e) { fail(e, UNCONFIRMED) } finally { setBusy(false) }
   }
   async function removePlace() {
     setBusy(true); setError('')
-    try { await send({action:'delete',id:deleteId}); if (selected===deleteId) setSelected(''); setDeleteId(''); setNotice('Place and its visits deleted from the active service.'); await load() }
-    catch(e) { setError(e instanceof Error ? e.message : 'Deletion could not be confirmed') } finally { setBusy(false) }
+    try { await send({action:'delete',id:deleteId}); if (selected===deleteId) setSelected(''); setDeleteId(''); setNotice('Place and its visits deleted from the active service.'); await refresh() }
+    catch(e) { fail(e, 'Deletion could not be confirmed. Reload your places to check, then retry.') } finally { setBusy(false) }
   }
   function download() {
     const url = URL.createObjectURL(new Blob([JSON.stringify({exportedAt:new Date().toISOString(),scope:'Ireland Listens pilot records only',...home},null,2)],{type:'application/json'}))
-    const a = document.createElement('a'); a.href=url; a.download='my-listening-history.json'; a.click(); URL.revokeObjectURL(url)
+    const a = document.createElement('a'); a.href=url; a.download='my-listening-history.json'; a.style.display='none'
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
   const current = home?.plots.find(p=>p.id===selected)
   const visits = home?.visits.filter(v=>v.plotId===selected) || []
   return <section aria-label="Your listening places">
-    {error && <div className="listen-alert" role="alert"><p>{error}</p><button disabled={busy} onClick={()=>{setError('');load().catch(e=>setError(e.message))}}>Reload my places</button> <Link href="/verify-email?callbackUrl=%2Flisten">Verify email</Link> · <Link href="/login?callbackUrl=%2Flisten">Sign in</Link></div>}
+    {error && <div className="listen-alert" role="alert"><p>{error}</p><button disabled={busy} onClick={()=>{setError('');load().catch(e=>fail(e,'Your places could not be loaded'))}}>Reload my places</button>{errorStatus===403 && <> <Link href="/verify-email?callbackUrl=%2Flisten">Verify email</Link></>}{errorStatus===401 && <> <Link href="/login?callbackUrl=%2Flisten">Sign in again</Link></>}</div>}
     {notice && <p className="listen-notice" role="status">{notice}</p>}
     {!home ? !error && <p role="status">Opening your place memories…</p> : <>
       <div className="listen-heading"><h2>Your listening places</h2><button onClick={download}>Download my history</button></div>
@@ -68,7 +81,7 @@ export function ListeningHome() {
         <label>A small detail you noticed <small>(optional, private)</small><textarea maxLength={500} rows={3} value={note} onChange={e=>setNote(e.target.value)} placeholder="Something you want to remember about this visit…" /></label>
         <label className="listen-check"><input type="checkbox" checked={completed} onChange={e=>setCompleted(e.target.checked)} required />I completed five minutes at this place.</label><label className="listen-check"><input type="checkbox" checked={adult} onChange={e=>setAdult(e.target.checked)} required />I am 18 or over. I have not included another person’s personal details.</label>
         <button className="listen-button" type="submit">{busy ? 'Confirming your visit…' : 'Save this moment'}</button>
-      </fieldset></form><aside className="listen-card"><p className="listen-eyebrow">Place memory</p><h2>{visits.length ? `${visits.length} quiet moments` : 'A beginning, waiting for you.'}</h2><p>{visits.length ? 'These are your observations, in time order. They do not yet establish a change in bird populations.' : 'Your first visit will appear here. Come back to the same spot to build its history.'}</p><ol className="listen-timeline">{visits.map(v=><li key={v.id}><time dateTime={v.payload.observedAt}>{new Date(v.payload.observedAt).toLocaleString('en-IE')}</time><strong>{v.payload.birds==='heard' ? 'Birds heard' : v.payload.birds==='not_heard' ? 'No birds heard in this visit' : 'Unsure'}</strong><span>{v.payload.wind} · {v.payload.weather} · 5 minutes</span>{v.payload.note && <p>{v.payload.note}</p>}<small>Participant observation · Unverified</small></li>)}</ol><p className="listen-small">Method: five-minute listening visit v1. Time and weather affect what can be heard. Species identification, audio analysis and national trends are not part of this pilot.</p></aside></div>}
+      </fieldset></form><aside className="listen-card"><p className="listen-eyebrow">Place memory</p><h2>{visits.length ? `${visits.length} quiet moments` : 'A beginning, waiting for you.'}</h2><p>{visits.length ? 'These are your observations, newest first. They do not yet establish a change in bird populations.' : 'Your first visit will appear here. Come back to the same spot to build its history.'}</p><ol className="listen-timeline">{visits.map(v=><li key={v.id}><time dateTime={v.payload.sourceTime}>{recorded(v.payload.sourceTime)}</time><strong>{v.payload.birds==='heard' ? 'Birds heard' : v.payload.birds==='not_heard' ? 'No birds heard in this visit' : 'Unsure'}</strong><span>{v.payload.wind} · {v.payload.weather} · 5 minutes</span>{v.payload.note && <p>{v.payload.note}</p>}<small>Participant observation · Unverified · Saved {recorded(new Date(v.receivedAt).toISOString().slice(0,16) + 'Z')}</small></li>)}</ol><p className="listen-small">Method: five-minute listening visit v1. Time and weather affect what can be heard. Species identification, audio analysis and national trends are not part of this pilot.</p></aside></div>}
       {current && <section className="listen-delete"><button disabled={busy} onClick={()=>setDeleteId(current.id)}>Delete this place and its visits</button>{deleteId && <div role="alert"><p>Delete {current.name} and all its listening visits? Download your history first if you want to keep a copy. This cannot be undone here. Backups follow the service’s retention policy.</p><button disabled={busy} onClick={removePlace}>Confirm deletion</button> <button onClick={()=>setDeleteId('')}>Keep my place</button></div>}</section>}
     </>}
   </section>

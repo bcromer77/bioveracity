@@ -7,13 +7,17 @@ function object(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new ListenError(400, 'Invalid submission')
   return value
 }
-function text(value, max) {
-  if (typeof value !== 'string' || !value.trim() || value.trim().length > max || /[\u0000-\u001f]/.test(value)) throw new ListenError(400, 'Please check your text fields')
-  return value.trim()
+function text(value, max, multiline = false) {
+  if (typeof value !== 'string') throw new ListenError(400, 'Please check your text fields')
+  // Only the private note may contain line breaks; other control characters are always rejected.
+  const clean = multiline ? value.replace(/\r\n?/g, '\n').trim() : value.trim()
+  const control = multiline ? /[\u0000-\u0009\u000b-\u001f\u007f]/ : /[\u0000-\u001f\u007f]/
+  if (!clean || clean.length > max || control.test(clean)) throw new ListenError(400, 'Please check your text fields')
+  return clean
 }
 export function key(value) {
-  if (typeof value !== 'string' || !/^[a-f0-9-]{36}$/i.test(value)) throw new ListenError(400, 'Invalid submission identifier')
-  return value
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new ListenError(400, 'Invalid submission identifier')
+  return value.toLowerCase()
 }
 export function plotInput(value) {
   const input = object(value)
@@ -26,7 +30,10 @@ export function visitInput(value, now = new Date()) {
   // Date/time includes an explicit offset; source time and receipt time stay distinct.
   if (typeof input.observedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/.test(input.observedAt)) throw new ListenError(400, 'Choose the time of your visit')
   const observedAt = new Date(input.observedAt)
-  if (!Number.isFinite(observedAt.getTime()) || observedAt > now || now - observedAt > 31 * 86400000) throw new ListenError(400, 'Visits must be within the past 31 days')
+  if (!Number.isFinite(observedAt.getTime())) throw new ListenError(400, 'Choose the time of your visit')
+  // Five minutes of tolerance for phone clock drift; later times are rejected, never adjusted.
+  if (observedAt - now > 5 * 60000) throw new ListenError(400, 'The visit time is in the future. Check the time and your device clock.')
+  if (now - observedAt > 31 * 86400000) throw new ListenError(400, 'Visits must be within the past 31 days')
   // Reject impossible calendar dates instead of letting Date normalise them.
   const date = input.observedAt.slice(0,10)
   if (new Date(date + 'T00:00:00Z').toISOString().slice(0,10) !== date) throw new ListenError(400, 'Invalid calendar date')
@@ -34,7 +41,8 @@ export function visitInput(value, now = new Date()) {
   if (!['calm','breezy','windy'].includes(input.wind) || !['dry','rain'].includes(input.weather)) throw new ListenError(400, 'Choose the conditions')
   if (!['heard','not_heard','unsure'].includes(input.birds)) throw new ListenError(400, 'Choose what you heard')
   if (input.adult !== true) throw new ListenError(400, 'This pilot is for adult participants')
-  const note = input.note ? text(input.note, 500) : ''
+  if (input.note !== undefined && input.note !== null && typeof input.note !== 'string') throw new ListenError(400, 'Please check your text fields')
+  const note = input.note && input.note.trim() ? text(input.note, 500, true) : ''
   return { id, plotId, observedAt: observedAt.toISOString(), sourceTime: input.observedAt, method: METHOD, durationSeconds: 300, wind: input.wind, weather: input.weather, birds: input.birds, note }
 }
 export function coverage(visits) {

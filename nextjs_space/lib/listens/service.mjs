@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto'
 import { ListenError, plotInput, visitInput, key } from './domain.mjs'
 const hash = input => createHash('sha256').update(JSON.stringify(input)).digest('hex')
+// A primary-key race with another participant's identical identifier surfaces as a unique violation;
+// report it as the same conflict, without revealing who holds the identifier.
+const unique = error => /23505|unique constraint/i.test(`${error?.code ?? ''} ${error?.meta?.code ?? ''} ${error?.message ?? ''}`)
+async function insert(tx, sql, values, message) {
+  try { await tx.query(sql, values) } catch (error) { if (unique(error)) throw new ListenError(409, message); throw error }
+}
 export function listenService(db, ownerId) {
   async function owned(tx, id) {
     const [plot] = await tx.query('SELECT id,name,county FROM "ListeningPlot" WHERE id=$1 AND "ownerId"=$2', [id,ownerId])
@@ -23,11 +29,12 @@ export function listenService(db, ownerId) {
     async createPlot(value) {
       const input = plotInput(value), fingerprint = hash(input)
       return locked(async tx => {
-        const [existing] = await tx.query('SELECT id,"payloadHash" FROM "ListeningPlot" WHERE id=$1 AND "ownerId"=$2', [input.id,ownerId])
-        if (existing) { if (existing.payloadHash !== fingerprint) throw new ListenError(409, 'This submission identifier was already used'); return { id: existing.id } }
+        // Identifiers are global: a collision with any other participant's record is a conflict, never a leak or a 500.
+        const [existing] = await tx.query('SELECT id,"payloadHash","ownerId" FROM "ListeningPlot" WHERE id=$1', [input.id])
+        if (existing) { if (existing.ownerId !== ownerId || existing.payloadHash !== fingerprint) throw new ListenError(409, 'This submission identifier was already used'); return { id: existing.id } }
         const [count] = await tx.query('SELECT COUNT(*)::int AS n FROM "ListeningPlot" WHERE "ownerId"=$1', [ownerId])
         if (count.n >= 3) throw new ListenError(409, 'The free pilot supports three places per participant')
-        await tx.query('INSERT INTO "ListeningPlot" (id,"ownerId",name,county,"payloadHash") VALUES ($1,$2,$3,$4,$5)', [input.id,ownerId,input.name,input.county,fingerprint])
+        await insert(tx, 'INSERT INTO "ListeningPlot" (id,"ownerId",name,county,"payloadHash") VALUES ($1,$2,$3,$4,$5)', [input.id,ownerId,input.name,input.county,fingerprint], 'This submission identifier was already used')
         return { id: input.id }
       })
     },
@@ -35,16 +42,16 @@ export function listenService(db, ownerId) {
       const input = visitInput(value), fingerprint = hash(input)
       return locked(async tx => {
         await owned(tx,input.plotId)
-        const [existing] = await tx.query('SELECT id,"payloadHash" FROM "ListeningVisit" WHERE id=$1 AND "plotId"=$2', [input.id,input.plotId])
-        if (existing) { if (existing.payloadHash !== fingerprint) throw new ListenError(409, 'This visit identifier was already used'); return { id: existing.id } }
+        const [existing] = await tx.query('SELECT id,"payloadHash","plotId" FROM "ListeningVisit" WHERE id=$1', [input.id])
+        if (existing) { if (existing.plotId !== input.plotId || existing.payloadHash !== fingerprint) throw new ListenError(409, 'This visit identifier was already used'); return { id: existing.id } }
         const [count] = await tx.query('SELECT COUNT(*)::int AS n FROM "ListeningVisit" WHERE "plotId"=$1', [input.plotId])
         if (count.n >= 52) throw new ListenError(409, 'This place has reached the pilot’s 52-visit limit. You can still read and export its history.')
-        await tx.query('INSERT INTO "ListeningVisit" (id,"plotId","observedAt",payload,"payloadHash") VALUES ($1,$2,$3,$4::jsonb,$5)', [input.id,input.plotId,new Date(input.observedAt),JSON.stringify(input),fingerprint])
+        await insert(tx, 'INSERT INTO "ListeningVisit" (id,"plotId","observedAt",payload,"payloadHash") VALUES ($1,$2,$3,$4::jsonb,$5)', [input.id,input.plotId,new Date(input.observedAt),JSON.stringify(input),fingerprint], 'This visit identifier was already used')
         return { id: input.id }
       })
     },
-    async deletePlot(id) {
-      key(id)
+    async deletePlot(value) {
+      const id = key(value)
       return locked(async tx => { await owned(tx,id); await tx.query('DELETE FROM "ListeningPlot" WHERE id=$1 AND "ownerId"=$2 RETURNING id',[id,ownerId]); return { deleted: true } })
     },
   }

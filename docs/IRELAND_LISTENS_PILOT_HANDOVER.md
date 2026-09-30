@@ -38,6 +38,16 @@ Rollback: disable only the listening flag and restore the prior compatible appli
 - Partner editorial review and approved attribution. BioVeracity stays the evidence infrastructure; Derek and scientists interpret. No RTÉ logo, endorsement or programme ownership asserted.
 - Consent-based return reminders, delivery tracking and unsubscribe; no jobs are installed here. Measure signup completion, verified first visit, second visit and founder support minutes. Proposed pilot review after 25 invited adults and four weeks: improve or pause on concrete completion/support evidence, not publicity alone.
 
-## Validation status
+## Validation status (local release-candidate qualification, 30 September 2026)
 
-Fill with observed results in the PR. No full application build, deployed URL, email arrival, browser QA, PostgreSQL integration or production-readiness claim can be made from contract tests alone.
+Observed on this VM against a local scratch PostgreSQL 17 + pgvector cluster and a local `next start` production build. Nothing here was run on Abacus hosting, a hosted QA database, real email or a real device.
+
+- Unit/contract (`tests/listening-pilot.test.mjs`, mocked SQL): 14/14 pass.
+- Real PostgreSQL (`tests/listening-pilot.pg.test.mjs`, skipped unless `LISTEN_PG_URL` is set): 8/8 pass, repeated 5 times. Covers owner isolation, separate evidence columns, unverified 403, concurrent 6 place creates → exactly 3, concurrent identical retries → 1 row with conflicting reuse 409, concurrent 48+8 visits → exactly 52, cross-owner id race at INSERT → one row plus 409 (not 500), place and account deletion cascades.
+- Migration `20261005_listening_pilot` applied on a scratch database after the historical chain; both foreign keys are ON DELETE CASCADE; `prisma migrate diff` shows no listening drift. Two pre-existing migrations (`20260909_private_case_files`, `20260923_bng_obligations`) fail in lexical order on an empty database ("PrivateCase" does not exist); unrelated to this pilot.
+- Full regression, every `tests/*` file: candidate 80 files / 550 tests, 548 pass, 0 fail, 2 skipped; base `7ee1155` 78 files / 528 tests, 526 pass, 0 fail, the same 2 skipped.
+- App TypeScript, SDK TypeScript, SSR lint on `app/listen`, `prisma validate`, `next build` with the flag unset: all exit 0.
+- HTTP end-to-end against the local production build (email transport stubbed locally, not delivered): 64/64 checks — flag off 503, guest 401, signup → verification link returning to `/listen`, expired/reused tokens, resend, callback manipulation, Origin/content-type/size hardening, idempotency and conflicts, quotas, two-user isolation without disclosure, deletion, password reset invalidating old sessions.
+- Headless Chromium at 390×844 and 360×740: 96/96 checks — axe 0 violations in 9 states per width, /listen targets ≥ 44px, no horizontal overflow, visible keyboard focus, lost-response and offline retries save exactly once with typed form kept, timeline labels unverified participant observations, not-heard is not absence, download holds only own data without coordinates/email, delete, session-expiry state. The global cookie-consent banner (shared layout, first visit) has targets under 44px; recorded as pre-existing global debt, not changed here.
+
+Not proven here: hosted QA database migration, real email arrival, proxy/origin behaviour on hosting, real iOS/Android date-time pickers and zones, screen-reader use by people, hosted interrupted-commit retry, rollback route, privacy notice and retention wording, and account erasure (the existing data-rights erasure request does not delete the User row, so it does not yet remove listening data).
