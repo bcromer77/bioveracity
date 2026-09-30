@@ -254,6 +254,7 @@ model Asset {
   placeAccessPoints   PlaceAccessPoint[]
   listeningPlots      ListeningPlot[]
   placeParticipation  PlaceParticipation?
+  participantObservations ParticipantObservation[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -2295,6 +2296,7 @@ model ListeningPlot {
   payloadHash String
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   visits ListeningVisit[]
+  observations ParticipantObservation[]
   @@unique([ownerId, placeId])
   @@index([ownerId])
   @@index([placeId])
@@ -2304,6 +2306,10 @@ model PlaceParticipation {
   placeId String @id
   place Asset @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   listeningEnabledAt DateTime? @db.Timestamptz(3)
+  // Participant observation (20261007). Map centre is a participation viewport, not Place geometry.
+  observationEnabledAt DateTime? @db.Timestamptz(3)
+  mapCentreLat Float?
+  mapCentreLng Float?
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 }
@@ -2316,4 +2322,48 @@ model ListeningVisit {
   payloadHash String
   receivedAt DateTime @default(now()) @db.Timestamptz(3)
   @@index([plotId, observedAt])
+}
+// PILOT-001 NE demo: a private participant observation. Its own record type, never
+// Asset/PlatformEvidence/search/timeline. Status is pinned to UNVERIFIED by a CHECK;
+// machine interpretation and human verification are future, separate records.
+model ParticipantObservation {
+  id String @id
+  plotId String
+  plot ListeningPlot @relation(fields: [plotId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  placeId String
+  place Asset @relation(fields: [placeId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  kind String
+  category String
+  observedAt DateTime @db.Timestamptz(3)
+  observedAtSource String
+  observedAtProvenance String
+  receivedAt DateTime @default(now()) @db.Timestamptz(3)
+  note String?
+  participantIdentification String?
+  participantConfidence String?
+  locationMethod String
+  capturedLat Float?
+  capturedLng Float?
+  capturedAccuracyM Float?
+  locationSharing String
+  disclosureOverride String?
+  status String @default("PARTICIPANT_UNVERIFIED")
+  payloadHash String
+  media ParticipantObservationMedia?
+  @@index([plotId, observedAt])
+  @@index([placeId])
+}
+// DEMO STORAGE ONLY: private media bytes (original + metadata-stripped photo derivative).
+model ParticipantObservationMedia {
+  observationId String @id
+  observation ParticipantObservation @relation(fields: [observationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  mediaType String
+  mime String
+  byteLength Int
+  sha256 String
+  durationMs Int?
+  original Bytes
+  displayMime String?
+  display Bytes?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 }

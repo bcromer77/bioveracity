@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return created
     })
     const returnPath = authReturnPath(typeof input.callbackUrl === 'string' ? input.callbackUrl : null)
-    const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true' || returnPath === '/listen' || /^\/place\/[a-z0-9]+(?:-[a-z0-9]+)*\/listen$/.test(returnPath)
+    const verificationRequired = process.env.AUTH_REQUIRE_VERIFIED_EMAIL === 'true' || returnPath === '/listen' || /^\/place\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:listen|notice)$/.test(returnPath)
     if (verificationRequired) {
       try { await identities().issue({email:user.email,ip:securityIp(request),purpose:'VERIFY_EMAIL',returnTo:authReturnPath(typeof input.callbackUrl === 'string' ? input.callbackUrl : null)}) }
       catch { console.error('signup_verification_issue_failed') }

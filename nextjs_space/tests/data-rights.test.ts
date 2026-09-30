@@ -13,7 +13,7 @@ async function fixture(){
  const pg=new PGlite()
  await pg.exec(`CREATE TABLE "User" (id TEXT PRIMARY KEY,name TEXT,email TEXT,role TEXT DEFAULT 'user',"accessState" TEXT DEFAULT 'REGISTERED',"createdAt" TIMESTAMPTZ DEFAULT now()); INSERT INTO "User" (id,name,email) VALUES ('a','Alice','a@example.test'),('b','Bob','b@example.test'),('admin','Reviewer','admin@example.test'); UPDATE "User" SET role='admin' WHERE id='admin';`)
  await pg.exec(`CREATE TABLE "Asset" (id TEXT PRIMARY KEY); INSERT INTO "Asset" (id) VALUES ('place-x');`)
- for(const migration of ['20260914_wild_hubs','20260915_wild_editorial_review','20260919_attention_return','20260923_venue_photo_journal','20260924_data_rights','20261005_listening_pilot','20261006_pilot_001_place_link'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
+ for(const migration of ['20260914_wild_hubs','20260915_wild_editorial_review','20260919_attention_return','20260923_venue_photo_journal','20260924_data_rights','20261005_listening_pilot','20261006_pilot_001_place_link','20261007_participant_observation'])await pg.exec(readFileSync(new URL(`../prisma/migrations/${migration}/migration.sql`,import.meta.url),'utf8'))
  await pg.exec(`INSERT INTO "WildHub" (id,"ownerId",profile,published) VALUES ('venue','a','{"name":"Test venue"}','{}'),('other','b','{"name":"Other venue"}','{}');`)
  const sql=(p:Pick<PGlite,'query'>):Sql=>({query:async<T>(q:string,v:unknown[])=>(await p.query<T>(q,v)).rows})
  const db:Database={...sql(pg),transaction:fn=>pg.transaction(tx=>fn(sql(tx)))}

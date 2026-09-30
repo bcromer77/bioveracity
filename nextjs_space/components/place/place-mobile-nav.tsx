@@ -33,7 +33,9 @@ function Section({ base, hash, children }: { base?: string | null; hash: `#${str
   return base ? <Link href={`${base}${hash}`} prefetch={false} className={item}>{children}</Link> : <HashLink href={hash} className={item}>{children}</HashLink>
 }
 
-export function PlaceMobileNav({ base }: { base?: string | null } = {}) {
+// PILOT-001 NE demo: when the observation pilot is enabled for this Place the + becomes
+// a link to the private observation flow; otherwise the inert control is unchanged.
+export function PlaceMobileNav({ base, noticeHref }: { base?: string | null; noticeHref?: string | null } = {}) {
   return (
     <nav
       aria-label="Place navigation"
@@ -42,7 +44,13 @@ export function PlaceMobileNav({ base }: { base?: string | null } = {}) {
       <ul className="mx-auto grid max-w-2xl grid-cols-5 items-center px-2 py-1">
         <li><Link href="/" prefetch={false} className={item}><Icon d={ICONS.home} /><span>Home</span></Link></li>
         <li><Section base={base} hash="#explore"><Icon d={ICONS.explore} /><span>Explore</span></Section></li>
-        <li className="flex flex-col items-center justify-center gap-0.5">
+        {noticeHref ? <li className="flex flex-col items-center justify-center gap-0.5">
+          <Link href={noticeHref} prefetch={false} className={`flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--pl-green-deep)] text-white ${focus}`} data-place-contribute="notice" aria-describedby="place-contribute-status">
+            <span aria-hidden="true" className="text-2xl leading-none">+</span>
+            <span className="sr-only">Make an observation</span>
+          </Link>
+          <span id="place-contribute-status" className="text-[11px] font-medium text-[color:var(--pl-ink)]">Notice</span>
+        </li> : <li className="flex flex-col items-center justify-center gap-0.5">
           <button
             type="button"
             disabled
@@ -55,7 +63,7 @@ export function PlaceMobileNav({ base }: { base?: string | null } = {}) {
             <span className="sr-only">Add to this place</span>
           </button>
           <span id="place-contribute-status" className="text-[11px] font-medium text-[color:var(--pl-muted)]">{PLACE_CONTRIBUTE_STATUS}</span>
-        </li>
+        </li>}
         <li><Section base={base} hash="#species"><Icon d={ICONS.species} /><span>Species</span></Section></li>
         <li><Section base={base} hash="#place-menu"><Icon d={ICONS.menu} /><span>Menu</span></Section></li>
       </ul>

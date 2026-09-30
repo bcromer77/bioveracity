@@ -7,7 +7,7 @@ import { searchPlaceView } from '@/lib/place/shell-view'
 import { placePresentation } from '@/lib/place-memory/place-presentation'
 import { PlaceShell } from '@/components/place/place-shell'
 import { PlaceListenInvitation } from '@/components/place/place-listen-invitation'
-import { isListeningPilotEnabled, placeListenPath, resolveListeningPlace } from '@/lib/place/participation'
+import { isListeningPilotEnabled, isObservationPilotEnabled, placeListenPath, placeNoticePath, resolveListeningPlace, resolveObservationPlace } from '@/lib/place/participation'
 
 // Place Experience PR D: dark by default. The route exists only when the
 // server-only PLACE_EXPERIENCE_ENABLED flag is exactly 'true'; otherwise, and
@@ -35,5 +35,9 @@ export default async function PlacePage({ params, searchParams }: { params: Prom
   // Place has participation enabled. It reads participation config, never listening data.
   const listening = isListeningPilotEnabled() ? await resolveListeningPlace(db, slug) : null
   const invitation = listening?.outcome === 'ok' ? <PlaceListenInvitation href={placeListenPath(listening.place.slug)} /> : undefined
-  return <PlaceShell view={result.view} search={searchPlaceView(result.view, q)} invitation={invitation} />
+  // PILOT-001 NE demo: observation entry points, likewise config-only. Participant
+  // observations are never read here and never reach the public view or search.
+  const observation = isObservationPilotEnabled() ? await resolveObservationPlace(db, slug) : null
+  const notice = observation?.outcome === 'ok' ? { href: placeNoticePath(observation.place.slug) } : null
+  return <PlaceShell view={result.view} search={searchPlaceView(result.view, q)} invitation={invitation} notice={notice} />
 }
