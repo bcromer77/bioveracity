@@ -27,7 +27,10 @@ export type EmailMessage = {
   subject: string
   html: string
   text: string
+  replyTo?: string
 }
+
+export type EmailSendResult = { id?: string }
 
 export type ResendConfig = {
   provider: 'resend'
@@ -85,7 +88,7 @@ export function resolveEmailConfig(env: EnvLike): EmailConfig {
 type FetchLike = typeof fetch
 
 export function createEmailer(config: EmailConfig, fetchImpl: FetchLike = fetch) {
-  async function send(message: EmailMessage): Promise<void> {
+  async function deliver(message: EmailMessage): Promise<EmailSendResult> {
     if (config.provider === 'resend') {
       const res = await fetchImpl('https://api.resend.com/emails', {
         method: 'POST',
@@ -100,13 +103,21 @@ export function createEmailer(config: EmailConfig, fetchImpl: FetchLike = fetch)
           subject: message.subject,
           html: message.html,
           text: message.text,
+          ...(message.replyTo ? { reply_to: message.replyTo } : {}),
         }),
       })
       if (!res.ok) {
         // Do not surface provider response bodies (may echo the recipient).
         throw new EmailDeliveryError(`Resend delivery failed with status ${res.status}`)
       }
-      return
+      let id: string | undefined
+      try {
+        const data = await res.json()
+        if (typeof data?.id === 'string') id = data.id
+      } catch {
+        // A 2xx without a JSON body still counts as accepted.
+      }
+      return { id }
     }
 
     const sender = parseFrom(config.from)
@@ -126,6 +137,7 @@ export function createEmailer(config: EmailConfig, fetchImpl: FetchLike = fetch)
         recipient_email: message.to,
         sender_email: sender.email,
         sender_alias: sender.name ?? 'BioVeracity',
+        ...(message.replyTo ? { reply_to: message.replyTo } : {}),
       }),
     })
     if (!res.ok) {
@@ -137,7 +149,13 @@ export function createEmailer(config: EmailConfig, fetchImpl: FetchLike = fetch)
     if (!delivered) {
       throw new EmailDeliveryError('Abacus delivery was not confirmed')
     }
+    return {}
   }
 
-  return { send }
+  async function send(message: EmailMessage): Promise<void> {
+    await deliver(message)
+  }
+
+  // sendWithId additionally returns the provider message id (Resend) for delivery tracing.
+  return { send, sendWithId: deliver }
 }

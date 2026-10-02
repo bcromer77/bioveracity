@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PublicShell } from '@/components/wild/public-shell'
+import { enquiryHref } from '@/lib/enquiry/config'
 
 export const metadata = {
   title: 'BioVeracity | Every place is changing.',
@@ -76,6 +77,10 @@ export default function HomePage() {
         <div className="bv-grid bv-three">
           {RESPONSIBILITIES.map(([title, body, href]) => <article className="bv-feature" key={title}><h3>{title}</h3><p>{body}</p><Link href={href}>Find your route →</Link></article>)}
         </div>
+        <div className="bv-actions">
+          <Link className="bv-button" href={enquiryHref('home-tell-us')}>Tell us about your place →</Link>
+        </div>
+        <p className="bv-small">A short note is enough. We read every enquiry and reply by email.</p>
       </section>
 
       <section className="bv-section bv-tinted">
