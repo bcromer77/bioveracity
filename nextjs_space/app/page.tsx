@@ -13,7 +13,7 @@ export const metadata = {
 const ROUTES = [
   ['I run a place', 'Make your venue a meeting point for its local ecology.', '/wild/partners', 'For venues'],
   ['I investigate places', 'Find environmental evidence and build a source-linked record.', '/professionals', 'For ecologists & professionals'],
-  ['I manage environmental commitments', 'Make sense of years of reports, monitoring and engineering evidence.', '/professionals#sustainability', 'For sustainability teams'],
+  ['I manage environmental commitments', 'Keep claims, targets and environmental evidence connected across UK SRS, BNG and CSRD.', '/evidence', 'For organisations'],
   ['I work in planning or enforcement', 'Follow what was promised, what should have happened and what evidence exists.', '/institutional', 'For councils & public bodies'],
   ['I look for environmental opportunities', 'See how BioVeracity can follow emerging environmental needs and programmes.', '/contact', 'Discuss horizon scanning'],
   ['I know my local wildlife', 'Explore the living record of your county and the places connected to it.', '/wild', 'Explore Wild Counties'],
