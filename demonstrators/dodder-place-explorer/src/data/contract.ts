@@ -101,7 +101,7 @@ export type PlacePack = {
 };
 
 const BASIS =
-  "These records share this illustration\u2019s place and time window. They may be related and require review. No cause is assigned.";
+  "These records share this illustration’s place and time window. They may be related and require review. No cause is assigned.";
 
 export function statusOf(review: Review): EvidenceStatus {
   switch (review) {
@@ -164,7 +164,7 @@ export function projectPlace(place: PlaceModel): PlacePack {
     id: place.id,
     name: place.name,
     location: place.siteMeta,
-    kicker: `${place.siteLabel} \u2014 ${place.siteMeta}`,
+    kicker: `${place.siteLabel} — ${place.siteMeta}`,
     headline: place.question,
     headlineItalic: place.questionItalic,
     summary: place.dek,
@@ -177,7 +177,7 @@ export function projectPlace(place: PlaceModel): PlacePack {
       earlyImage: place.earlyImage,
       lateImage: place.lateImage,
       imageAlt: place.imageAlt,
-      attribution: "Illustrative aerial \u00b7 not a survey and not to scale",
+      attribution: "Illustrative aerial · not a survey and not to scale",
     },
     timeline: {
       start: ticks[0]?.long ?? "",
