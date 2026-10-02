@@ -1,0 +1,417 @@
+export type Lens = "provenance" | "conflict" | "uncertainty" | "versions" | "challenge" | "causation";
+
+export type Shelf = "observation" | "interpretation" | "hypothesis" | "predicted" | "intervention" | "association" | "causal" | "unresolved";
+
+export type MemRecord = {
+  id: string;
+  yearIndex: number;
+  lenses: Lens[];
+  shelf: Shelf;
+  label: string;
+  text: string;
+  plain: string;
+  sourceLine: string;
+  publisher: string;
+  document: string;
+  eventDate: string;
+  published: string;
+  retrieved: string;
+  geography: string;
+  method: string;
+  passage: string;
+  limitation: string;
+  url: string;
+};
+
+export const retrieved = "2 October 2026";
+
+export const ticks = [
+  { short: "Oct 2025", long: "October 2025" },
+  { short: "Nov 2025", long: "November 2025" },
+  { short: "Dec 2025", long: "December 2025" },
+  { short: "Mar 2026", long: "March 2026" },
+  { short: "Jun 2026", long: "June 2026" },
+  { short: "Sep 2026", long: "September 2026" },
+];
+
+const planUrl = "https://www.cambridge.gov.uk/media/w5lpaton/gccsp-water-quality-monitoring-plan.pdf";
+const octUrl = "https://www.cambridge.gov.uk/media/mt2pepg2/greater-cambridge-chalk-stream-project-newsletter-2025-10.pdf";
+const decUrl = "https://www.cambridge.gov.uk/media/apikdyd5/greater-cambridge-chalk-stream-project-newsletter-2025-12.pdf";
+const marUrl = "https://www.cambridge.gov.uk/media/n0xbiuz3/greater-cambridge-chalk-stream-project-newsletter-2026-03.pdf";
+const newsUrl =
+  "https://www.cambridge.gov.uk/news/2026/03/19/work-on-case-study-sites-for-chalk-stream-project-making-good-progress-this-spring";
+const q1Url = "https://www.rivercam.org.uk/wp-content/uploads/2026/07/2026-07_GCCSP-Water-Quality-Q1-2026-Report-Final-Version.pdf";
+const cabinetUrl =
+  "https://democracy.cambridge.gov.uk/documents/s73624/River%20Cam%20Chalk%20Streams%20and%20Tributaries%20Strategic%20Review%20and%20Environmental%20Projects.pdf";
+
+export const records: MemRecord[] = [
+  {
+    id: "oct-predict",
+    yearIndex: 0,
+    lenses: ["provenance", "versions", "causation"],
+    shelf: "predicted",
+    label: "Predicted response",
+    text: "Cleaner gravels and a more varied flow would create the conditions for bullhead, and for some chalk-stream invertebrates, to recover.",
+    plain: "The hope was that a cleaner, more varied bed would give fish and insects somewhere to come back to.",
+    sourceLine: "Project newsletter, October 2025",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project newsletter, October 2025",
+    eventDate: "Not a measurement. A statement about works then out for consultation.",
+    published: "October 2025 newsletter. Council file dated in the address as 2025-10.",
+    retrieved,
+    geography: "Cherry Hinton Brook, named with Coldham’s Common as a consultation site",
+    method: "Project communication. The WHPT, MTR, sediment and eDNA surveys it mentions were not retrieved as separate reports.",
+    passage:
+      "Cleaner gravels and better flow diversity will create the conditions needed for species such as bullhead and specialist chalk stream invertebrates to recover.",
+    limitation: "This is what the update expected. It is not a later count of those animals.",
+    url: octUrl,
+  },
+  {
+    id: "oct-limit",
+    yearIndex: 0,
+    lenses: ["provenance", "versions", "causation"],
+    shelf: "interpretation",
+    label: "Interpretation",
+    text: "The same update said channel works alone cannot solve the nutrient problem. The brook does not have the capacity to process the phosphate and nitrate arriving from the wider landscape.",
+    plain: "Tidying the channel would not, by itself, deal with what was washing in from outside.",
+    sourceLine: "Project newsletter, October 2025",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project newsletter, October 2025",
+    eventDate: "Published with the consultation, before the spring 2026 works.",
+    published: "October 2025 newsletter.",
+    retrieved,
+    geography: "Cherry Hinton Brook, in that update’s account of the urban streams",
+    method: "Project interpretation, written beside the consultation designs.",
+    passage:
+      "Channel works alone cannot solve the nutrient problem. There simply is not enough capacity within the stream to process the phosphate, nitrate, and other pollutants entering from the wider landscape.",
+    limitation: "The newsletter does not, in this passage, identify a single pipe, field or outfall.",
+    url: octUrl,
+  },
+  {
+    id: "oct-follow",
+    yearIndex: 0,
+    lenses: ["provenance", "causation"],
+    shelf: "hypothesis",
+    label: "Hypothesis, not a result",
+    text: "Keele University is quoted as saying that when the chemistry and the sediment are right, the biology follows. That sentence is a view of how a chalk stream works. It is not a result from this brook.",
+    plain: "A university partner said the wildlife should follow if the water and the silt are put right. That is a view, not a result.",
+    sourceLine: "Keele University, quoted in the October 2025 newsletter",
+    publisher: "Quoted by the Greater Cambridge Chalk Stream Project from Keele University",
+    document: "Project newsletter, October 2025",
+    eventDate: "The quotation is not dated more precisely than the newsletter.",
+    published: "October 2025 newsletter.",
+    retrieved,
+    geography: "Not a Cherry Hinton measurement. A general statement printed beside the Cherry Hinton consultation.",
+    method: "A named university researcher is quoted. The underlying paper or dataset is not in this newsletter.",
+    passage: "When the chemistry and sediment balance are right, the biology follows naturally.",
+    limitation: "BioVeracity does not treat this sentence as evidence that any later change was caused by the works.",
+    url: octUrl,
+  },
+  {
+    id: "nov-rule",
+    yearIndex: 1,
+    lenses: ["provenance", "versions", "challenge", "causation"],
+    shelf: "interpretation",
+    label: "A rule for the evidence",
+    text: "The November 2025 plan says more than twenty years of in-channel restoration have not produced a lasting recovery. It puts diagnosis before works. Measurements are to reduce uncertainty, not to claim a definite cause. A biological score is to be read with the chemistry and the sediment, not on its own. Habitat works alone are unlikely to help where the water itself is outside the stream’s tolerance.",
+    plain: "The written rule was: find out what is wrong before building. A change in the wildlife, on its own, does not prove the works worked. And a measurement is not yet a cause.",
+    sourceLine: "Water Quality Monitoring Plan and Evidence Framework, November 2025, version 3",
+    publisher: "Cambridge City Council, Greater Cambridge Chalk Stream Project",
+    document: "Water Quality Monitoring Plan and Evidence Framework, November 2025, version 3",
+    eventDate: "The plan is a method. It is not a survey of Cherry Hinton Brook.",
+    published: "November 2025, version 3. Retrieved from the council site.",
+    retrieved,
+    geography: "Cherry Hinton Brook is one of the named urban case-study sites, with Hobson’s Brook, Coldham’s Brook and the East Cambridge Main Drain.",
+    method:
+      "The plan sets the monitoring architecture. A document with the separate title of a city biological monitoring plan was not found.",
+    passage:
+      "Data are used to reduce uncertainty, not to claim definitive causation. Biological indices are used as integrative evidence streams, interpreted alongside chemistry and sediment data. Where water-quality parameters fall outside chalk stream tolerances, physical habitat enhancement alone is unlikely to deliver ecological benefit.",
+    limitation:
+      "These are the plan’s rules. They are not a finding that a particular Cherry Hinton intervention succeeded or failed.",
+    url: planUrl,
+  },
+  {
+    id: "dec-nitrate",
+    yearIndex: 2,
+    lenses: ["provenance", "causation"],
+    shelf: "observation",
+    label: "Measurement",
+    text: "Nitrate-nitrogen at Cherry Hinton Brook was fairly steady, and well above the project’s chalk-stream benchmark: generally 8 to 13 mg per litre.",
+    plain: "The nitrate was already high, and it was not swinging about. Generally 8 to 13 milligrams a litre, against a benchmark under 1.",
+    sourceLine: "Project newsletter, December 2025",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project newsletter, December 2025",
+    eventDate: "The newsletter describes monitoring across that season. Individual sample dates are not listed in this passage.",
+    published: "December 2025 newsletter.",
+    retrieved,
+    geography: "Cherry Hinton Brook",
+    method: "Project report of the monitoring. The laboratory sheets are not in the newsletter.",
+    passage:
+      "At Cherry Hinton Brook, nitrate-N concentrations were relatively consistent and well above the chalk stream benchmark, generally between 8 and 13 mg L⁻¹ as N.",
+    limitation: "A range in a newsletter is not the same thing as the monthly medians published the following June. They are not drawn as one line.",
+    url: decUrl,
+  },
+  {
+    id: "dec-phos",
+    yearIndex: 2,
+    lenses: ["provenance", "conflict", "causation"],
+    shelf: "observation",
+    label: "One phosphate reading",
+    text: "Downstream, phosphate-phosphorus rose at several points and reached 0.17 mg per litre in mid-November.",
+    plain: "Downstream, the phosphate reached 0.17 milligrams a litre in the middle of November.",
+    sourceLine: "Project newsletter, December 2025",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project newsletter, December 2025",
+    eventDate: "Mid-November 2025, as stated in the December newsletter.",
+    published: "December 2025 newsletter.",
+    retrieved,
+    geography: "Downstream Cherry Hinton Brook. The sampling points are not named in this sentence.",
+    method: "Reported concentration. The laboratory table was not in the newsletter.",
+    passage:
+      "Downstream phosphate-P concentrations increased at several sampling points, reaching 0.17 mg L⁻¹ as P in mid-November.",
+    limitation:
+      "This is one period. The June 2026 report describes January to March, and does not publish a single Cherry Hinton figure to set beside 0.17. The two are not treated as a before-and-after.",
+    url: decUrl,
+  },
+  {
+    id: "dec-read",
+    yearIndex: 2,
+    lenses: ["provenance", "conflict", "causation"],
+    shelf: "interpretation",
+    label: "The update’s reading",
+    text: "The newsletter suggests the November phosphate was extra nutrient entering along the urban reach, on top of a baseline that was already rich. It does not name the source.",
+    plain: "The project thought something extra was getting in along the built-up stretch. It did not say what.",
+    sourceLine: "Project newsletter, December 2025",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project newsletter, December 2025",
+    eventDate: "A reading of the mid-November samples, published in December 2025.",
+    published: "December 2025 newsletter.",
+    retrieved,
+    geography: "Urban reach of Cherry Hinton Brook",
+    method: "The newsletter’s own verb is “suggesting”.",
+    passage:
+      "Suggesting additional nutrient inputs within the urban reach superimposed on an already enriched baseline.",
+    limitation: "A suggestion is not a traced outfall, and it is not a cause assigned by this page.",
+    url: decUrl,
+  },
+  {
+    id: "mar-works",
+    yearIndex: 3,
+    lenses: ["provenance", "causation"],
+    shelf: "intervention",
+    label: "What was done",
+    text: "On 19 March 2026 the council said work had started that week at Cherry Hinton Brook, the fifth of five city case-study sites. The sites were to be monitored before, during and after. A newspaper schedule in February had put this stretch, near Sainsbury’s on Coldham’s Lane, at 16 to 27 March. The council’s biodiversity manager told that paper the point was to test methods, not to assume a large scheme would work.",
+    plain: "In March 2026 the council started work on this brook. The stated point was to test the method and watch what happened, not to declare it a success.",
+    sourceLine: "Cambridge City Council, 19 March 2026; Cambridge Independent, 20 February 2026",
+    publisher: "Cambridge City Council. The dates also appear in the Cambridge Independent.",
+    document: "Council news, 19 March 2026. Cambridge Independent, 20 February 2026.",
+    eventDate: "Council: work started the week of 19 March 2026. Independent: scheduled 16–27 March 2026.",
+    published: "20 February 2026 and 19 March 2026.",
+    retrieved,
+    geography: "Cherry Hinton Brook. The Independent locates the stretch near Sainsbury’s, Coldham’s Lane.",
+    method: "A news announcement and a newspaper schedule. The construction record and the as-built drawing were not retrieved.",
+    passage:
+      "Work has started this week at Cherry Hinton Brook, to create the fifth of five chalk stream case study sites. The sites are being monitored before, during and after restoration.",
+    limitation: "Neither piece says the plants or insects had responded. Starting the work is not the result of the work.",
+    url: newsUrl,
+  },
+  {
+    id: "mar-gravel",
+    yearIndex: 3,
+    lenses: ["provenance", "versions", "causation"],
+    shelf: "interpretation",
+    label: "A later reading of older gravel",
+    text: "The March 2026 update says earlier habitat work on the lower brook used gravel up to 70 mm. Preliminary findings from Keele University, in that same update, say gravel of 40 to 70 mm can be damaging here: it sits still, traps fine sediment, and can bury the insect habitat. The date of the original gravel works is not given. The full Keele report, earlier expected in January and then in April, was not found.",
+    plain: "Gravel that had been put in to help the brook was later described, in a preliminary finding, as something that could smother it. The full study was not found.",
+    sourceLine: "Project update, March 2026, reporting preliminary Keele University findings",
+    publisher: "Greater Cambridge Chalk Stream Project, reporting Keele University",
+    document: "Project update, March 2026",
+    eventDate: "The original gravel works are undated in this update. The preliminary finding is given as March 2026.",
+    published: "March 2026 project update.",
+    retrieved,
+    geography: "Lower reach of Cherry Hinton Brook",
+    method: "Preliminary findings, as summarised by the project. Not the university’s full report.",
+    passage:
+      "Preliminary findings from the March 2026 study indicate that large-scale gravel augmentation using 40mm to 70mm material can be ecologically damaging in these conditions.",
+    limitation: "The full Keele report was not located on 2 October 2026. A preliminary finding stays preliminary.",
+    url: marUrl,
+  },
+  {
+    id: "mar-concern",
+    yearIndex: 3,
+    lenses: ["provenance", "challenge"],
+    shelf: "unresolved",
+    label: "A challenge",
+    text: "The March update says there had been concern about coir matting on Cherry Hinton Brook, because of water voles. It does not name the people who raised it.",
+    plain: "People were worried the bank works would harm the water voles. The update does not say who.",
+    sourceLine: "Project update, March 2026",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project update, March 2026",
+    eventDate: "The concern is recorded in the March 2026 update. When it was first raised is not stated.",
+    published: "March 2026 project update.",
+    retrieved,
+    geography: "Sections of Cherry Hinton Brook where coir matting was installed",
+    method: "The project’s acknowledgement of a concern. Not a letter, and not a complaint file.",
+    passage:
+      "There has been some concern regarding the installation of coir matting along sections of Cherry Hinton Brook, particularly in relation to potential impacts on water voles.",
+    limitation: "Concern is not a finding that voles were harmed, and it is not evidence they were not.",
+    url: marUrl,
+  },
+  {
+    id: "mar-survey",
+    yearIndex: 3,
+    lenses: ["provenance", "challenge", "causation"],
+    shelf: "observation",
+    label: "Survey, as reported",
+    text: "The same update says Anglia Ruskin University surveyed about 600 metres in November 2025 and recorded evidence of water voles: burrows, feeding stations and latrines. It does not say the animals were seen. Much of the bank where works were done was classed as poor habitat. The coir, it says, was in those poorer sections. One stretch was classed as good.",
+    plain: "A university survey in November 2025 recorded evidence of water voles along about 600 metres: burrows, feeding remains and latrines. The animals were not reported as seen. Most of the bank being worked on was already classed as poor habitat.",
+    sourceLine: "Project update, March 2026, describing an Anglia Ruskin University survey",
+    publisher: "Greater Cambridge Chalk Stream Project, describing Anglia Ruskin University",
+    document: "Project update, March 2026. The survey report itself was not retrieved.",
+    eventDate: "November 2025 survey, described in March 2026.",
+    published: "March 2026 project update. The survey’s own publication was not found.",
+    retrieved,
+    geography: "About 600 metres of Cherry Hinton Brook",
+    method: "Described as a systematic survey. Field sheets and the survey report were not retrieved, so this page uses only the project’s account.",
+    passage:
+      "A full, systematic water vole survey along approximately 600 metres of the brook in November 2025 recorded burrows, feeding stations, latrines and other field signs.",
+    limitation: "Until the survey report is read, the project’s summary is the record, not the survey.",
+    url: marUrl,
+  },
+  {
+    id: "mar-reading",
+    yearIndex: 3,
+    lenses: ["provenance", "challenge", "causation", "uncertainty"],
+    shelf: "interpretation",
+    label: "The update’s reading of the survey",
+    text: "The update says that, done this way, the works are a low and temporary disturbance, set against habitat gains later. Those gains had not been counted again in any report found here. Ecological supervision and burrow checks are described. They are not the same thing as a later survey.",
+    plain: "The project said the disturbance should be small and brief, and the banks better later. A later survey showing that was not found.",
+    sourceLine: "Project update, March 2026",
+    publisher: "Greater Cambridge Chalk Stream Project, Cambridge City Council",
+    document: "Project update, March 2026",
+    eventDate: "A reading published in March 2026 of a November 2025 survey.",
+    published: "March 2026 project update.",
+    retrieved,
+    geography: "Cherry Hinton Brook, banks where coir was laid",
+    method: "Project interpretation of a survey whose own report was not retrieved.",
+    passage:
+      "The survey concludes that, when undertaken in this way, the works present a low and temporary level of disturbance, particularly when compared to the long-term habitat gains.",
+    limitation: "“The survey concludes” is the update’s wording. The long-term gains are not an observation in the records read.",
+    url: marUrl,
+  },
+  {
+    id: "jun-nitrate",
+    yearIndex: 4,
+    lenses: ["provenance", "causation"],
+    shelf: "observation",
+    label: "Measurement, next report",
+    text: "In the January to March 2026 laboratory report, nitrate at both Cherry Hinton points stayed far above the report’s chalk-stream figure of under 1 mg per litre. Monthly medians sat between 12.95 and 13.50. In January the upstream median was 13.35 and the downstream median 12.95.",
+    plain: "In the first three months of 2026 the nitrate was still about 13 milligrams a litre. The report’s chalk-stream figure is under 1.",
+    sourceLine: "Anglia Ruskin University for the project, report dated June 2026",
+    publisher: "Anglia Ruskin University, for the Greater Cambridge Chalk Stream Project",
+    document: "Water Quality Analysis, Q1 2026. Report dated June 2026. Written by Emma Dominic. Reviewed by Dr Gerbrandus Boots.",
+    eventDate: "Samples from January to March 2026, weekly.",
+    published: "Report dated June 2026. Retrieved from the Cam Catchment Partnership site.",
+    retrieved,
+    geography: "Cherry Hinton Brook, upstream and downstream points. The point names are not coordinates.",
+    method:
+      "Laboratory analysis. The report says volunteers were involved in the wider survey and that the laboratory work was professional. These medians are not a volunteer field reading.",
+    passage:
+      "Nitrate levels at both Cherry Hinton sampling points remained vastly higher than the chalk stream target of <1 mg/l N, with monthly medians from 12.95 to 13.50 mg/l N.",
+    limitation:
+      "The December range was 8 to 13. These are medians for a later quarter. Same measure, different summaries. Not plotted as a rise or a fall.",
+    url: q1Url,
+  },
+  {
+    id: "jun-phos",
+    yearIndex: 4,
+    lenses: ["provenance", "conflict", "causation"],
+    shelf: "observation",
+    label: "A later description, not a pair",
+    text: "The same report says Cherry Hinton, Coldham’s Brook and Hobson’s Brook generally showed lower phosphate than other sites, many results close to or below 0.05 mg per litre. It does not give a single Cherry Hinton number to set beside the 0.17 of mid-November.",
+    plain: "Early in 2026 the report describes phosphate at this brook as often near or under 0.05. It never puts that beside the November figure of 0.17. Different months. Not a pair.",
+    sourceLine: "Anglia Ruskin University, Q1 2026 report, dated June 2026",
+    publisher: "Anglia Ruskin University, for the Greater Cambridge Chalk Stream Project",
+    document: "Water Quality Analysis, Q1 2026, section 4.1.1.2",
+    eventDate: "January to March 2026.",
+    published: "Report dated June 2026.",
+    retrieved,
+    geography: "Cherry Hinton is grouped in this sentence with Coldham’s Brook and Hobson’s Brook.",
+    method: "Laboratory phosphate. The sentence is a grouped description, not a transcribed weekly table for Cherry Hinton alone.",
+    passage:
+      "Cherry Hinton, Coldham’s Brook and Hobson’s Brook generally show lower phosphate concentrations, with many measurements close to or below the chalk stream threshold (<0.05 mg/l P).",
+    limitation: "Not equivalent to the mid-November 0.17 mg/L reading. Different period, and not the same form of number.",
+    url: q1Url,
+  },
+  {
+    id: "jun-oxygen",
+    yearIndex: 4,
+    lenses: ["provenance", "conflict", "uncertainty", "challenge", "causation"],
+    shelf: "unresolved",
+    label: "The report does not decide",
+    text: "Downstream on 23 March, oxygen saturation was 7.3 per cent, and 0.8 mg per litre. On 30 March it was 3.9 per cent, and 0.4 mg per litre. Upstream on those days the report says saturation stayed above 100 per cent. The report says this may be a local loss of oxygen, or a fault in the measurement. It does not choose.",
+    plain: "At the end of March the downstream oxygen reading collapsed. Upstream it did not. The report says that might be the brook, or the measurement. It leaves the question open.",
+    sourceLine: "Anglia Ruskin University, Q1 2026 report, section 5.3.4",
+    publisher: "Anglia Ruskin University, for the Greater Cambridge Chalk Stream Project",
+    document: "Water Quality Analysis, Q1 2026",
+    eventDate: "23 March 2026 and 30 March 2026.",
+    published: "Report dated June 2026.",
+    retrieved,
+    geography: "Cherry Hinton Brook, downstream point. Upstream cited as the contrast.",
+    method: "Field dissolved-oxygen readings, as reported. No later note resolving the anomaly was found.",
+    passage:
+      "These results may represent either a highly localised oxygen depletion event or a potential measurement anomaly and should be interpreted with caution.",
+    limitation: "The works on this stretch were scheduled across the same weeks. The report does not connect the oxygen readings to the works. This page does not either.",
+    url: q1Url,
+  },
+  {
+    id: "sep-account",
+    yearIndex: 5,
+    lenses: ["provenance", "causation"],
+    shelf: "observation",
+    label: "The council’s later account",
+    text: "The September 2026 officer report says Cherry Hinton Brook and Coldham’s Brook were commonly around 13 mg per litre of nitrate-nitrogen, and that a stream cannot be judged by how it looks. On 24 September the Cabinet noted the project’s evidence and backed a wider city programme. It did not record that this brook had recovered.",
+    plain: "By September the council was still talking about nitrate around 13, and about not trusting the look of the water. It did not say the brook had recovered.",
+    sourceLine: "Officer report to Cabinet, September 2026. Decision, 24 September 2026.",
+    publisher: "Cambridge City Council",
+    document: "River Cam, Chalk Streams and Tributaries: Strategic Review and Environmental Projects",
+    eventDate: "The report uses the quarter-one 2026 evidence. The Cabinet decision is 24 September 2026.",
+    published: "Report considered in September 2026. Decision 24 September 2026.",
+    retrieved,
+    geography: "Cherry Hinton Brook, named with Coldham’s Brook for the nitrate sentence. The decision is about the city programme.",
+    method: "Officer synthesis of the project evidence, then a Cabinet decision. Not a new laboratory table.",
+    passage:
+      "Cherry Hinton Brook and Coldham’s Brook commonly recording nitrate concentrations around 13 mg/l N. The evidence demonstrates why river condition cannot be assessed from appearance alone.",
+    limitation: "“Around 13” is the report’s summary of earlier monitoring. It is not a new sample, and it is not a biological survey.",
+    url: cabinetUrl,
+  },
+  {
+    id: "gaps",
+    yearIndex: 5,
+    lenses: ["provenance", "uncertainty", "causation"],
+    shelf: "unresolved",
+    label: "Not located",
+    text: "Not found, in the sources reviewed on 2 October 2026: a survey of the plants or insects after the spring works; the full Keele sediment report; a city biological monitoring plan standing apart from the November 2025 water-quality plan; the construction record for the Cherry Hinton works.",
+    plain: "We do not have the later wildlife survey, the full sediment study, a separate biological plan, or the builder’s record. Those gaps stay empty.",
+    sourceLine: "Searches of council, partnership and university pages, 2 October 2026",
+    publisher: "Not a source. A record of what was not found.",
+    document: "Not located",
+    eventDate: "Retrieval on 2 October 2026.",
+    published: "Not published, in the places searched.",
+    retrieved,
+    geography: "Cherry Hinton Brook",
+    method: "Council site, Cam Catchment Partnership, and searches for the Keele report and a separately titled biological plan.",
+    passage: "No passage. The documents were not retrieved.",
+    limitation: "Not found is not the same as does not exist. It is also not evidence of a recovery, or of a failure.",
+    url: "https://www.cambridge.gov.uk/greater-cambridge-chalk-stream-project",
+  },
+];
+
+export const lenses: { id: Lens; title: string; note: string }[] = [
+  { id: "provenance", title: "Provenance", note: "Where each sentence comes from." },
+  { id: "conflict", title: "Conflict", note: "Both accounts. No winner picked." },
+  { id: "uncertainty", title: "Uncertainty", note: "Left as the source left it." },
+  { id: "versions", title: "Versions", note: "An earlier reading stays on the page." },
+  { id: "challenge", title: "Challenge", note: "Disagreement is not treated as a scandal." },
+  { id: "causation", title: "Causation", note: "A measurement, a view, a hope, and a cause are not the same." },
+];
