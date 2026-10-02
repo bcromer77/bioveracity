@@ -29,3 +29,9 @@ Excluded runtime `.env`, TypeScript build cache, historical platform metadata/in
 ## Commercial direction
 
 Cambridge–Peterborough leads. Kilkenny–Carlow and Puglia are partner-development workstreams. Awards recognise observation and learning; sponsors fund participation without controlling findings. Institutional customers purchase scoped evidence services. No partners, awards launch or funding are implied confirmed.
+
+## Dodder PlaceExplorer demonstrator
+
+Reference implementation only. It is not mounted on the landing page, not deployed, and not connected to the private enquiry pipeline in PR #101.
+
+The source lives in `demonstrators/dodder-place-explorer/`. Read `demonstrators/dodder-place-explorer/README.md` before copying it into `nextjs_space/`. Do not import its stylesheet into the Next.js app until the class names are scoped. Enquiry submissions in this demonstrator stay in localStorage and are not transmitted.
