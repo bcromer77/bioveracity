@@ -22,7 +22,7 @@ export async function POST(request:Request){
      if(saved?.email===data.email&&saved.issue===data.issue&&saved.name===data.name)return Response.json({received:true})
      return Response.json({error:'Please refresh the page and try again.'},{status:409})
    }
-   await notifyFounder(data)
+   await notifyFounder({...data,source:'Place / venue (Wild partners form)'})
    return Response.json({received:true},{status:201})
  }catch{return Response.json({error:'We could not save your enquiry. Your details are still in the form; please try again.'},{status:503})}
 }

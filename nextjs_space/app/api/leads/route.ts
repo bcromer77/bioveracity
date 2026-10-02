@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     })
 
     // Send the enquiry through to the founder (non-blocking on failure).
-    await notifyFounder({ name, email, organisation, role, assetName, issue, disputed, decisionMatters, orgsInvolved })
+    await notifyFounder({ name, email, organisation, role, assetName, issue, disputed, decisionMatters, orgsInvolved, source: 'Contact form' })
 
     return NextResponse.json({ id: lead?.id })
   } catch (error: any) {

@@ -1,4 +1,5 @@
-const ENQUIRY_RECIPIENT = 'bazil.cromer@ripplexn.com'
+// The recipient is server-side configuration only (BIOVERACITY_ENQUIRY_RECIPIENT).
+// It must never be hard-coded, logged or returned to the browser.
 
 function esc(v: unknown): string {
   return String(v ?? '')
@@ -21,11 +22,18 @@ export async function notifyFounder(lead: {
   disputed?: string | null
   decisionMatters?: string | null
   orgsInvolved?: string | null
+  source?: string | null
 }) {
   try {
+    const recipient = process.env.BIOVERACITY_ENQUIRY_RECIPIENT?.trim()
+    if (!recipient) {
+      console.error('Enquiry notification not sent: recipient is not configured')
+      return
+    }
     const appUrl = process.env.NEXTAUTH_URL || ''
     const hostname = appUrl ? new URL(appUrl).hostname : 'bioveracity.com'
     const rows: Array<[string, string | null | undefined]> = [
+      ['Source', lead.source],
       ['Name', lead.name],
       ['Email', lead.email],
       ['Organisation', lead.organisation],
@@ -71,7 +79,7 @@ export async function notifyFounder(lead: {
         subject: `New BioVeracity enquiry from ${lead.name}`,
         body: htmlBody,
         is_html: true,
-        recipient_email: ENQUIRY_RECIPIENT,
+        recipient_email: recipient,
         reply_to: lead.email,
         sender_email: `noreply@${hostname}`,
         sender_alias: 'BioVeracity',
@@ -86,6 +94,6 @@ export async function notifyFounder(lead: {
       console.error('Enquiry notification not delivered:', inner?.message ?? res.status)
     }
   } catch (err) {
-    console.error('Enquiry notification error:', err)
+    console.error('Enquiry notification error:', err instanceof Error ? err.name : 'error')
   }
 }
