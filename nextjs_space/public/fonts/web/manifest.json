@@ -1,0 +1,86 @@
+[
+  {
+    "file": "dm-sans-latin-ext.woff2",
+    "family": "DM Sans",
+    "weight": "100 1000",
+    "sha256": "219b02c7d8884817d3d6ad4c8771f2c000ce4c5669a67ef4e2e5617ffa25c4cc",
+    "bytes": 18192
+  },
+  {
+    "file": "dm-sans-latin.woff2",
+    "family": "DM Sans",
+    "weight": "100 1000",
+    "sha256": "468d56b6b25b05b70190b6c233d773f6f1770e8579827ce022a57f03fa8002fb",
+    "bytes": 36980
+  },
+  {
+    "file": "plus-jakarta-sans-cyrillic-ext.woff2",
+    "family": "Plus Jakarta Sans",
+    "weight": "200 800",
+    "sha256": "a16f29d7d2a21a4f9b3249a82eb2725ed5bdb91500dfb5c4758977de27477f20",
+    "bytes": 1716
+  },
+  {
+    "file": "plus-jakarta-sans-vietnamese.woff2",
+    "family": "Plus Jakarta Sans",
+    "weight": "200 800",
+    "sha256": "5c913fc1b1f86f4b475e5df45a796aa480d1f7f0891ed6f1a5991d6d1be887c3",
+    "bytes": 8292
+  },
+  {
+    "file": "plus-jakarta-sans-latin-ext.woff2",
+    "family": "Plus Jakarta Sans",
+    "weight": "200 800",
+    "sha256": "0303e02b53b0298fb26a0193941a2e8754f0f9a9fce50d90b178d8da3424873f",
+    "bytes": 21688
+  },
+  {
+    "file": "plus-jakarta-sans-latin.woff2",
+    "family": "Plus Jakarta Sans",
+    "weight": "200 800",
+    "sha256": "cd8db90cd950e26bc8761f65d323588bd5cd112d326d6d322bc7c8ea86771215",
+    "bytes": 27272
+  },
+  {
+    "file": "jetbrains-mono-cyrillic-ext.woff2",
+    "family": "JetBrains Mono",
+    "weight": "100 800",
+    "sha256": "992eea2f70210457ddd1196de4df3240919ffe068ad188c79d985fba4565d3bf",
+    "bytes": 2020
+  },
+  {
+    "file": "jetbrains-mono-cyrillic.woff2",
+    "family": "JetBrains Mono",
+    "weight": "100 800",
+    "sha256": "af7486955880be1c2b972e9c766acffb776768d669b6576ed9a0919ce72e7ca6",
+    "bytes": 12064
+  },
+  {
+    "file": "jetbrains-mono-greek.woff2",
+    "family": "JetBrains Mono",
+    "weight": "100 800",
+    "sha256": "3edf363dbf9d5fa0cdc784ae2b431a8a4152f4055a8a8858028c0bd668808273",
+    "bytes": 9084
+  },
+  {
+    "file": "jetbrains-mono-vietnamese.woff2",
+    "family": "JetBrains Mono",
+    "weight": "100 800",
+    "sha256": "1390e86cc2823e759358918c01c4fcc1b6e4f01bca915bdbeb6d68eb5c244405",
+    "bytes": 7468
+  },
+  {
+    "file": "jetbrains-mono-latin-ext.woff2",
+    "family": "JetBrains Mono",
+    "weight": "100 800",
+    "sha256": "7db7affbce1fdee69c1ffc2641bbca289b049867f524c9d861fe35ab6670bf29",
+    "bytes": 15204
+  },
+  {
+    "file": "jetbrains-mono-latin.woff2",
+    "family": "JetBrains Mono",
+    "weight": "100 800",
+    "sha256": "1e06740a02a443fb7f3eeda8fcaa685a0f6c620e3f01e6666e847295469ce3ad",
+    "bytes": 40480
+  }
+]

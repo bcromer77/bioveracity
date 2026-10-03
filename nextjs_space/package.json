@@ -25,7 +25,14 @@
     "test:cambridgeshire": "node --import tsx --test tests/cambridgeshire-*.test.ts tests/cambridgeshire-*.test.tsx",
     "ingest:cambridgeshire": "node --import tsx scripts/ingest-cambridgeshire.ts",
     "seed:ellona": "tsx --require dotenv/config scripts/seed-ellona.ts",
-    "test:ellona": "node --import tsx --test tests/ellona.test.ts"
+    "test:ellona": "node --import tsx --test tests/ellona.test.ts",
+    "test:account-recovery": "node --import tsx --test tests/account-recovery.test.ts tests/transactional-email.test.ts",
+    "test:venue-photos": "node --import tsx --test tests/venue-photo-journal.test.ts && node --test tests/venue-photo-ui.test.mjs",
+    "photos:weekly": "node --import tsx scripts/venue-photo-digest.ts",
+    "test:readiness": "node --import tsx --test tests/production-readiness.test.ts",
+    "ops:daily": "node --import tsx scripts/operations-daily.ts",
+    "ops:check": "node --import tsx scripts/check-production-readiness.ts",
+    "db:release": "node --import tsx scripts/database-release.ts"
   },
   "prisma": {
     "seed": "tsx --require dotenv/config scripts/safe-seed.ts"

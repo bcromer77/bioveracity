@@ -66,3 +66,16 @@ test('subscription state is derived from Stripe metadata without treating paymen
   assert.equal(state.priceId, 'price_wild')
   assert.equal(state.currentPeriodEnd?.toISOString(), new Date(1_800_000_000 * 1000).toISOString())
 })
+
+test('subscription lifecycle preserves cancellation timing without granting access from checkout alone',()=>{
+ for(const [status,expected] of [['active','ACTIVE'],['past_due','PAST_DUE'],['canceled','CANCELED']] as const){
+  const state=subscriptionState({created:456,data:{object:{id:'sub_lifecycle',customer:'cus_fixture',status,cancel_at_period_end:status==='active',metadata:{bioveracityUserId:'u1',planKey:'WILD_MONTHLY'},items:{data:[{price:{id:'price_wild'},current_period_end:1800000000}]}}}})
+  assert.equal(state.status,expected)
+  assert.equal(state.cancelAtPeriodEnd,status==='active')
+  assert.equal(state.userId,'u1')
+ }
+})
+test('selecting an unimplemented payment provider fails closed',()=>{
+ reset();process.env.BIOVERACITY_BILLING_ENABLED='true';process.env.BILLING_PROVIDER='revolut';process.env.STRIPE_SECRET_KEY='sk_test_fixture'
+ try{assert.throws(()=>billingConfig(),WorkspaceError)}finally{delete process.env.BILLING_PROVIDER;reset()}
+})

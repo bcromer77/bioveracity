@@ -20,3 +20,13 @@ path. Keep schema changes additive-only to protect the shared database.
 Run `yarn prisma migrate dev --name <change>` against a **local/test** database,
 commit the generated folder, then `migrate deploy` in the target environment.
 Do not run `migrate dev` against the shared production database.
+
+## Readiness review correction (PR 72)
+
+The generic fresh `migrate deploy` instruction above is **not safe for this mixed
+history**. Private case files sort before workspace foundation, and the Ellona
+migration references EvidenceDocument although production evidence is isolated.
+Use `yarn db:release` to inspect dependency order/checksums and read
+`docs/PRODUCTION_READINESS_HANDOVER.md` (repository root) before any application.
+No existing historical migration was renamed or rewritten. A schema created by
+`db push` needs actual hosted reconciliation, not automatic mark-as-applied.

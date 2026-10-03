@@ -1,3 +1,4 @@
+import { RELEASE_VERSION } from '../lib/venue-journal/release'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -190,6 +191,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       ),
     )
     await pg.exec(readFileSync(new URL('../prisma/migrations/20260915_wild_editorial_review/migration.sql', import.meta.url), 'utf8'))
+    for (const m of ['20260923_venue_photo_journal','20260924_data_rights']) await pg.exec(readFileSync(new URL(`../prisma/migrations/${m}/migration.sql`, import.meta.url),'utf8'))
     const sql = (client: Pick<PGlite, 'query'>): Sql => ({
       query: async <T>(statement: string, values: unknown[]) =>
         (await client.query<T>(statement, values)).rows,
@@ -249,7 +251,7 @@ test('isolated PostgreSQL: owner onboarding through publication, edits, photos, 
       year: new Date().getUTCFullYear(),
     })
     assert.equal(hub.plan?.campaigns.length, 12)
-    const data = {
+    const data = {contactName:'Owner',contactEmail:'owner@example.test',releaseVersion:RELEASE_VERSION,releaseAccepted:true as const,venuePublications:false,bioPublications:false,
       caption: 'Only selected images go public',
       credit: 'QA',
       hash: 'test-hash',

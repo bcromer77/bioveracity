@@ -1,0 +1,6 @@
+# TEMPLATE ONLY. Install using the confirmed Abacus scheduler and protected environment.
+# Confirm absolute paths. Configure external monitoring of /api/ops/status with bearer auth.
+CRON_TZ=UTC
+15 8 * * * cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn ops:daily
+0 9 * * 1 cd /CONFIRMED/BIOVERACITY/nextjs_space && /CONFIRMED/PATH/TO/yarn photos:weekly
+# Keep execution/error logs private. Route nonzero exit and missing heartbeat to operator/deputy.

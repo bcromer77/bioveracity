@@ -1,3 +1,4 @@
+import { releaseInput } from '@/lib/venue-journal/release'
 import { body } from '@/lib/workspaces/request-body'
 import { hubRequest } from '@/lib/wild-hubs/http'
 import { HubError, record, text } from '@/lib/wild-hubs/domain'
@@ -9,10 +10,12 @@ export async function POST(request: Request, ctx: Context) {
   return hubRequest(async (s) => {
     const id = (await ctx.params).id
     await s.get(id) // Authorisation before reading or sending any uploaded bytes.
-    const input = photoInput(await body(request, 4300000))
+    const raw = await body(request, 4300000)
+    const release = releaseInput(raw)
+    const input = photoInput(raw)
     await s.reserveScan(id)
     try {
-      return { hub: await s.addPhoto(id, await preparePhoto(input)) }
+      return { hub: await s.addPhoto(id, {...await preparePhoto(input),...release}) }
     } catch (e) {
       if (e instanceof ScanError) throw new HubError(e.status, e.message)
       throw e

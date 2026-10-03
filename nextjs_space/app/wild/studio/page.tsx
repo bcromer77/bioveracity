@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { PublicShell } from '@/components/wild/public-shell'
+import { journalEnabled } from '@/lib/venue-journal/http'
 import { HubStudio } from '@/components/wild/hub-studio'
 import { enabled } from '@/lib/wild-hubs/http'
 export const dynamic = 'force-dynamic'
@@ -30,7 +31,7 @@ export default async function StudioPage() {
   if (!session?.user?.id) redirect('/login?callbackUrl=%2Fwild%2Fstudio')
   return (
     <PublicShell>
-      <HubStudio />
+      <HubStudio photoJournalEnabled={journalEnabled()} />
     </PublicShell>
   )
 }
