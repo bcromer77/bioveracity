@@ -1,3 +1,69 @@
+# Current state — 3 October 2026
+
+This is the operational record as of the documentation baseline.
+Classifications are not interchangeable.
+
+- **VERIFIED** — directly observed, with the evidence named.
+- **REPORTED** — stated by a person, a host or an existing document, and not independently checked.
+- **INFERRED** — the evidence points this way and does not prove it.
+- **UNKNOWN** — not established. Unknown is a result, not a gap to be filled by assumption.
+
+## Identity
+
+| Fact | Class | Record |
+|---|---|---|
+| Production running commit | UNKNOWN | No page, header or script on the public site named a git commit. A branch name containing "deployed" is not evidence. |
+| Production application database identity | UNKNOWN | Pending a current host confirmation. No connection string is recorded here. |
+| Production evidence database identity | UNKNOWN | Pending a current host confirmation. |
+| Production `_prisma_migrations` ledger | UNKNOWN | It has not been read. |
+| `20260915_ellona_opportunity_watch` on production | UNKNOWN | Three states remain possible. None is selected. See the migration register. |
+| `EvidenceDocument` present in the production application database | UNKNOWN | Not inspected. |
+| Production feature-flag state | UNKNOWN | No current environment was read. Flags this candidate understands are listed in `docs/registers/CUSTOMER_CANDIDATE.md` as code, not as live settings. |
+| Current host backup and recovery configuration | UNKNOWN | A historical document describes a restore helper and says a full restore had not been performed. That is not proof of today's backups. See the incident log. |
+| Customer candidate | VERIFIED | `3c08ab229a2e4c76c9b8b17137951b8e700c017f`. **CUSTOMER CANDIDATE — NOT DEPLOYED — NOT ACCEPTED.** Database compatibility is not established. |
+| Production write freeze | DECIDED | Operating decision of 3 October 2026. It is not a control observed on the host. |
+| Customer browser acceptance | NOT RUN | |
+| Two-tenant isolation on this candidate in a rehearsal | NOT RUN | |
+| Controlled railway acceptance | NOT RUN | |
+| Pull request 105 | UNTOUCHED | Outside this recovery. Not modified by this commit. |
+
+## What was actually observed
+
+VERIFIED, 3 October 2026, by reading this commit and the GitHub record of it:
+
+- The commit message is "Fix personal sign-in journeys and complete case access revocation". Its parent is `32d0646504b84db3d9d62700d48f0e82875ec5ec`. Committer time 2026-09-22 14:48:22 +0100.
+- GitHub check run `validate` concluded success: https://github.com/bcromer77/bioveracity/actions/runs/35736037352/job/106773408220. That is a check run. It is not browser acceptance and it is not a deployment.
+- `Event.datePrecision` is in `nextjs_space/prisma/schema.prisma`. No migration in this commit adds that column.
+- The repair file lives in a later commit, `156d29a67324a3ed5510079518189712d5ac81ff`, folder `20260930_event_date_precision`. That commit is five commits after this candidate and was not cherry-picked.
+- This commit has no `nextjs_space/app/place` route.
+- The next commit, `4f0daec0ed18b8bf5d740246a1bfefa0e6d31034`, has this commit as its only parent. It adds the club source watch and the Revolut pilot. It is not part of the candidate. The sports-club venue type is a further descendant, `423215bd3b331502ae44bda5d172ca21dfe7dd3d`.
+
+VERIFIED external HTTP observation, 2026-10-03T09:46:34Z: `GET https://bioveracity.com/place/dodder` returned 500, and the HTML title was `Place — BioVeracity`. No commit hash was present.
+
+INFERRED from that response, and not a production SHA: the title matches the Place page that exists only in later commits. The response is compatible with a build that contains that route. It does not identify which commit, and it does not prove that this candidate is, or is not, the rest of the running application.
+
+## Contradictions left unresolved
+
+The 19 September text preserved below disagrees with itself. One section says a supplied report deployed `7b240dab00826c8d2a52c1c4582449d744dec2e5` and applied the three `20260919_*` migrations. An older section of the same file says those migrations were not applied and that production was checkpoint `b692e9a`. Neither section was re-checked against the host. Both stay as historical writing.
+
+## Registers
+
+- `docs/registers/RELEASE_REGISTER.md`
+- `docs/registers/MIGRATION_REGISTER.md`
+- `docs/registers/DECISION_LOG.md`
+- `docs/registers/INCIDENT_LOG.md`
+- `docs/registers/CUSTOMER_CANDIDATE.md`
+- `docs/registers/ACCEPTANCE_REGISTER.md`
+- `docs/registers/ACCEPTANCE_CONTRACT.md`
+- `docs/registers/RAILWAY_TEST.md`
+- `docs/registers/REHEARSAL_PLAN.md`
+
+---
+
+# HISTORICAL SUPPLIED REPORT — 19 SEPTEMBER 2026 — NOT CURRENT PRODUCTION VERIFICATION
+
+The material below is preserved. It is not the current production record. Nothing in it has been promoted to VERIFIED by this commit.
+
 # Current engineering update — venue launch preparation
 
 Updated 2026-09-19 (UTC). This section supersedes the older release snapshot below.

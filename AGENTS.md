@@ -25,6 +25,7 @@ Preserve a source-linked environmental chronology. Distinguish measurements, reg
 - Use isolated development data. Make ingestion idempotent and corrections auditable; enforce access on the server for search, APIs and reports.
 - Add meaningful checks for each behavioural change. Run explicit type checks; a Next build with ignored type errors is not enough.
 - Document source coverage, failed retrieval and unsupported integrations honestly. GitHub is the code and work register; controlled evidence storage is separate.
+- Chat is not the system of record. Material implementation, migration, deployment, incident and acceptance facts must be transferred to the appropriate repository record without secrets or customer data.
 - Confirm the specific Abacus app deployment route and rollback before proposing a production release. Do not enable automatic production deployment without authorisation.
 
 ## Agent tasks
