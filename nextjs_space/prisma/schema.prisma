@@ -136,6 +136,8 @@ model User {
   watchlists    Watchlist[]
   leads         Lead[]
   watches       Watch[]
+  commercialReviews CommercialReview[]
+  commercialReports CommercialReport[]
   accessState   String      @default("REGISTERED") // REGISTERED, DEMO, INSTITUTIONAL, ADMIN
   authVersion   Int         @default(0)
   passwordResetTokens PasswordResetToken[]
@@ -948,6 +950,11 @@ model PrivateWorkspace {
   cases PrivateCase[]
   audit PrivateWorkspaceAudit[]
   invitations PrivateWorkspaceInvitation[]
+  commercialPortfolios CommercialPortfolio[]
+  commercialEvents CommercialSignalEvent[]
+  commercialChanges CommercialChange[]
+  commercialReports CommercialReport[]
+  commercialChecks CommercialSourceCheck[]
 }
 model PrivateWorkspaceMember {
   workspaceId String
@@ -957,6 +964,7 @@ model PrivateWorkspaceMember {
   workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
   cases PrivateCaseMember[]
+  commercialGrants CommercialPortfolioGrant[]
   @@id([workspaceId, userId])
   @@index([userId, revokedAt])
 }
@@ -1735,4 +1743,143 @@ model JobHeartbeat {
  status String
  startedAt DateTime @db.Timestamp(3)
  finishedAt DateTime? @db.Timestamp(3)
+}
+
+// Commercial property intelligence. Workspace-scoped. Not the public Asset table.
+model CommercialPortfolio {
+  id String @id
+  workspaceId String
+  name String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  assets CommercialAsset[]
+  grants CommercialPortfolioGrant[]
+  @@unique([workspaceId, id])
+  @@index([workspaceId])
+}
+model CommercialAsset {
+  id String @id
+  workspaceId String
+  portfolioId String
+  name String
+  address String?
+  eircode String?
+  latitude Float?
+  longitude Float?
+  assetType String
+  ownershipStatus String?
+  localAuthority String?
+  county String?
+  geography Json @default("{}")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  portfolio CommercialPortfolio @relation(fields: [workspaceId, portfolioId], references: [workspaceId, id], onDelete: Restrict)
+  signals CommercialAssetSignal[]
+  @@index([workspaceId, portfolioId])
+}
+model CommercialPortfolioGrant {
+  workspaceId String
+  portfolioId String
+  userId String
+  role String
+  revokedAt DateTime? @db.Timestamptz(3)
+  portfolio CommercialPortfolio @relation(fields: [workspaceId, portfolioId], references: [workspaceId, id], onDelete: Restrict)
+  member PrivateWorkspaceMember @relation(fields: [workspaceId, userId], references: [workspaceId, userId], onDelete: Restrict)
+  @@id([workspaceId, portfolioId, userId])
+  @@index([userId, revokedAt])
+}
+model CommercialSignalEvent {
+  id String @id
+  workspaceId String
+  registrySignalId String
+  sourceAuthority String
+  sourceRecordId String?
+  underlyingMatterId String?
+  sourceUrl String
+  title String
+  factualObservation String
+  observedValue String?
+  unit String?
+  previousValue String?
+  eventDate DateTime? @db.Date
+  publicationDate DateTime? @db.Date
+  retrievalDate DateTime @db.Date
+  spatialResolution String
+  geographicIdentifier String?
+  lifecycleStage String?
+  previousLifecycleStage String?
+  evidenceStatus String
+  contentHash String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  links CommercialAssetSignal[]
+  @@unique([workspaceId, contentHash])
+  @@index([workspaceId, registrySignalId])
+}
+model CommercialAssetSignal {
+  id String @id
+  workspaceId String
+  assetId String
+  signalEventId String
+  relationshipType String
+  distanceMetres Float?
+  relevanceReason String
+  relevanceRuleId String
+  dependencyStatus String
+  spatialBand String
+  asset CommercialAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  event CommercialSignalEvent @relation(fields: [signalEventId], references: [id], onDelete: Restrict)
+  reviews CommercialReview[]
+  @@unique([workspaceId, assetId, signalEventId, relationshipType])
+  @@index([workspaceId, assetId])
+}
+model CommercialChange {
+  id String @id
+  workspaceId String
+  assetId String?
+  signalEventId String?
+  changeType String
+  previousState Json?
+  newState Json?
+  detectedAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  @@index([workspaceId, assetId, detectedAt])
+}
+model CommercialReview {
+  id String @id
+  workspaceId String
+  assetSignalId String
+  actorId String
+  action String
+  assigneeId String?
+  note String @default("")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  signal CommercialAssetSignal @relation(fields: [assetSignalId], references: [id], onDelete: Restrict)
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([workspaceId, assetSignalId, createdAt])
+}
+model CommercialReport {
+  id String @id
+  workspaceId String
+  kind String
+  status String
+  snapshotHash String
+  snapshot Json
+  pdfBytes Bytes?
+  xlsxBytes Bytes?
+  createdBy String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  issuedAt DateTime? @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  author User @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  @@index([workspaceId, status])
+}
+model CommercialSourceCheck {
+  id String @id
+  workspaceId String
+  registrySignalId String
+  state String
+  detail String @default("")
+  checkedAt DateTime @default(now()) @db.Timestamptz(3)
+  workspace PrivateWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  @@index([workspaceId, registrySignalId, checkedAt])
 }
